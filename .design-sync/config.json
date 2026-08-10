@@ -4,7 +4,7 @@
   "pkg": "shelf-sense-ds",
   "globalName": "ShelfSenseDS",
   "storybookStatic": ".design-sync/sb-reference",
-  "storybookConfigDir": ".storybook",
-  "buildCmd": "npm run build",
+  "storybookConfigDir": "packages/design-system/.storybook",
+  "buildCmd": "npm run build -w shelf-sense-ds",
   "readmeHeader": ".design-sync/conventions.md"
 }

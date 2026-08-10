@@ -3,6 +3,7 @@ dist
 storybook-static
 .DS_Store
 *.log
+*.tsbuildinfo
 .design-sync/*.local.json
 
 # design-sync

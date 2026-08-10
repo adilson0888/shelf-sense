@@ -1,58 +1,35 @@
-# ShelfSense Design System
+# ShelfSense
 
-A React + TypeScript component library for shelf-stock / inventory tracking UIs — dashboards, shelf/SKU listings, replenishment workflows, and sensor-driven alerts.
+Shelf-stock / inventory tracking. Monorepo (npm workspaces).
 
-## Install & use
+```
+packages/
+  design-system/   shelf-sense-ds — the component library (synced to claude.ai/design)
+apps/
+  web/             shelf-sense-web — Vite + React SPA, consumes shelf-sense-ds
+  api/             shelf-sense-api — Express + TypeScript API
+specs/             feature specs — the source of truth; see specs/README.md for the process
+.design-sync/      design-sync config/notes (stays at repo root even in this monorepo layout)
+```
+
+## Setup
 
 ```bash
-npm install
-npm run build
+npm install          # installs all workspaces from the root
 ```
 
-```tsx
-import { Button, StatusBadge, StatCard, DataTable } from "shelf-sense-ds";
-import "shelf-sense-ds/styles.css";
-```
-
-## Develop
+## Commands
 
 ```bash
-npm run storybook   # interactive component playground on :6006
-npm run dev          # Vite dev server
-npm run typecheck
-npm run build         # library build -> dist/
-npm run build-storybook
+npm run storybook     # browse the design system's components
+npm run build:ds       # build the design system package
+npm run dev:web        # run the web app (localhost:5173)
+npm run dev:api         # run the API (localhost:3001)
+npm run typecheck       # typecheck every workspace
 ```
 
-## Tokens
+## Workflow
 
-All color, spacing, radius, typography and shadow values are CSS custom properties defined in `src/styles/tokens.css`, consumed through Tailwind (`tailwind.config.ts`). Never hardcode a hex color or raw px spacing in a component — extend the token set instead. A `.dark` class on any ancestor switches the whole tree to the dark palette.
+New feature → write a spec in `specs/` → prototype the UI in Claude Design against the real `shelf-sense-ds` components → implement for real in `apps/web` / `apps/api`. See `specs/README.md`.
 
-The core semantic vocabulary is **stock status** — `in-stock` / `low` / `out` / `incoming` — surfaced via `--ss-stock-*` tokens and the `StatusBadge` component. Prefer it over generic `Badge` colors whenever the value being shown is a shelf/SKU stock state.
-
-## Components
-
-| Component | Purpose |
-|---|---|
-| `Button` | Primary interactive control (`primary`/`secondary`/`outline`/`ghost`/`danger`, `sm`/`md`/`lg`) |
-| `StatusBadge` | Fixed stock-status vocabulary: in-stock, low, out, incoming |
-| `Badge` | Generic tag/label (`neutral`/`success`/`warning`/`danger`/`info`) |
-| `Card`, `CardHeader`, `CardTitle`, `CardBody`, `CardFooter` | Composable surface container |
-| `Input` | Text field with label/hint/error |
-| `Select` | Bounded-choice dropdown |
-| `Alert` | Page/section-level banner (`success`/`warning`/`danger`/`info`) |
-| `StatCard` | Dashboard metric tile with optional trend delta |
-| `DataTable` | Typed, generic table for shelf/SKU/shipment listings |
-
-Every component has a Storybook story under `src/components/<Name>/<Name>.stories.tsx` demonstrating its variants — start there before writing new usage.
-
-## Project layout
-
-```
-src/
-  styles/       tokens.css, globals.css
-  lib/          cn() className helper (clsx + tailwind-merge)
-  components/   one folder per component: <Name>.tsx, index.ts, <Name>.stories.tsx
-  index.ts      public exports
-.storybook/     Storybook config
-```
+If a feature needs a component `shelf-sense-ds` doesn't have yet, add it in `packages/design-system` first and run `/design-sync` before prototyping — Claude Design should only ever build with real, synced components.

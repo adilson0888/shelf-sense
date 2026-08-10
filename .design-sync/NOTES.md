@@ -4,8 +4,9 @@ First sync: 2026-08-10. 9/9 components graded `match`, no skips, no `close` verd
 
 ## Repo-specific setup
 
-- **This is the DS's own source repo** (not a consumer with `node_modules/shelf-sense-ds` installed), so every `package-build.mjs` / `resync.mjs` invocation needs both `--node-modules ./node_modules --entry ./dist/shelf-sense-ds.es.js`. Run `npm run build` first — the converter bundles `dist/`, not `src/`.
-- Reference storybook must be built with `npx storybook build -c .storybook -o "$(pwd)/.design-sync/sb-reference"` from the repo root — **not** `npm run build-storybook` (wrong output dir, `storybook-static/`).
+- **Monorepo since 2026-08-10**: `shelf-sense-ds` source lives at `packages/design-system/`, not repo root. `.design-sync/`, `.ds-sync/`, and `ds-bundle/` stay at the **repo root** regardless — this is the skill's documented monorepo rule (`.design-sync/` always resolves from repo root). `config.json`'s `storybookConfigDir` is `packages/design-system/.storybook` and `buildCmd` is `npm run build -w shelf-sense-ds`.
+- **This is the DS's own source repo** (not a consumer with `node_modules/shelf-sense-ds` installed), so every `package-build.mjs` / `resync.mjs` invocation run from repo root needs both `--node-modules ./node_modules --entry ./packages/design-system/dist/shelf-sense-ds.es.js`. `node_modules` is still at repo root — npm workspaces hoist it there. Run `npm run build -w shelf-sense-ds` first — the converter bundles `dist/`, not `src/`.
+- Reference storybook must be built with `npx storybook build -c packages/design-system/.storybook -o "$(git rev-parse --show-toplevel)/.design-sync/sb-reference"` — **not** `npm run build-storybook` (wrong output dir, `storybook-static/` inside the package).
 - `cfg.provider` is intentionally unset: no components read React context, nothing to wrap.
 
 ## Fonts — was `[FONT_MISSING]`, now fixed at the source
