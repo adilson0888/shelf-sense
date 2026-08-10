@@ -1,0 +1,68 @@
+/**
+ * Font faces backing --ss-font-sans / --ss-font-mono (see tokens.css).
+ * Sourced from the @fontsource/inter and @fontsource/ibm-plex-mono npm
+ * packages (devDependencies) — latin + latin-ext subsets only, at the
+ * weights this design system actually uses (400/500/600/700 for Inter,
+ * 400/500 for IBM Plex Mono). Vite inlines these at build time, so the
+ * published dist/style.css is self-contained — no runtime font dependency.
+ */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    url("@fontsource/inter/files/inter-latin-400-normal.woff2") format("woff2"),
+    url("@fontsource/inter/files/inter-latin-ext-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src:
+    url("@fontsource/inter/files/inter-latin-500-normal.woff2") format("woff2"),
+    url("@fontsource/inter/files/inter-latin-ext-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src:
+    url("@fontsource/inter/files/inter-latin-600-normal.woff2") format("woff2"),
+    url("@fontsource/inter/files/inter-latin-ext-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    url("@fontsource/inter/files/inter-latin-700-normal.woff2") format("woff2"),
+    url("@fontsource/inter/files/inter-latin-ext-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    url("@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2") format("woff2"),
+    url("@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-ext-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src:
+    url("@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2") format("woff2"),
+    url("@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-ext-500-normal.woff2") format("woff2");
+}

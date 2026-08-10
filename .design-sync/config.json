@@ -1,0 +1,10 @@
+{
+  "projectId": "a82e5c16-4605-4f2a-838a-5a1505e71e81",
+  "shape": "storybook",
+  "pkg": "shelf-sense-ds",
+  "globalName": "ShelfSenseDS",
+  "storybookStatic": ".design-sync/sb-reference",
+  "storybookConfigDir": ".storybook",
+  "buildCmd": "npm run build",
+  "readmeHeader": ".design-sync/conventions.md"
+}
