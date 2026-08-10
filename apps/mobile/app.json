@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "ShelfSense",
+    "slug": "shelf-sense-mobile",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "package": "com.shelfsense.mobile",
+      "permissions": [
+        "CAMERA"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.shelfsense.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "ShelfSense uses the camera to scan shelf/SKU barcodes."
+      }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "ShelfSense uses the camera to scan shelf/SKU barcodes."
+        }
+      ],
+      "expo-sqlite",
+      "expo-status-bar"
+    ]
+  }
+}
