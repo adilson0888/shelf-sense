@@ -1,0 +1,120 @@
+/**
+ * ShelfSense design tokens.
+ *
+ * These CSS custom properties are the single source of truth for color,
+ * spacing, radius, typography and shadow. Tailwind classes (see
+ * tailwind.config.ts) resolve to these variables — never hardcode a hex
+ * value or a raw px spacing in a component; reach for a token instead.
+ */
+
+:root {
+  /* Brand — teal/blue, evokes sensors + retail tech */
+  --ss-brand-50: #eefbfa;
+  --ss-brand-100: #d3f4f1;
+  --ss-brand-200: #a8e8e3;
+  --ss-brand-300: #72d5cd;
+  --ss-brand-400: #3fb9b0;
+  --ss-brand-500: #219c93;
+  --ss-brand-600: #167d76;
+  --ss-brand-700: #14655f;
+  --ss-brand-800: #14504c;
+  --ss-brand-900: #134441;
+
+  /* Neutral surfaces */
+  --ss-surface-0: #ffffff;
+  --ss-surface-1: #f7f8f8;
+  --ss-surface-2: #eef0f1;
+  --ss-surface-3: #e2e5e7;
+
+  /* Ink (text) */
+  --ss-ink-primary: #14181b;
+  --ss-ink-secondary: #454c52;
+  --ss-ink-muted: #767f86;
+  --ss-ink-inverse: #ffffff;
+
+  /* Borders */
+  --ss-border: #dfe3e6;
+  --ss-border-strong: #c3c9cd;
+
+  /* Semantic stock-status — the core vocabulary of this design system */
+  --ss-stock-in: #157f4a;
+  --ss-stock-in-bg: #e4f6ec;
+  --ss-stock-low: #a15c00;
+  --ss-stock-low-bg: #fdf1dc;
+  --ss-stock-out: #b3261e;
+  --ss-stock-out-bg: #fbe7e6;
+  --ss-stock-incoming: #3452b4;
+  --ss-stock-incoming-bg: #e8ecfa;
+
+  /* Generic semantic (alerts, banners, form validation) */
+  --ss-success: #157f4a;
+  --ss-success-bg: #e4f6ec;
+  --ss-warning: #a15c00;
+  --ss-warning-bg: #fdf1dc;
+  --ss-danger: #b3261e;
+  --ss-danger-bg: #fbe7e6;
+  --ss-info: #3452b4;
+  --ss-info-bg: #e8ecfa;
+
+  /* Radius */
+  --ss-radius-sm: 4px;
+  --ss-radius-md: 8px;
+  --ss-radius-lg: 12px;
+  --ss-radius-xl: 16px;
+  --ss-radius-full: 9999px;
+
+  /* Spacing scale */
+  --ss-space-xs: 4px;
+  --ss-space-sm: 8px;
+  --ss-space-md: 16px;
+  --ss-space-lg: 24px;
+  --ss-space-xl: 32px;
+  --ss-space-2xl: 48px;
+
+  /* Typography */
+  --ss-font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --ss-font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* Shadows */
+  --ss-shadow-sm: 0 1px 2px rgba(20, 24, 27, 0.06);
+  --ss-shadow-md: 0 4px 12px rgba(20, 24, 27, 0.08);
+  --ss-shadow-lg: 0 12px 32px rgba(20, 24, 27, 0.12);
+}
+
+/* Dark theme — applied via a `.dark` class on a root ancestor */
+.dark {
+  --ss-surface-0: #14181b;
+  --ss-surface-1: #1b2024;
+  --ss-surface-2: #23292e;
+  --ss-surface-3: #2d353b;
+
+  --ss-ink-primary: #f4f6f7;
+  --ss-ink-secondary: #c3cbd1;
+  --ss-ink-muted: #8b959c;
+  --ss-ink-inverse: #14181b;
+
+  --ss-border: #2d353b;
+  --ss-border-strong: #3c464d;
+
+  --ss-stock-in: #4ade8a;
+  --ss-stock-in-bg: #113325;
+  --ss-stock-low: #f3b54c;
+  --ss-stock-low-bg: #362a10;
+  --ss-stock-out: #f38b85;
+  --ss-stock-out-bg: #3a1815;
+  --ss-stock-incoming: #93a8f0;
+  --ss-stock-incoming-bg: #1b2140;
+
+  --ss-success: #4ade8a;
+  --ss-success-bg: #113325;
+  --ss-warning: #f3b54c;
+  --ss-warning-bg: #362a10;
+  --ss-danger: #f38b85;
+  --ss-danger-bg: #3a1815;
+  --ss-info: #93a8f0;
+  --ss-info-bg: #1b2140;
+
+  --ss-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --ss-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --ss-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
