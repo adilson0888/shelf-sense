@@ -5,6 +5,7 @@ import "./styles/globals.css";
 export * from "./components/Button";
 export * from "./components/Badge";
 export * from "./components/StatusBadge";
+export * from "./components/FreshnessBadge";
 export * from "./components/Card";
 export * from "./components/Input";
 export * from "./components/Select";

@@ -56,6 +56,19 @@
   --ss-info: #3452b4;
   --ss-info-bg: #e8ecfa;
 
+  /* Semantic freshness-status — the other controlled vocabulary of this DS,
+     alongside stock status. Values start aligned with success/warning/danger
+     and neutral ink/surface, kept in their own namespace so they can diverge
+     later without affecting those. */
+  --ss-freshness-fresh: #157f4a;
+  --ss-freshness-fresh-bg: #e4f6ec;
+  --ss-freshness-expiring-soon: #a15c00;
+  --ss-freshness-expiring-soon-bg: #fdf1dc;
+  --ss-freshness-expired: #b3261e;
+  --ss-freshness-expired-bg: #fbe7e6;
+  --ss-freshness-no-expiration: #767f86;
+  --ss-freshness-no-expiration-bg: #eef0f1;
+
   /* Radius */
   --ss-radius-sm: 4px;
   --ss-radius-md: 8px;
@@ -113,6 +126,15 @@
   --ss-danger-bg: #3a1815;
   --ss-info: #93a8f0;
   --ss-info-bg: #1b2140;
+
+  --ss-freshness-fresh: #4ade8a;
+  --ss-freshness-fresh-bg: #113325;
+  --ss-freshness-expiring-soon: #f3b54c;
+  --ss-freshness-expiring-soon-bg: #362a10;
+  --ss-freshness-expired: #f38b85;
+  --ss-freshness-expired-bg: #3a1815;
+  --ss-freshness-no-expiration: #8b959c;
+  --ss-freshness-no-expiration-bg: #23292e;
 
   --ss-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --ss-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);

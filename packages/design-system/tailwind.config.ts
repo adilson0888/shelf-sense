@@ -52,6 +52,18 @@ export default {
         warning: { DEFAULT: "var(--ss-warning)", bg: "var(--ss-warning-bg)" },
         danger: { DEFAULT: "var(--ss-danger)", bg: "var(--ss-danger-bg)" },
         info: { DEFAULT: "var(--ss-info)", bg: "var(--ss-info-bg)" },
+        // Semantic freshness-status colors — the other controlled vocabulary
+        // of this DS, alongside stock status (see StatusBadge)
+        freshness: {
+          fresh: "var(--ss-freshness-fresh)",
+          "fresh-bg": "var(--ss-freshness-fresh-bg)",
+          "expiring-soon": "var(--ss-freshness-expiring-soon)",
+          "expiring-soon-bg": "var(--ss-freshness-expiring-soon-bg)",
+          expired: "var(--ss-freshness-expired)",
+          "expired-bg": "var(--ss-freshness-expired-bg)",
+          "no-expiration": "var(--ss-freshness-no-expiration)",
+          "no-expiration-bg": "var(--ss-freshness-no-expiration-bg)",
+        },
       },
       borderRadius: {
         sm: "var(--ss-radius-sm)",
