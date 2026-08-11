@@ -4,6 +4,16 @@
    harmlessly, so it's omitted; only utilities are actually needed. */
 @tailwind utilities;
 
+/* shelf-sense-ds/styles.css only sets a background on <body> (see its
+   globals.css), and reads --ss-surface-1 from whatever theme scope body
+   sits in. <html> now carries the "dark" class (index.html) precisely so
+   this resolves to the dark value here too — covering <html> explicitly
+   as well as <body> closes the gap that showed up as thin white lines on
+   real mobile Safari (see index.html's comment for the full mechanism). */
+html {
+  background-color: var(--ss-surface-1);
+}
+
 /* AddProductModals' scan-capture placeholder — no Tailwind built-in for a
    translating line, so a small scoped keyframe instead of pulling in a
    whole animation plugin for one decorative flourish. */
