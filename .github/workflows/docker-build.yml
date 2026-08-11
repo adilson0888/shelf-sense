@@ -1,12 +1,12 @@
 name: Build and push Docker images
 
-# Every push to main builds fresh images for both deployable apps and
+# Every push to master builds fresh images for both deployable apps and
 # publishes them to GitHub Container Registry. See the Docker pipeline plan
 # (apps/api/Dockerfile, apps/web/Dockerfile) for why each image is built the
 # way it is. apps/mobile is out of scope — it ships via Expo/EAS, not Docker.
 on:
   push:
-    branches: [main]
+    branches: [master]
 
 jobs:
   docker:
