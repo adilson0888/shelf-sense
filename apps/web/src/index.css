@@ -1,0 +1,5 @@
+/* Generates utility classes for this app's own JSX. Tokens/fonts/preflight
+   already come from "shelf-sense-ds/styles.css" (imported first, in
+   main.tsx) — @tailwind base here would just duplicate that reset
+   harmlessly, so it's omitted; only utilities are actually needed. */
+@tailwind utilities;
