@@ -1,10 +1,10 @@
-# <Feature name>
+# Feature name
 
 **Status:** draft | ready | in-progress | done
 
 ## User story
 
-As a <role>, I want to <action>, so that <benefit>.
+As a **role**, I want to **action**, so that **benefit**.
 
 ## Acceptance criteria
 
