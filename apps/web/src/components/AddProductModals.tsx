@@ -1,4 +1,4 @@
-import { Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Select } from "shelf-sense-ds";
+import { Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Switch } from "shelf-sense-ds";
 import type { AddFlowStep, AddProductFormState, PrefillSource } from "../lib/addProduct";
 import { MOCK_BARCODE_MATCH } from "../lib/addProduct";
 
@@ -19,11 +19,6 @@ export interface AddProductModalsProps {
   onFieldChange: <K extends keyof AddProductFormState>(key: K, value: AddProductFormState[K]) => void;
   onSave: () => void;
 }
-
-const EXPIRE_OPTIONS = [
-  { value: "yes", label: "Yes — track an expiry date" },
-  { value: "no", label: "No — it doesn't expire" },
-];
 
 /**
  * The five Add Product modals, translated from the merged Claude Design
@@ -202,11 +197,10 @@ export function AddProductModals({
             value={form.long}
             onChange={(e) => onFieldChange("long", e.target.value)}
           />
-          <Select
+          <Switch
             label="Does it expire?"
-            options={EXPIRE_OPTIONS}
-            value={form.doesExpire ? "yes" : "no"}
-            onChange={(e) => onFieldChange("doesExpire", e.target.value === "yes")}
+            checked={form.doesExpire}
+            onCheckedChange={(checked) => onFieldChange("doesExpire", checked)}
           />
           <Input
             label="Quantity"

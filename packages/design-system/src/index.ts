@@ -10,6 +10,7 @@ export * from "./components/Card";
 export * from "./components/Modal";
 export * from "./components/Input";
 export * from "./components/Select";
+export * from "./components/Switch";
 export * from "./components/Alert";
 export * from "./components/StatCard";
 export * from "./components/DataTable";
