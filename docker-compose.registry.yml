@@ -1,0 +1,33 @@
+# Local example: runs the images already published by CI (see
+# .github/workflows/docker-build.yml) instead of building from source —
+# use this once a push to main has run the pipeline at least once.
+#
+# The packages are private (same visibility as this repo), so pulling
+# requires logging in first:
+#   echo <a GitHub PAT with read:packages scope> | docker login ghcr.io -u <your-github-username> --password-stdin
+#
+# Usage:
+#   docker compose -f docker-compose.registry.yml up -d
+#   api  -> http://localhost:3001/health
+#   web  -> http://localhost:8080
+#
+# To pick up a newer push instead of whatever was last pulled:
+#   docker compose -f docker-compose.registry.yml pull
+#   docker compose -f docker-compose.registry.yml up -d
+
+services:
+  api:
+    image: ghcr.io/adilson0888/shelf-sense-api:latest
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/adilson0888/shelf-sense-web:latest
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped

@@ -1,0 +1,30 @@
+# Local example: builds and runs both images from source (same Dockerfiles
+# the CI pipeline uses — see .github/workflows/docker-build.yml) and wires
+# them together on one network. Not used by CI; this is for running the
+# stack locally without pulling from GHCR.
+#
+# Usage:
+#   docker compose up --build
+#   api  -> http://localhost:3001/health
+#   web  -> http://localhost:8080
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
