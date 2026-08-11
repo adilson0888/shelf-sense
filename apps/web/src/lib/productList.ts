@@ -25,14 +25,17 @@ const STATUS_RANK: Record<FreshnessStatus, number> = {
   "no-expiration": 3,
 };
 
+/** Soonest-expiring first, does-not-expire batches last. The one depletion/display order this app uses everywhere — Quick Batch Edit's decrease logic reuses this too (see quickBatchEdit.ts). */
+export function sortBatchesByExpiry<T extends Batch>(batches: T[]): T[] {
+  return batches.slice().sort((a, b) => {
+    const at = a.expires_on ? new Date(a.expires_on).getTime() : Infinity;
+    const bt = b.expires_on ? new Date(b.expires_on).getTime() : Infinity;
+    return at - bt;
+  });
+}
+
 export function enrichProduct(product: Product, batches: Batch[], today: Date): EnrichedProduct {
-  const sortedBatches: EnrichedBatch[] = batches
-    .slice()
-    .sort((a, b) => {
-      const at = a.expires_on ? new Date(a.expires_on).getTime() : Infinity;
-      const bt = b.expires_on ? new Date(b.expires_on).getTime() : Infinity;
-      return at - bt;
-    })
+  const sortedBatches: EnrichedBatch[] = sortBatchesByExpiry(batches)
     .map((b) => ({
       ...b,
       status: freshnessStatus(b.expires_on, product.freshness_threshold_days, today),

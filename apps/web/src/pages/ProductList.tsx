@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Alert, Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
 import { mockBatches, mockProducts } from "../mocks/products";
 import {
@@ -11,7 +11,16 @@ import {
   matchesSearch,
 } from "../lib/productList";
 import { BLANK_FORM, buildNewProduct, type AddFlowStep, type AddProductFormState, type PrefillSource, MOCK_BARCODE_MATCH } from "../lib/addProduct";
+import {
+  applyQuickEdit,
+  bumpQuickEdit,
+  commitQuickEditDraft,
+  openQuickEditState,
+  resetQuickEdit,
+  type QuickEditState,
+} from "../lib/quickBatchEdit";
 import { AddProductModals } from "../components/AddProductModals";
+import { QuickBatchEditModal } from "../components/QuickBatchEditModal";
 import type { Batch, Product } from "../types";
 
 const SAVED_MESSAGE_DELAY_MS = 2600;
@@ -45,10 +54,26 @@ export function ProductListPage() {
   const [addSource, setAddSource] = useState<PrefillSource>(null);
   const [addForm, setAddForm] = useState<AddProductFormState>(BLANK_FORM);
 
+  // --- Quick Batch Edit: hold-to-open / swipe-to-reveal row gestures -----
+  const [quick, setQuick] = useState<QuickEditState | null>(null);
+  const [swipedId, setSwipedId] = useState<string | null>(null);
+  const [drag, setDrag] = useState<{ id: string; dx: number } | null>(null);
+  // Mutable, non-render-triggering bookkeeping for the in-flight gesture —
+  // must be read synchronously inside pointer handlers, not via state.
+  const pressRef = useRef<{ id: string; x: number; y: number; moved: boolean; fired: boolean } | null>(null);
+  const holdTimerRef = useRef<number | null>(null);
+  // A hold or swipe suppresses the *next* row click so opening the modal
+  // (or revealing the swipe panel) never also toggles the row's expand.
+  const suppressClickRef = useRef(false);
+
   const savedMessageTimer = useRef<number | null>(null);
-  useEffect(() => () => {
-    if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    },
+    [],
+  );
 
   const today = useMemo(() => new Date(), []);
 
@@ -78,8 +103,124 @@ export function ProductListPage() {
   const countLow = all.filter((p) => p.isLow).length;
   const hasFilters = query.length > 0 || scope !== "all";
 
+  const quickProduct = useMemo(
+    () => (quick ? (all.find((p) => p.id === quick.productId) ?? null) : null),
+    [all, quick],
+  );
+
   function toggleExpanded(id: string) {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
     setExpanded((s) => ({ ...s, [id]: !s[id] }));
+  }
+
+  // --- Quick Batch Edit: gestures ---------------------------------------
+
+  function openQuick(id: string, total: number) {
+    setQuick(openQuickEditState(id, total));
+  }
+  function openQuickFromSwipe(id: string, total: number) {
+    setSwipedId(null);
+    openQuick(id, total);
+  }
+
+  // Long-press: pointer down starts a threshold timer; any real movement
+  // (scroll or swipe) cancels it before it fires.
+  function handlePressStart(id: string, total: number, e: ReactPointerEvent) {
+    if (e.button && e.button !== 0) return;
+    if (holdTimerRef.current) window.clearTimeout(holdTimerRef.current);
+    pressRef.current = { id, x: e.clientX, y: e.clientY, moved: false, fired: false };
+    holdTimerRef.current = window.setTimeout(() => {
+      const press = pressRef.current;
+      if (!press || press.moved) return;
+      press.fired = true;
+      setSwipedId(null);
+      setDrag(null);
+      openQuick(id, total);
+    }, 480);
+  }
+
+  // Distinguishes a horizontal swipe (drags the row to reveal the "•••"
+  // panel) from vertical scroll, and cancels the hold once real movement
+  // is detected.
+  function handlePressMove(e: ReactPointerEvent) {
+    const press = pressRef.current;
+    if (!press || press.fired) return;
+    const dx = e.clientX - press.x;
+    const dy = e.clientY - press.y;
+    if (!press.moved && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      press.moved = true;
+      if (holdTimerRef.current) window.clearTimeout(holdTimerRef.current);
+    }
+    if (!press.moved || Math.abs(dy) > Math.abs(dx)) return;
+    const base = swipedId === press.id ? -76 : 0;
+    const next = Math.min(0, Math.max(-88, base + dx));
+    setDrag({ id: press.id, dx: next });
+  }
+
+  function handlePressEnd(id: string, _e: ReactPointerEvent) {
+    if (holdTimerRef.current) window.clearTimeout(holdTimerRef.current);
+    const press = pressRef.current;
+    pressRef.current = null;
+    if (press && press.fired) {
+      // The hold already opened the modal — just clear the drag, nothing else.
+      suppressClickRef.current = true;
+      setDrag(null);
+      return;
+    }
+    if (drag && drag.id === id) {
+      // Latch open past the 40px threshold, otherwise snap back closed.
+      suppressClickRef.current = true;
+      setSwipedId(drag.dx <= -40 ? id : null);
+      setDrag(null);
+      return;
+    }
+    if (swipedId === id) {
+      // Tapping an already-open row closes its swipe panel instead of expanding.
+      suppressClickRef.current = true;
+      setSwipedId(null);
+    }
+  }
+
+  function handlePressAbort() {
+    if (holdTimerRef.current) window.clearTimeout(holdTimerRef.current);
+    pressRef.current = null;
+    setDrag(null);
+  }
+
+  function quickClose() {
+    setQuick(null);
+  }
+  function quickBump(delta: number) {
+    setQuick((q) => (q ? bumpQuickEdit(q, delta) : q));
+  }
+  function quickStartEdit() {
+    setQuick((q) => (q ? { ...q, editing: true, draft: String(q.target) } : q));
+  }
+  function quickDraftChange(value: string) {
+    setQuick((q) => (q ? { ...q, draft: value } : q));
+  }
+  function quickDraftCommit() {
+    setQuick((q) => (q ? commitQuickEditDraft(q) : q));
+  }
+  function quickAddExpiresOnChange(value: string) {
+    setQuick((q) => (q ? { ...q, addExpiresOn: value } : q));
+  }
+  function quickReset() {
+    setQuick((q) => (q ? resetQuickEdit(q) : q));
+  }
+  function quickSave() {
+    if (!quick) return;
+    const product = products.find((p) => p.id === quick.productId);
+    if (product) {
+      const delta = quick.target - quick.base;
+      const productBatches = batches.filter((b) => b.product_id === quick.productId);
+      const updated = applyQuickEdit(productBatches, quick.productId, product.does_expire, delta, quick.addExpiresOn);
+      setBatches((bs) => [...bs.filter((b) => b.product_id !== quick.productId), ...updated]);
+    }
+    setQuick(null);
   }
 
   // --- Add Product flow -----------------------------------------------
@@ -250,6 +391,13 @@ export function ProductListPage() {
                   product={p}
                   expanded={!!expanded[p.id]}
                   onToggle={() => toggleExpanded(p.id)}
+                  slideX={drag && drag.id === p.id ? drag.dx : swipedId === p.id ? -76 : 0}
+                  dragging={!!(drag && drag.id === p.id)}
+                  onPressStart={(e) => handlePressStart(p.id, p.totalQty, e)}
+                  onPressMove={handlePressMove}
+                  onPressEnd={(e) => handlePressEnd(p.id, e)}
+                  onPressAbort={handlePressAbort}
+                  onOpenQuick={() => openQuickFromSwipe(p.id, p.totalQty)}
                 />
               ))}
             </div>
@@ -286,6 +434,19 @@ export function ProductListPage() {
         onClearPrefill={clearPrefill}
         onFieldChange={setFormField}
         onSave={saveProduct}
+      />
+
+      <QuickBatchEditModal
+        quick={quick}
+        product={quickProduct}
+        onClose={quickClose}
+        onBump={quickBump}
+        onStartEdit={quickStartEdit}
+        onDraftChange={quickDraftChange}
+        onDraftCommit={quickDraftCommit}
+        onAddExpiresOnChange={quickAddExpiresOnChange}
+        onReset={quickReset}
+        onSave={quickSave}
       />
     </div>
   );
@@ -366,59 +527,100 @@ function ProductRow({
   product: p,
   expanded,
   onToggle,
+  slideX,
+  dragging,
+  onPressStart,
+  onPressMove,
+  onPressEnd,
+  onPressAbort,
+  onOpenQuick,
 }: {
   product: EnrichedProduct;
   expanded: boolean;
   onToggle: () => void;
+  /** Current horizontal offset in px (0 = closed, -76 = swipe panel revealed, or a live drag value in between). */
+  slideX: number;
+  /** True mid-drag — disables the snap transition so the row tracks the pointer 1:1. */
+  dragging: boolean;
+  onPressStart: (e: ReactPointerEvent) => void;
+  onPressMove: (e: ReactPointerEvent) => void;
+  onPressEnd: (e: ReactPointerEvent) => void;
+  onPressAbort: () => void;
+  onOpenQuick: () => void;
 }) {
   const metaLabel =
     (p.batches.length > 1 ? `${p.batches.length} batches · ` : "") +
     (p.batches[0]?.expiryLabel ?? "Does not expire");
 
   return (
-    <div className="-mb-px flex border-b border-t border-border bg-surface-0">
+    <div className="-mb-px flex border-b border-t border-border">
       <div className={cn("w-[3px] flex-shrink-0", accentBarClass(p.status))} />
-      <div className="min-w-0 flex-1">
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex w-full items-center gap-md px-md py-[13px] text-left"
-        >
-          <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
-            <div className="flex items-center gap-sm">
-              <span className="truncate text-[15px] font-semibold">{p.short_description}</span>
-              {p.isLow && (
-                <span className="flex-shrink-0 rounded-full bg-info-bg px-sm py-[2px] font-mono text-[10px] tracking-[0.06em] text-info">
-                  LOW
-                </span>
-              )}
-            </div>
-            <span className="truncate text-[12px] text-ink-muted">{metaLabel}</span>
-          </div>
-          <span className="flex-shrink-0 font-mono text-[17px] font-semibold text-ink-primary">{p.totalQty}</span>
-          <FreshnessBadge status={p.status} />
-          <span
-            className={cn(
-              "flex-shrink-0 text-[11px] text-ink-muted transition-transform",
-              expanded ? "rotate-180" : "rotate-0",
-            )}
+      <div className="relative min-w-0 flex-1 overflow-hidden">
+        {/* Swipe-revealed quick-batch-edit action, pinned behind the row. */}
+        <div className="absolute inset-y-0 right-0 flex w-[76px] items-center justify-center border-l border-border bg-surface-2">
+          <button
+            type="button"
+            onClick={onOpenQuick}
+            title="Quick batch edit"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface-0 text-sm tracking-[0.08em] text-ink-primary"
           >
-            ▼
-          </span>
-        </button>
-        {expanded && (
-          <div className="flex flex-col gap-sm px-md pb-[14px]">
-            {p.batches.map((b) => (
-              <div key={b.id} className="flex items-center gap-[10px] rounded-md bg-surface-2 px-[11px] py-[9px]">
-                <span className="min-w-[34px] font-mono text-[12px] font-semibold text-ink-primary">
-                  {b.qtyLabel}
-                </span>
-                <span className="flex-1 truncate text-[12px] text-ink-secondary">{b.expiryLabel}</span>
-                <FreshnessBadge status={b.status} />
+            •••
+          </button>
+        </div>
+        <div
+          onPointerDown={onPressStart}
+          onPointerMove={onPressMove}
+          onPointerUp={onPressEnd}
+          onPointerCancel={onPressAbort}
+          onContextMenu={(e) => e.preventDefault()}
+          className="relative bg-surface-0"
+          style={{
+            transform: `translateX(${slideX}px)`,
+            transition: dragging ? "none" : "transform 180ms ease",
+            touchAction: "pan-y",
+          }}
+        >
+          <button
+            type="button"
+            onClick={onToggle}
+            className="flex w-full items-center gap-md px-md py-[13px] text-left"
+          >
+            <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+              <div className="flex items-center gap-sm">
+                <span className="truncate text-[15px] font-semibold">{p.short_description}</span>
+                {p.isLow && (
+                  <span className="flex-shrink-0 rounded-full bg-info-bg px-sm py-[2px] font-mono text-[10px] tracking-[0.06em] text-info">
+                    LOW
+                  </span>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+              <span className="truncate text-[12px] text-ink-muted">{metaLabel}</span>
+            </div>
+            <span className="flex-shrink-0 font-mono text-[17px] font-semibold text-ink-primary">{p.totalQty}</span>
+            <FreshnessBadge status={p.status} />
+            <span
+              className={cn(
+                "flex-shrink-0 text-[11px] text-ink-muted transition-transform",
+                expanded ? "rotate-180" : "rotate-0",
+              )}
+            >
+              ▼
+            </span>
+          </button>
+          {expanded && (
+            <div className="flex flex-col gap-sm px-md pb-[14px]">
+              {p.batches.map((b) => (
+                <div key={b.id} className="flex items-center gap-[10px] rounded-md bg-surface-2 px-[11px] py-[9px]">
+                  <span className="min-w-[34px] font-mono text-[12px] font-semibold text-ink-primary">
+                    {b.qtyLabel}
+                  </span>
+                  <span className="flex-1 truncate text-[12px] text-ink-secondary">{b.expiryLabel}</span>
+                  <FreshnessBadge status={b.status} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -68,14 +68,13 @@ Implemented in `apps/web` (`src/pages/ProductList.tsx`) against the approved Cla
 
 - **Offline caching**: mobile already has SQLite (`apps/mobile/src/db.ts` precedent); web needs an equivalent local cache (IndexedDB/localStorage) so "load from cache after first load" behaves consistently on both platforms. Exact sync strategy (what happens to edits made offline) is bigger than this spec — see the earlier note about writing a dedicated offline-sync spec before too many features depend on it.
 - **Freshness threshold**: `expiring-soon` = soonest batch within `Product.freshness_threshold_days`; `fresh` = further out than that. Per-product, defaulting to a global user preference (7 days until that preference screen exists) when not explicitly set — see `Product Add.md`'s Data section for the field. A product's threshold is read live at render time, not frozen at add time, so changing the global preference later re-flows every product that hasn't been individually overridden.
-- **% quantity updates** (from a bulk batch like a 40-pack): always resolve to a stored integer count under the hood — "50% used" on a 40-unit batch recalculates and stores ~20, so the list always has a real number to sum and display, never just a vague percentage.
 - **Low-stock threshold**: same fallback pattern as freshness — `minimal_quantity` per product, global default of **3** until a preferences feature exists.
 - **Data source**: `apps/web` currently renders fixed mock data (`src/mocks/products.ts`) with dates computed relative to "now" rather than pinned — there is no real `apps/api` endpoint yet. Wiring to a real backend is a follow-up, not covered here.
 
 ## Out of scope
 
 - **Adding a product** — barcode scanning, external product-database lookup, the alias-suggestion-and-accept flow, manual alias management. Explicitly a separate future spec per this conversation; Product List only *displays and searches* what already exists.
-- **Updating/consuming stock** (decrementing quantity, recording a % used) — ASSUMPTION: also a separate future spec, since it's a mutation flow distinct from listing/viewing. Flag if you intended basic quantity editing to live in this spec instead.
+- **Updating/consuming stock** (increasing or decreasing quantity) — a mutation flow distinct from listing/viewing; covered by `Quick Batch Edit.md`. Quantity changes there are always absolute unit counts, never a percentage (a % of an unknown pack size isn't a real number — see that spec's Non-functional section).
 - **Product categories** — explicitly ruled out.
 - **Category-based freshness thresholds** — still ruled out; the override is per-product, not per-category.
 - **Unit of measure / weight-volume tracking** — everything is a unit count; no grams, liters, etc.
