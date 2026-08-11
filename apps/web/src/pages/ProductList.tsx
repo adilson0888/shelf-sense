@@ -14,7 +14,7 @@ import { BLANK_FORM, buildNewProduct, type AddFlowStep, type AddProductFormState
 import { AddProductModals } from "../components/AddProductModals";
 import type { Batch, Product } from "../types";
 
-const PENDING_ICON_DELAY_MS = 2600;
+const SAVED_MESSAGE_DELAY_MS = 2600;
 
 /**
  * Real implementation of the approved Claude Design prototype, merged
@@ -28,8 +28,8 @@ const PENDING_ICON_DELAY_MS = 2600;
  *
  * Real data wiring (apps/api) doesn't exist yet — see mocks/products.ts.
  * The Add flow's scan/photo/match steps are simulated (MOCK_BARCODE_MATCH)
- * for the same reason — no real barcode-lookup, vision-identify, or
- * icon-generate endpoint exists yet (Product Add.md).
+ * for the same reason — no real barcode-lookup or vision-identify endpoint
+ * exists yet (Product Add.md).
  */
 export function ProductListPage() {
   const [query, setQuery] = useState("");
@@ -39,15 +39,16 @@ export function ProductListPage() {
 
   const [products, setProducts] = useState<Product[]>(mockProducts);
   const [batches, setBatches] = useState<Batch[]>(mockBatches);
-  const [pendingIconIds, setPendingIconIds] = useState<ReadonlySet<string>>(new Set());
   const [justSavedMessage, setJustSavedMessage] = useState<string | null>(null);
 
   const [addStep, setAddStep] = useState<AddFlowStep>("idle");
   const [addSource, setAddSource] = useState<PrefillSource>(null);
   const [addForm, setAddForm] = useState<AddProductFormState>(BLANK_FORM);
 
-  const pendingTimers = useRef<number[]>([]);
-  useEffect(() => () => pendingTimers.current.forEach(clearTimeout), []);
+  const savedMessageTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
+  }, []);
 
   const today = useMemo(() => new Date(), []);
 
@@ -145,23 +146,15 @@ export function ProductListPage() {
     const { product, batch } = buildNewProduct(addForm);
     setProducts((ps) => [product, ...ps]);
     if (batch) setBatches((bs) => [batch, ...bs]);
-    setPendingIconIds((ids) => new Set(ids).add(product.id));
-    setJustSavedMessage("Product added — generating its icon in the background.");
+    setJustSavedMessage("Product added.");
     setAddStep("idle");
     setAddSource(null);
     setAddForm(BLANK_FORM);
     setQuery("");
     setScope("all");
 
-    const t1 = window.setTimeout(() => {
-      setPendingIconIds((ids) => {
-        const next = new Set(ids);
-        next.delete(product.id);
-        return next;
-      });
-    }, PENDING_ICON_DELAY_MS);
-    const t2 = window.setTimeout(() => setJustSavedMessage(null), PENDING_ICON_DELAY_MS + 2200);
-    pendingTimers.current.push(t1, t2);
+    if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
+    savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
   }
 
   function onEmptyAction() {
@@ -256,7 +249,6 @@ export function ProductListPage() {
                   key={p.id}
                   product={p}
                   expanded={!!expanded[p.id]}
-                  pending={pendingIconIds.has(p.id)}
                   onToggle={() => toggleExpanded(p.id)}
                 />
               ))}
@@ -373,12 +365,10 @@ function ScopeTile({
 function ProductRow({
   product: p,
   expanded,
-  pending,
   onToggle,
 }: {
   product: EnrichedProduct;
   expanded: boolean;
-  pending: boolean;
   onToggle: () => void;
 }) {
   const metaLabel =
@@ -400,15 +390,6 @@ function ProductRow({
               {p.isLow && (
                 <span className="flex-shrink-0 rounded-full bg-info-bg px-sm py-[2px] font-mono text-[10px] tracking-[0.06em] text-info">
                   LOW
-                </span>
-              )}
-              {pending && (
-                <span
-                  title="Generating icon…"
-                  className="flex flex-shrink-0 animate-pulse items-center gap-1 rounded-full bg-surface-2 px-sm py-[2px] font-mono text-[10px] tracking-[0.06em] text-ink-muted"
-                >
-                  <span className="h-2 w-2 rounded-sm bg-border-strong" />
-                  ICON
                 </span>
               )}
             </div>

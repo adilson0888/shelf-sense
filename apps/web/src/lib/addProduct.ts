@@ -34,7 +34,6 @@ export const BLANK_FORM: AddProductFormState = {
  */
 export const MOCK_BARCODE_MATCH = {
   barcode: "7 891234 560123",
-  icon: "🧀",
   short: "Queijo Ralado",
   long: "Queijo Parmesão ralado em saquinho",
   minQty: "1",

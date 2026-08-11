@@ -7,7 +7,6 @@ export interface Product {
   short_description: string; // generic/canonical name — drives identity, search, and display
   long_description: string; // more detail, still generic/brand-free
   aliases: string[]; // alternate names that resolve to this product
-  icon?: string; // small representative icon — product-level, not per-batch
   freshness_threshold_days: number | null; // per-product override of the "expiring soon" window; null = follow the global preference
   minimal_quantity: number | null; // per-product low-stock threshold; null = follow the global preference
   does_expire: boolean;

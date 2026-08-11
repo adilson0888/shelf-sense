@@ -26,9 +26,9 @@ export interface AddProductModalsProps {
  * presentational — ProductListPage owns all the state and step transitions.
  *
  * Scan/photo capture and the barcode match are simulated (MOCK_BARCODE_MATCH)
- * — apps/api has no real barcode-lookup, vision-identify, or icon-generate
- * endpoint yet (see Product Add.md). This matches the prototype's own
- * fidelity level; wiring real endpoints is separate follow-up work.
+ * — apps/api has no real barcode-lookup or vision-identify endpoint yet (see
+ * Product Add.md). This matches the prototype's own fidelity level; wiring
+ * real endpoints is separate follow-up work.
  */
 export function AddProductModals({
   step,
@@ -119,14 +119,9 @@ export function AddProductModals({
         </ModalHeader>
         <ModalBody>
           <p className="mb-sm font-mono text-xs text-ink-muted">{MOCK_BARCODE_MATCH.barcode}</p>
-          <div className="flex items-start gap-sm rounded-lg border border-border bg-surface-1 p-sm">
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-surface-2 text-2xl">
-              {MOCK_BARCODE_MATCH.icon}
-            </div>
-            <div className="min-w-0">
-              <div className="text-[15px] font-semibold text-ink-primary">{MOCK_BARCODE_MATCH.short}</div>
-              <div className="mt-[3px] text-sm text-ink-secondary">{MOCK_BARCODE_MATCH.long}</div>
-            </div>
+          <div className="rounded-lg border border-border bg-surface-1 p-sm">
+            <div className="text-[15px] font-semibold text-ink-primary">{MOCK_BARCODE_MATCH.short}</div>
+            <div className="mt-[3px] text-sm text-ink-secondary">{MOCK_BARCODE_MATCH.long}</div>
           </div>
           <button
             type="button"

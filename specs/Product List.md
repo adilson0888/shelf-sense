@@ -33,7 +33,6 @@ interface Product {
   short_description: string; // generic/canonical name — drives identity, search, and display. e.g. "Queijo Ralado"
   long_description: string; // more detail, still generic/brand-free — e.g. "Queijo Parmesão ralado em saquinho"
   aliases: string[]; // alternate names that resolve to this product (e.g. "Parmesão ralado")
-  icon?: string; // small representative icon — product-level (generic), not per-batch. NOT currently rendered on this screen (see UI requirements)
   freshness_threshold_days: number | null; // per-product override of the "expiring soon" window; null = follow the global preference
   minimal_quantity: number | null; // per-product low-stock threshold; null = follow the global preference (same fallback pattern)
 }
@@ -48,7 +47,7 @@ interface Batch {
 type FreshnessStatus = "fresh" | "expiring-soon" | "expired" | "no-expiration";
 ```
 
-`aliases` is populated by a different, future spec (product addition — see Out of scope); Product List only *reads* it for search matching. Both descriptions live on `Product`, not `Batch` — brand and size stay out of the model entirely, at every level, per your note. A `Batch` is purely "how much, expiring when" — it exists only to keep different purchases' expiration dates separate, nothing else varies per batch.
+`aliases` is populated by a different, future spec (product addition — see Out of scope); Product List only *reads* it for search matching. Both descriptions live on `Product`, not `Batch` — brand and size stay out of the model entirely, at every level, per your note. A `Batch` is purely "how much, expiring when" — it exists only to keep different purchases' expiration dates separate, nothing else varies per batch. `Product.icon` is deferred — see `specs/BACKLOG.md`.
 
 ## UI requirements
 
@@ -61,7 +60,8 @@ Implemented in `apps/web` (`src/pages/ProductList.tsx`) against the approved Cla
 - **Product row**: `short_description`, a "LOW" badge when applicable, a meta line (batch count + relative expiry phrasing, e.g. "Expires in 3 days" / "Best before Aug 20, 2026"), total quantity, a `FreshnessBadge` for the row's rolled-up status, and a chevron to expand.
 - **Row expand**: reveals each `Batch` — quantity and `expires_on` (or "Does not expire") — **each with its own `FreshnessBadge`**, since sibling batches of the same product can have different statuses (this is the whole point of the Product/Batch split — don't collapse it away in the expanded view).
 - **Empty state**: no products yet, or nothing matches the current search/scope — copy and call-to-action differ between the two cases.
-- **Gap to resolve**: the approved design does **not** render `Product.icon` anywhere on this screen, and drops the "i" detail affordance for `long_description` that this section used to call for — neither survived into what got approved and built. Flag whether that's intentional (maybe deferred to a later visual pass) or should be added back; as built, this screen shows neither.
+- **Product icons**: out of scope for this phase — see `specs/BACKLOG.md`.
+- **Gap to resolve**: the approved design drops the "i" detail affordance for `long_description` that this section used to call for — it didn't survive into what got approved and built. Flag whether that's intentional (maybe deferred to a later visual pass) or should be added back; as built, this screen doesn't show it.
 - **Components**: `Button`, `Input`, `FreshnessBadge` from `shelf-sense-ds` (all exist and are synced) — layout is custom Tailwind, not `DataTable` (a row-grouped list doesn't fit a table shape well). Mobile still has no `shelf-sense-ds` equivalent to draw from (web-only package) and needs native RN components built fresh when this screen's mobile version happens.
 
 ## Non-functional

@@ -19,7 +19,6 @@ As someone building out their pantry inventory, I want a fast way to add a new p
 - [ ] Given either scan path produced a suggestion, when the user reviews it, then an explicit "this isn't right, edit manually" action is always available, even when the suggestion looks plausible — the user is never stuck with a wrong auto-fill.
 - [ ] Given the user is on the manual form (blank or prefilled, from any path), when they save with quantity left blank or `0`, then the `Product` is created with **no batch** — it appears in Product List as present but out of stock, and `expires_on` is never asked.
 - [ ] Given the user saves with a quantity greater than `0`, when `Product.does_expire` is `true`, then `expires_on` is a required field for that batch; when `does_expire` is `false`, `expires_on` is hidden/disabled entirely.
-- [ ] Given a product is saved (any path), when `short_description` has a value, then an icon-generation request fires in the background — the product appears in Product List immediately with a pending-icon state, and the real generated icon replaces it once the request completes.
 - [ ] Given the user leaves `minimal_quantity` or the per-product freshness threshold blank, when the product is saved, then both are stored as `null` — Product List falls back to the user's global preference for each, read live rather than frozen at save time.
 - [ ] Given the manual/edit form opens (blank or prefilled, any path), when `does_expire` hasn't been touched yet, then it defaults to `true` — the user explicitly switches it off, rather than explicitly switching it on.
 
@@ -29,7 +28,7 @@ Extends `Product` from `Product List.md` — same entity, these are the fields t
 
 ```ts
 interface Product {
-  // ...id, short_description, long_description, aliases, icon, freshness_threshold_days
+  // ...id, short_description, long_description, aliases, freshness_threshold_days
   // (see Product List.md — unchanged here)
 
   barcodes: string[]; // barcodes/SKUs linked to this product — a scan matches against these
@@ -42,7 +41,7 @@ interface Product {
 
 **A barcode can only ever be linked to one product at a time** — the same invariant applies globally, not just within one product's own `barcodes` list. Saving a barcode against a new product implicitly unlinks it from wherever it was linked before (see the acceptance criteria's warning-and-confirm flow); the data layer should enforce this as a real constraint, not just something the UI happens to respect.
 
-**Two new `apps/api` capabilities**, both proxying to a third-party AI provider server-side (never call these directly from the client — keeps provider keys off the device and centralizes cost/rate control):
+**One new `apps/api` capability**, proxying to a third-party AI provider server-side (never call this directly from the client — keeps provider keys off the device and centralizes cost/rate control):
 
 ```ts
 // POST /products/identify-from-photo
@@ -52,16 +51,9 @@ interface PhotoIdentifyResult {
   short_description?: string;
   long_description?: string;
 }
-
-// POST /products/generate-icon
-// request: { short_description: string }
-// response:
-interface IconGenerateResult {
-  icon_url: string;
-}
 ```
 
-`identify-from-photo` calls a vision-capable LLM (e.g. Claude with image input). `generate-icon` calls an image-generation-capable model — **not** something Claude itself does; a separate provider is needed (e.g. OpenAI's image models, Google Imagen). The exact vendor is an implementation decision, not pinned here — but the generation call must apply one consistent, predefined style prompt to every product, so icons stay visually coherent across the list. Barcode-to-product lookup (the no-local-match case) is a third, simpler external call — suggest **Open Food Facts** as a concrete starting point (free, open, no key required for basic lookups), flagged as a suggestion rather than a firm commitment.
+`identify-from-photo` calls a vision-capable LLM (e.g. Claude with image input). Barcode-to-product lookup (the no-local-match case) is a second, simpler external call — suggest **Open Food Facts** as a concrete starting point (free, open, no key required for basic lookups), flagged as a suggestion rather than a firm commitment.
 
 ## UI requirements
 
@@ -69,17 +61,17 @@ interface IconGenerateResult {
 - **Method choice**: a modal/sheet with three options — barcode/QR scan, photo, manual.
 - **Barcode scan screen**: reuses the camera-scanning flow already built in `apps/mobile`'s `ScanScreen` — this spec extends it with the match/lookup logic above rather than building scanning from scratch.
 - **Photo capture screen**: camera, single shot, sent for identification; loading state while `identify-from-photo` runs.
-- **Match review** (barcode-matched-locally case): shows the matched product's `icon`/`short_description`/`long_description`, with "use this" and "add as new" actions.
+- **Match review** (barcode-matched-locally case): shows the matched product's `short_description`/`long_description`, with "use this" and "add as new" actions.
 - **Unlink warning**: triggered by "add as new" from a match. A confirmation dialog naming the matched product and stating the barcode will move to the new product — not a toast, not an inline hint; the user must actively confirm before the manual form opens. Uses the same new modal/dialog component the method-choice step needs (see below).
 - **Manual/edit form** (blank, or prefilled from any path): `short_description` (blank when arriving via "add as new" from a match, prefilled otherwise), `long_description`, `does_expire` toggle (**defaults on**), `minimal_quantity` (optional), freshness threshold (optional), `quantity` (optional), `expires_on` (shown/required only per the acceptance criteria's `does_expire`/quantity rules). Always reachable via an explicit "edit manually" action from either scan path's review step.
-- **Icon**: pending/generating state (spinner or placeholder) on the product until `generate-icon` resolves; does not block saving or navigating away.
+- **Product icons**: out of scope for this phase — see `specs/BACKLOG.md`.
 - **New `shelf-sense-ds` component needed**: a modal/dialog — nothing in the current component set covers this (`Button`, `Badge`, `StatusBadge`, `FreshnessBadge`, `Card`, `Input`, `Select`, `Alert`, `StatCard`, `DataTable`). Build it in `packages/design-system` and re-sync before this ships to Claude Design.
 - Mobile-first (this flow is camera-driven), but the manual-entry path should work on web too.
 
 ## Non-functional
 
-- **Connectivity**: barcode-lookup-by-value, photo identification, and icon generation all require connectivity. Local barcode matching (against the user's own previously-added products) works offline. Manual entry always works offline. What happens to a save made offline that's still waiting on icon generation is bigger than this spec — ties into the offline-sync spec already flagged as a prerequisite in `Product List.md`.
-- **Cost/latency**: both AI calls cost money per request and take a few seconds — icon generation is explicitly async/non-blocking (see acceptance criteria); photo identification blocks only the review step, not the whole flow.
+- **Connectivity**: barcode-lookup-by-value and photo identification both require connectivity. Local barcode matching (against the user's own previously-added products) works offline. Manual entry always works offline.
+- **Cost/latency**: the photo-identification AI call costs money per request and takes a few seconds — it blocks only the review step, not the whole flow.
 - **Validation**: `does_expire = true` + quantity > 0 + no `expires_on` is a hard validation error, not a soft warning.
 
 ## Out of scope
@@ -87,5 +79,4 @@ interface IconGenerateResult {
 - **Editing an existing product's own record** (`short_description`, `long_description`, `does_expire`, etc. after creation) — this spec covers creation and adding a batch to an already-matched product only. "Edit" during the add flow means adjusting the new batch being created, not the product's stored identity.
 - **A shared/cross-user barcode or product database** — matching is local to the user's own previously-added data only.
 - **Manual alias management** (adding/removing aliases outside the add flow) — aliases are populated implicitly by this flow's matching; a dedicated management screen is separate future work.
-- **Icon regeneration** after the fact — not applicable while general editing is out of scope.
-- **The exact image-generation style/prompt and vendor choice** — named as a requirement (one consistent predefined style, a non-Claude provider), not pinned to a specific service here.
+- **Product icons entirely** (generation, rendering, pending states, regeneration) — deferred; see `specs/BACKLOG.md`.
