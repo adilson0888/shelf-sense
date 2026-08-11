@@ -10,7 +10,10 @@ As someone building out their pantry inventory, I want a fast way to add a new p
 
 - [ ] Given the user is on the Product List screen, when they tap "add product", then a choice of three entry methods is shown: barcode/QR scan, photo, or manual.
 - [ ] Given the user picks manual entry, when the form opens, then it is blank — no lookup, no prefill.
-- [ ] Given a barcode is scanned and it matches a barcode already linked to one of the user's own products, when the match is shown, then the user can either confirm it (proceed straight to entering quantity/`expires_on` for a new batch of that existing product) or say "add as new" (opens the manual form).
+- [ ] Given a barcode is scanned and it matches a barcode already linked to one of the user's own products, when the match is shown, then the user can either confirm it (proceed straight to entering quantity/`expires_on` for a new batch of that existing product) or say "add as new" (opens the manual form, prefilled from the matched product — see below).
+- [ ] Given the user says "add as new" from a match, when the manual form opens, then every field prefills from the matched product **except `short_description`, which is left blank** — `short_description` must be unique, so it can't default to the value of the product it's diverging from.
+- [ ] Given the user says "add as new" from a match, when the form opens, then a warning is shown first (not silently, not just an inline note): this barcode is currently linked to `<matched product's short_description>`; continuing will unlink it from that product and link it to the new one instead — a barcode can only ever belong to one product at a time. The user must explicitly confirm before the form opens.
+- [ ] Given the user confirms that warning and saves the new product, when the save completes, then the barcode is removed from the old product's `barcodes` and added to the new product's `barcodes` — never present on both, even momentarily as stored data.
 - [ ] Given a barcode is scanned and it does **not** match anything the user has added before, when the app looks it up, then it queries an external barcode-lookup service by the barcode value and prefills the manual form with whatever it finds (or opens it blank if the lookup finds nothing).
 - [ ] Given a photo is taken, when the app processes it, then it sends the photo to a vision-capable AI call (via `apps/api`) and prefills the manual form with the suggested `short_description`/`long_description`.
 - [ ] Given either scan path produced a suggestion, when the user reviews it, then an explicit "this isn't right, edit manually" action is always available, even when the suggestion looks plausible — the user is never stuck with a wrong auto-fill.
@@ -18,6 +21,7 @@ As someone building out their pantry inventory, I want a fast way to add a new p
 - [ ] Given the user saves with a quantity greater than `0`, when `Product.does_expire` is `true`, then `expires_on` is a required field for that batch; when `does_expire` is `false`, `expires_on` is hidden/disabled entirely.
 - [ ] Given a product is saved (any path), when `short_description` has a value, then an icon-generation request fires in the background — the product appears in Product List immediately with a pending-icon state, and the real generated icon replaces it once the request completes.
 - [ ] Given the user leaves `minimal_quantity` or the per-product freshness threshold blank, when the product is saved, then both are stored as `null` — Product List falls back to the user's global preference for each, read live rather than frozen at save time.
+- [ ] Given the manual/edit form opens (blank or prefilled, any path), when `does_expire` hasn't been touched yet, then it defaults to `true` — the user explicitly switches it off, rather than explicitly switching it on.
 
 ## Data
 
@@ -29,12 +33,14 @@ interface Product {
   // (see Product List.md — unchanged here)
 
   barcodes: string[]; // barcodes/SKUs linked to this product — a scan matches against these
-  does_expire: boolean; // required at add time. Governs whether future batch-add screens require or hide `expires_on` — does not itself change Batch's shape
+  does_expire: boolean; // required — always has a value, never null. Defaults to `true` in the UI (most products expire); the user switches it off explicitly for things like toilet paper. Governs whether future batch-add screens require or hide `expires_on` — does not itself change Batch's shape
   minimal_quantity: number | null; // per-product low-stock threshold; null = follow the global preference (same pattern as freshness_threshold_days)
 }
 ```
 
-`short_description` is the **business key** for matching/deduplication (search, alias resolution, "is this the same product") — but `id` stays the actual stored identifier, not `short_description` itself. Editing a product's `short_description` later (out of scope here) shouldn't require rewriting every `Batch`'s foreign key. Flag if you intended something more literal by "primary key."
+`short_description` is the **business key** for matching/deduplication (search, alias resolution, "is this the same product") — but `id` stays the actual stored identifier, not `short_description` itself. Editing a product's `short_description` later (out of scope here) shouldn't require rewriting every `Batch`'s foreign key. Confirmed: `short_description` must be **unique across all products**, enforced at save time — not literally the primary key, but the uniqueness constraint that makes it usable as one for matching purposes.
+
+**A barcode can only ever be linked to one product at a time** — the same invariant applies globally, not just within one product's own `barcodes` list. Saving a barcode against a new product implicitly unlinks it from wherever it was linked before (see the acceptance criteria's warning-and-confirm flow); the data layer should enforce this as a real constraint, not just something the UI happens to respect.
 
 **Two new `apps/api` capabilities**, both proxying to a third-party AI provider server-side (never call these directly from the client — keeps provider keys off the device and centralizes cost/rate control):
 
@@ -64,7 +70,8 @@ interface IconGenerateResult {
 - **Barcode scan screen**: reuses the camera-scanning flow already built in `apps/mobile`'s `ScanScreen` — this spec extends it with the match/lookup logic above rather than building scanning from scratch.
 - **Photo capture screen**: camera, single shot, sent for identification; loading state while `identify-from-photo` runs.
 - **Match review** (barcode-matched-locally case): shows the matched product's `icon`/`short_description`/`long_description`, with "use this" and "add as new" actions.
-- **Manual/edit form** (blank, or prefilled from any path): `short_description`, `long_description`, `does_expire` toggle, `minimal_quantity` (optional), freshness threshold (optional), `quantity` (optional), `expires_on` (shown/required only per the acceptance criteria's `does_expire`/quantity rules). Always reachable via an explicit "edit manually" action from either scan path's review step.
+- **Unlink warning**: triggered by "add as new" from a match. A confirmation dialog naming the matched product and stating the barcode will move to the new product — not a toast, not an inline hint; the user must actively confirm before the manual form opens. Uses the same new modal/dialog component the method-choice step needs (see below).
+- **Manual/edit form** (blank, or prefilled from any path): `short_description` (blank when arriving via "add as new" from a match, prefilled otherwise), `long_description`, `does_expire` toggle (**defaults on**), `minimal_quantity` (optional), freshness threshold (optional), `quantity` (optional), `expires_on` (shown/required only per the acceptance criteria's `does_expire`/quantity rules). Always reachable via an explicit "edit manually" action from either scan path's review step.
 - **Icon**: pending/generating state (spinner or placeholder) on the product until `generate-icon` resolves; does not block saving or navigating away.
 - **New `shelf-sense-ds` component needed**: a modal/dialog — nothing in the current component set covers this (`Button`, `Badge`, `StatusBadge`, `FreshnessBadge`, `Card`, `Input`, `Select`, `Alert`, `StatCard`, `DataTable`). Build it in `packages/design-system` and re-sync before this ships to Claude Design.
 - Mobile-first (this flow is camera-driven), but the manual-entry path should work on web too.

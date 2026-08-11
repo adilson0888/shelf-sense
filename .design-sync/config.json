@@ -6,5 +6,11 @@
   "storybookStatic": ".design-sync/sb-reference",
   "storybookConfigDir": "packages/design-system/.storybook",
   "buildCmd": "npm run build -w shelf-sense-ds",
-  "readmeHeader": ".design-sync/conventions.md"
+  "readmeHeader": ".design-sync/conventions.md",
+  "overrides": {
+    "Modal": {
+      "cardMode": "single",
+      "primaryStory": "MethodChoice"
+    }
+  }
 }
