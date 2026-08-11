@@ -3,3 +3,18 @@
    main.tsx) — @tailwind base here would just duplicate that reset
    harmlessly, so it's omitted; only utilities are actually needed. */
 @tailwind utilities;
+
+/* AddProductModals' scan-capture placeholder — no Tailwind built-in for a
+   translating line, so a small scoped keyframe instead of pulling in a
+   whole animation plugin for one decorative flourish. */
+@keyframes ss-scan-line {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(150px);
+  }
+}
+.ss-scan-line {
+  animation: ss-scan-line 1.1s ease-in-out infinite alternate;
+}

@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
 import { mockBatches, mockProducts } from "../mocks/products";
 import {
   type EnrichedProduct,
@@ -10,18 +10,26 @@ import {
   matchesScope,
   matchesSearch,
 } from "../lib/productList";
+import { BLANK_FORM, buildNewProduct, type AddFlowStep, type AddProductFormState, type PrefillSource, MOCK_BARCODE_MATCH } from "../lib/addProduct";
+import { AddProductModals } from "../components/AddProductModals";
+import type { Batch, Product } from "../types";
+
+const PENDING_ICON_DELAY_MS = 2600;
 
 /**
- * Real implementation of the approved Claude Design prototype
- * (templates/product-list-alt/ProductListAlt.approved.dc.html, "Product
- * List — Triage", approved 2026-08-11). Translated to real React + our
- * actual shelf-sense-ds components and Tailwind idiom rather than the
- * design canvas's inline-style markup — see the summary in chat for what
- * changed in translation (freshness threshold 7d not 5d, per-product
- * minimal_quantity not a flat 3, group labels no longer promise a fixed
- * day count).
+ * Real implementation of the approved Claude Design prototype, merged
+ * version (templates/product-list-alt/ProductListAlt.dc.html, "Product
+ * List — Triage" + the Add Product flow wired into the same screen).
+ * Translated to real React + shelf-sense-ds components and Tailwind idiom
+ * rather than the design canvas's inline-style markup — see chat history
+ * for what changed in translation (freshness threshold 7d not 5d,
+ * per-product minimal_quantity not a flat 3, group labels no longer
+ * promise a fixed day count).
  *
  * Real data wiring (apps/api) doesn't exist yet — see mocks/products.ts.
+ * The Add flow's scan/photo/match steps are simulated (MOCK_BARCODE_MATCH)
+ * for the same reason — no real barcode-lookup, vision-identify, or
+ * icon-generate endpoint exists yet (Product Add.md).
  */
 export function ProductListPage() {
   const [query, setQuery] = useState("");
@@ -29,18 +37,30 @@ export function ProductListPage() {
   const [sortBy, setSortBy] = useState<"soonest" | "alpha">("soonest");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
+  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [batches, setBatches] = useState<Batch[]>(mockBatches);
+  const [pendingIconIds, setPendingIconIds] = useState<ReadonlySet<string>>(new Set());
+  const [justSavedMessage, setJustSavedMessage] = useState<string | null>(null);
+
+  const [addStep, setAddStep] = useState<AddFlowStep>("idle");
+  const [addSource, setAddSource] = useState<PrefillSource>(null);
+  const [addForm, setAddForm] = useState<AddProductFormState>(BLANK_FORM);
+
+  const pendingTimers = useRef<number[]>([]);
+  useEffect(() => () => pendingTimers.current.forEach(clearTimeout), []);
+
   const today = useMemo(() => new Date(), []);
 
   const all = useMemo(
     () =>
-      mockProducts.map((p) =>
+      products.map((p) =>
         enrichProduct(
           p,
-          mockBatches.filter((b) => b.product_id === p.id),
+          batches.filter((b) => b.product_id === p.id),
           today,
         ),
       ),
-    [today],
+    [products, batches, today],
   );
 
   const filtered = useMemo(
@@ -61,6 +81,98 @@ export function ProductListPage() {
     setExpanded((s) => ({ ...s, [id]: !s[id] }));
   }
 
+  // --- Add Product flow -----------------------------------------------
+
+  function openAddMethod() {
+    setAddStep("method");
+    setAddSource(null);
+    setAddForm(BLANK_FORM);
+    setJustSavedMessage(null);
+  }
+  function closeAddFlow() {
+    setAddStep("idle");
+    setAddSource(null);
+  }
+  function openManual() {
+    setAddSource(null);
+    setAddForm(BLANK_FORM);
+    setAddStep("form");
+  }
+  function completeCapture() {
+    if (addStep === "photo") {
+      setAddSource("photo");
+      setAddForm({ ...BLANK_FORM, short: "Grated cheese", long: MOCK_BARCODE_MATCH.long, qty: "1" });
+      setAddStep("form");
+    } else {
+      setAddStep("match");
+    }
+  }
+  function useMatchedProduct() {
+    setAddSource("match-use");
+    setAddForm({
+      ...BLANK_FORM,
+      short: MOCK_BARCODE_MATCH.short,
+      long: MOCK_BARCODE_MATCH.long,
+      qty: "1",
+      minQty: MOCK_BARCODE_MATCH.minQty,
+      fresh: MOCK_BARCODE_MATCH.fresh,
+      doesExpire: true,
+    });
+    setAddStep("form");
+  }
+  function confirmUnlink() {
+    setAddSource("match");
+    setAddForm({
+      short: "", // must diverge — short_description stays unique (Product Add.md)
+      long: MOCK_BARCODE_MATCH.long,
+      doesExpire: MOCK_BARCODE_MATCH.doesExpire,
+      qty: MOCK_BARCODE_MATCH.qty,
+      minQty: MOCK_BARCODE_MATCH.minQty,
+      fresh: MOCK_BARCODE_MATCH.fresh,
+      expiresOn: "",
+    });
+    setAddStep("form");
+  }
+  function clearPrefill() {
+    setAddSource(null);
+    setAddForm(BLANK_FORM);
+  }
+  function setFormField<K extends keyof AddProductFormState>(key: K, value: AddProductFormState[K]) {
+    setAddForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function saveProduct() {
+    const { product, batch } = buildNewProduct(addForm);
+    setProducts((ps) => [product, ...ps]);
+    if (batch) setBatches((bs) => [batch, ...bs]);
+    setPendingIconIds((ids) => new Set(ids).add(product.id));
+    setJustSavedMessage("Product added — generating its icon in the background.");
+    setAddStep("idle");
+    setAddSource(null);
+    setAddForm(BLANK_FORM);
+    setQuery("");
+    setScope("all");
+
+    const t1 = window.setTimeout(() => {
+      setPendingIconIds((ids) => {
+        const next = new Set(ids);
+        next.delete(product.id);
+        return next;
+      });
+    }, PENDING_ICON_DELAY_MS);
+    const t2 = window.setTimeout(() => setJustSavedMessage(null), PENDING_ICON_DELAY_MS + 2200);
+    pendingTimers.current.push(t1, t2);
+  }
+
+  function onEmptyAction() {
+    if (hasFilters) {
+      setQuery("");
+      setScope("all");
+    } else {
+      openAddMethod();
+    }
+  }
+
   return (
     <div className="dark mx-auto flex min-h-screen max-w-[420px] flex-col bg-surface-1 font-sans text-ink-primary">
       <header className="sticky top-0 z-[3] flex flex-col gap-[14px] border-b border-border bg-surface-0 px-md pb-[12px] pt-[22px]">
@@ -69,8 +181,7 @@ export function ProductListPage() {
             <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">Pantry</span>
             <h1 className="m-0 text-[26px] font-bold leading-[1.1] tracking-[-0.02em]">Inventory</h1>
           </div>
-          {/* Product Add isn't built yet — see specs/Product Add.md */}
-          <Button size="sm" onClick={() => {}}>
+          <Button size="sm" onClick={openAddMethod}>
             + Add
           </Button>
         </div>
@@ -122,6 +233,12 @@ export function ProductListPage() {
         </div>
       </header>
 
+      {justSavedMessage && (
+        <div className="px-md pt-sm">
+          <Alert variant="success" title={justSavedMessage} />
+        </div>
+      )}
+
       <div className="flex flex-1 flex-col">
         {filtered.length > 0 ? (
           groups.map((g) => (
@@ -139,6 +256,7 @@ export function ProductListPage() {
                   key={p.id}
                   product={p}
                   expanded={!!expanded[p.id]}
+                  pending={pendingIconIds.has(p.id)}
                   onToggle={() => toggleExpanded(p.id)}
                 />
               ))}
@@ -155,17 +273,28 @@ export function ProductListPage() {
                 ? "Clear the search or switch back to All items."
                 : "Add your first product to start tracking batches and expirations."}
             </div>
-            <Button
-              onClick={() => {
-                setQuery("");
-                setScope("all");
-              }}
-            >
-              {hasFilters ? "Clear filters" : "+ Add a product"}
-            </Button>
+            <Button onClick={onEmptyAction}>{hasFilters ? "Clear filters" : "+ Add a product"}</Button>
           </div>
         )}
       </div>
+
+      <AddProductModals
+        step={addStep}
+        form={addForm}
+        prefillSource={addSource}
+        onCloseAll={closeAddFlow}
+        onScan={() => setAddStep("scan")}
+        onPhoto={() => setAddStep("photo")}
+        onManual={openManual}
+        onCaptureDone={completeCapture}
+        onUseThis={useMatchedProduct}
+        onAddAsNew={() => setAddStep("unlink")}
+        onBackToMatch={() => setAddStep("match")}
+        onConfirmUnlink={confirmUnlink}
+        onClearPrefill={clearPrefill}
+        onFieldChange={setFormField}
+        onSave={saveProduct}
+      />
     </div>
   );
 }
@@ -244,10 +373,12 @@ function ScopeTile({
 function ProductRow({
   product: p,
   expanded,
+  pending,
   onToggle,
 }: {
   product: EnrichedProduct;
   expanded: boolean;
+  pending: boolean;
   onToggle: () => void;
 }) {
   const metaLabel =
@@ -269,6 +400,15 @@ function ProductRow({
               {p.isLow && (
                 <span className="flex-shrink-0 rounded-full bg-info-bg px-sm py-[2px] font-mono text-[10px] tracking-[0.06em] text-info">
                   LOW
+                </span>
+              )}
+              {pending && (
+                <span
+                  title="Generating icon…"
+                  className="flex flex-shrink-0 animate-pulse items-center gap-1 rounded-full bg-surface-2 px-sm py-[2px] font-mono text-[10px] tracking-[0.06em] text-ink-muted"
+                >
+                  <span className="h-2 w-2 rounded-sm bg-border-strong" />
+                  ICON
                 </span>
               )}
             </div>
