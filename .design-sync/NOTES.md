@@ -30,6 +30,15 @@ Originally imported the fontsource weight CSS files wholesale (`@fontsource/inte
 
 `Button` has 7 stories (`Primary/Secondary/Outline/Danger/Loading/AllVariants/Sizes`) — one over `compare.mjs`'s default cap of 6. Solo-phase grading used `--max-stories 7` to capture and grade all of them individually (not sibling-trusted) — this is recorded as an actual per-story grade in `Button.grade.json`, so it carries forward normally. If Button gains an 8th story, re-run with `--max-stories 8` (or higher) to grade the new one; the cap only affects capture, not already-graded stories.
 
+## 2026-08-12 re-sync — Button's new `confirm` variant
+
+Product Edit.md's confirm-to-commit Save button landed as a new `Button`
+`variant="confirm"` (warning-amber, distinct from `primary`/`danger`) —
+8th Button story added (`Confirm`), grade cleared and re-earned (all 8
+`match`, captured with `--max-stories 8`). Canary spot-check on 5 more
+components (reference-drift trigger, from the CSS-bug rebuild below) all
+confirmed still `match`, nothing rewritten.
+
 ## Re-sync risks
 
 - **Font resolution** (above) — the one thing that can silently regress if devDependencies drift.

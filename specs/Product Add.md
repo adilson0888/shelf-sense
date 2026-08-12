@@ -30,8 +30,8 @@ Extends `Product` from `Product List.md` — same entity, these are the fields t
 interface Product {
   // ...id, short_description, long_description, aliases, freshness_threshold_days
   // (see Product List.md — unchanged here)
+  // ...barcodes (see Product Edit.md for the Barcode entity shape — not redefined here to avoid two specs drifting out of sync)
 
-  barcodes: string[]; // barcodes/SKUs linked to this product — a scan matches against these
   does_expire: boolean; // required — always has a value, never null. Defaults to `true` in the UI (most products expire); the user switches it off explicitly for things like toilet paper. Governs whether future batch-add screens require or hide `expires_on` — does not itself change Batch's shape
   minimal_quantity: number | null; // per-product low-stock threshold; null = follow the global preference (same pattern as freshness_threshold_days)
 }

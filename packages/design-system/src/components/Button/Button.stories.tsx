@@ -6,7 +6,7 @@ const meta: Meta<typeof Button> = {
   component: Button,
   tags: ["autodocs"],
   argTypes: {
-    variant: { control: "select", options: ["primary", "secondary", "outline", "ghost", "danger"] },
+    variant: { control: "select", options: ["primary", "secondary", "outline", "ghost", "danger", "confirm"] },
     size: { control: "select", options: ["sm", "md", "lg"] },
   },
 };
@@ -29,6 +29,10 @@ export const Danger: Story = {
   args: { variant: "danger", children: "Remove item" },
 };
 
+export const Confirm: Story = {
+  args: { variant: "confirm", children: "Confirm?" },
+};
+
 export const Loading: Story = {
   args: { variant: "primary", loading: true, children: "Recording count…" },
 };
@@ -41,6 +45,7 @@ export const AllVariants: Story = {
       <Button variant="outline">Outline</Button>
       <Button variant="ghost">Ghost</Button>
       <Button variant="danger">Danger</Button>
+      <Button variant="confirm">Confirm?</Button>
     </div>
   ),
 };

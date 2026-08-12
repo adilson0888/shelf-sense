@@ -19,8 +19,34 @@ import {
   resetQuickEdit,
   type QuickEditState,
 } from "../lib/quickBatchEdit";
+import {
+  addAlias,
+  addBarcode,
+  armSave,
+  askRemoveSelectedBarcodes,
+  buildSaveResult,
+  cancelConfirm,
+  changeBarcodeDesc,
+  commitBarcodeDescEdit,
+  confirmAliasMove,
+  confirmBarcodeMove,
+  confirmRemoveSelectedBarcodes,
+  openProductEditState,
+  removeAlias,
+  setDoesExpire,
+  setField,
+  setNewAlias,
+  setNewBarcodeCode,
+  setNewBarcodeDesc,
+  startEditBarcodeDesc,
+  toggleAddBarcode,
+  toggleBarcodeSelected,
+  toggleSelectAllBarcodes,
+  type ProductEditState,
+} from "../lib/productEdit";
 import { AddProductModals } from "../components/AddProductModals";
 import { QuickBatchEditModal } from "../components/QuickBatchEditModal";
+import { ProductEditView } from "../components/ProductEditView";
 import type { Batch, Product } from "../types";
 
 const SAVED_MESSAGE_DELAY_MS = 2600;
@@ -53,6 +79,9 @@ export function ProductListPage() {
   const [addStep, setAddStep] = useState<AddFlowStep>("idle");
   const [addSource, setAddSource] = useState<PrefillSource>(null);
   const [addForm, setAddForm] = useState<AddProductFormState>(BLANK_FORM);
+
+  // --- Product Edit ------------------------------------------------------
+  const [edit, setEdit] = useState<ProductEditState | null>(null);
 
   // --- Quick Batch Edit: hold-to-open / swipe-to-reveal row gestures -----
   const [quick, setQuick] = useState<QuickEditState | null>(null);
@@ -106,6 +135,11 @@ export function ProductListPage() {
   const quickProduct = useMemo(
     () => (quick ? (all.find((p) => p.id === quick.productId) ?? null) : null),
     [all, quick],
+  );
+
+  const editDatedBatchCount = useMemo(
+    () => (edit ? batches.filter((b) => b.product_id === edit.productId && b.expires_on !== null).length : 0),
+    [batches, edit],
   );
 
   function toggleExpanded(id: string) {
@@ -221,6 +255,106 @@ export function ProductListPage() {
       setBatches((bs) => [...bs.filter((b) => b.product_id !== quick.productId), ...updated]);
     }
     setQuick(null);
+  }
+
+  // --- Product Edit -----------------------------------------------------
+
+  function openProductEdit(id: string) {
+    const product = products.find((p) => p.id === id);
+    if (!product) return;
+    setQuick(null);
+    setEdit(openProductEditState(product));
+  }
+  function editClose() {
+    setEdit(null);
+  }
+  function editFieldChange(key: "short" | "long" | "minQty" | "fresh", value: string) {
+    if (edit) setEdit(setField(edit, key, value));
+  }
+  function editDoesExpireChange(value: boolean) {
+    if (edit) setEdit(setDoesExpire(edit, value));
+  }
+  function editNewAliasChange(value: string) {
+    if (edit) setEdit(setNewAlias(edit, value));
+  }
+  function editAddAlias() {
+    if (edit) setEdit(addAlias(edit, products));
+  }
+  function editRemoveAlias(alias: string) {
+    if (edit) setEdit(removeAlias(edit, alias));
+  }
+  function editToggleBarcodeSelected(id: string) {
+    if (edit) setEdit(toggleBarcodeSelected(edit, id));
+  }
+  function editToggleSelectAllBarcodes() {
+    if (edit) setEdit(toggleSelectAllBarcodes(edit));
+  }
+  function editStartEditBarcodeDesc(id: string) {
+    if (edit) setEdit(startEditBarcodeDesc(edit, id));
+  }
+  function editBarcodeDescChange(id: string, value: string) {
+    if (edit) setEdit(changeBarcodeDesc(edit, id, value));
+  }
+  function editCommitBarcodeDescEdit() {
+    if (edit) setEdit(commitBarcodeDescEdit(edit));
+  }
+  function editToggleAddBarcode() {
+    if (edit) setEdit(toggleAddBarcode(edit));
+  }
+  function editNewBarcodeDescChange(value: string) {
+    if (edit) setEdit(setNewBarcodeDesc(edit, value));
+  }
+  function editNewBarcodeCodeChange(value: string) {
+    if (edit) setEdit(setNewBarcodeCode(edit, value));
+  }
+  function editAddBarcode() {
+    if (edit) setEdit(addBarcode(edit, products));
+  }
+  function editAskRemoveSelectedBarcodes() {
+    if (edit) setEdit(askRemoveSelectedBarcodes(edit));
+  }
+  function editConfirmRemoveSelectedBarcodes() {
+    if (edit) setEdit(confirmRemoveSelectedBarcodes(edit));
+  }
+  function editConfirmMove() {
+    if (!edit || !edit.confirm) return;
+    if (edit.confirm.type === "alias") setEdit(confirmAliasMove(edit));
+    else if (edit.confirm.type === "barcode") setEdit(confirmBarcodeMove(edit));
+  }
+  function editCancelConfirm() {
+    if (edit) setEdit(cancelConfirm(edit));
+  }
+  function editSave() {
+    if (!edit) return;
+    if (!edit.saveArmed) {
+      setEdit(armSave(edit, products));
+      return;
+    }
+    const product = products.find((p) => p.id === edit.productId);
+    if (!product) {
+      setEdit(null);
+      return;
+    }
+    const { updatedProduct, otherProductUpdates } = buildSaveResult(edit, product);
+    setProducts((ps) =>
+      ps.map((p) => {
+        if (p.id === updatedProduct.id) return updatedProduct;
+        const upd = otherProductUpdates.find((u) => u.productId === p.id);
+        if (!upd) return p;
+        return {
+          ...p,
+          barcodes: p.barcodes.filter((b) => !upd.removeBarcodeCodes.includes(b.code)),
+          aliases: p.aliases.filter((a) => !upd.removeAliases.includes(a)),
+        };
+      }),
+    );
+    if (!updatedProduct.does_expire) {
+      setBatches((bs) => bs.map((b) => (b.product_id === updatedProduct.id ? { ...b, expires_on: null } : b)));
+    }
+    setJustSavedMessage(`"${updatedProduct.short_description}" updated.`);
+    if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
+    savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
+    setEdit(null);
   }
 
   // --- Add Product flow -----------------------------------------------
@@ -447,6 +581,32 @@ export function ProductListPage() {
         onAddExpiresOnChange={quickAddExpiresOnChange}
         onReset={quickReset}
         onSave={quickSave}
+        onEditProduct={() => quick && openProductEdit(quick.productId)}
+      />
+
+      <ProductEditView
+        edit={edit}
+        datedBatchCount={editDatedBatchCount}
+        onClose={editClose}
+        onFieldChange={editFieldChange}
+        onDoesExpireChange={editDoesExpireChange}
+        onNewAliasChange={editNewAliasChange}
+        onAddAlias={editAddAlias}
+        onRemoveAlias={editRemoveAlias}
+        onToggleBarcodeSelected={editToggleBarcodeSelected}
+        onToggleSelectAllBarcodes={editToggleSelectAllBarcodes}
+        onStartEditBarcodeDesc={editStartEditBarcodeDesc}
+        onBarcodeDescChange={editBarcodeDescChange}
+        onCommitBarcodeDescEdit={editCommitBarcodeDescEdit}
+        onToggleAddBarcode={editToggleAddBarcode}
+        onNewBarcodeDescChange={editNewBarcodeDescChange}
+        onNewBarcodeCodeChange={editNewBarcodeCodeChange}
+        onAddBarcode={editAddBarcode}
+        onAskRemoveSelectedBarcodes={editAskRemoveSelectedBarcodes}
+        onConfirmRemoveSelectedBarcodes={editConfirmRemoveSelectedBarcodes}
+        onConfirmMove={editConfirmMove}
+        onCancelConfirm={editCancelConfirm}
+        onSave={editSave}
       />
     </div>
   );

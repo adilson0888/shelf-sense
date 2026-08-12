@@ -1,4 +1,4 @@
-import type { Batch, Product } from "../types";
+import type { Barcode, Batch, Product } from "../types";
 
 /**
  * Placeholder data standing in for apps/api's future /products endpoint —
@@ -17,8 +17,16 @@ function isoDaysFromNow(offset: number): string {
 }
 
 interface MockEntry {
-  product: Omit<Product, "id">;
+  product: Omit<Product, "id" | "barcodes">;
   batches: { quantity: number; expiresInDays: number | null }[];
+  // Descriptions are intentionally a little messy here (see "Biscoito Cream
+  // Cracker" under Queijo Ralado below) — real barcode descriptions start
+  // blank or get typed in a hurry (Product Edit.md's Non-functional
+  // section), so a demo where every one is already tidy would hide why the
+  // inline-edit-to-fix affordance exists. Same barcode values as the
+  // approved Claude Design prototype (templates/product-list-alt), for
+  // continuity between the two.
+  barcodes: { code: string; description: string }[];
 }
 
 const MOCK_ENTRIES: MockEntry[] = [
@@ -30,11 +38,17 @@ const MOCK_ENTRIES: MockEntry[] = [
       freshness_threshold_days: null,
       minimal_quantity: null,
       does_expire: true,
-      barcodes: [],
     },
     batches: [
       { quantity: 2, expiresInDays: 2 },
       { quantity: 3, expiresInDays: 41 },
+    ],
+    // Matches addProduct.ts's MOCK_BARCODE_MATCH ("7 891234 560123",
+    // display-formatted there) — scanning that barcode in Add Product
+    // "finds" this same product for a reason.
+    barcodes: [
+      { code: "7891234560123", description: "Queijo Ralado" },
+      { code: "7891150066702", description: "Biscoito Cream Cracker" },
     ],
   },
   {
@@ -45,9 +59,13 @@ const MOCK_ENTRIES: MockEntry[] = [
       freshness_threshold_days: null,
       minimal_quantity: null,
       does_expire: false,
-      barcodes: [],
     },
     batches: [{ quantity: 5, expiresInDays: null }],
+    barcodes: [
+      { code: "7894900011517", description: "Arroz Branco 1kg" },
+      { code: "7896003714408", description: "Açúcar Refinado 1kg" },
+      { code: "7896102500018", description: "Sal Refinado 1kg" },
+    ],
   },
   {
     product: {
@@ -57,12 +75,12 @@ const MOCK_ENTRIES: MockEntry[] = [
       freshness_threshold_days: null,
       minimal_quantity: null,
       does_expire: true,
-      barcodes: [],
     },
     batches: [
       { quantity: 1, expiresInDays: -26 },
       { quantity: 4, expiresInDays: 153 },
     ],
+    barcodes: [{ code: "7896036090619", description: "Feijão Preto 1kg" }],
   },
   {
     product: {
@@ -72,9 +90,9 @@ const MOCK_ENTRIES: MockEntry[] = [
       freshness_threshold_days: null,
       minimal_quantity: null,
       does_expire: false,
-      barcodes: [],
     },
     batches: [{ quantity: 12, expiresInDays: null }],
+    barcodes: [], // demonstrates the barcode table's empty state
   },
   {
     product: {
@@ -84,9 +102,12 @@ const MOCK_ENTRIES: MockEntry[] = [
       freshness_threshold_days: null,
       minimal_quantity: null,
       does_expire: true,
-      barcodes: [],
     },
     batches: [{ quantity: 1, expiresInDays: 1 }],
+    barcodes: [
+      { code: "7891000100103", description: "Leite Integral 1L" },
+      { code: "7896004004501", description: "Café Torrado 500g" },
+    ],
   },
   {
     product: {
@@ -96,12 +117,12 @@ const MOCK_ENTRIES: MockEntry[] = [
       freshness_threshold_days: null,
       minimal_quantity: null,
       does_expire: true,
-      barcodes: [],
     },
     batches: [
       { quantity: 2, expiresInDays: -1 },
       { quantity: 1, expiresInDays: 4 },
     ],
+    barcodes: [{ code: "7891910000197", description: "Macarrão Espaguete" }],
   },
   {
     product: {
@@ -111,16 +132,22 @@ const MOCK_ENTRIES: MockEntry[] = [
       freshness_threshold_days: null,
       minimal_quantity: null,
       does_expire: true,
-      barcodes: [],
     },
     batches: [{ quantity: 1, expiresInDays: -2 }],
+    barcodes: [{ code: "7891098010457", description: "Óleo de Soja 900ml" }],
   },
 ];
 
-export const mockProducts: Product[] = MOCK_ENTRIES.map((entry, i) => ({
-  id: `p${i + 1}`,
-  ...entry.product,
-}));
+export const mockProducts: Product[] = MOCK_ENTRIES.map((entry, i) => {
+  const id = `p${i + 1}`;
+  const barcodes: Barcode[] = entry.barcodes.map((b, bi) => ({
+    id: `${id}-bc${bi + 1}`,
+    code: b.code,
+    description: b.description,
+    product_id: id,
+  }));
+  return { id, ...entry.product, barcodes };
+});
 
 export const mockBatches: Batch[] = MOCK_ENTRIES.flatMap((entry, pi) =>
   entry.batches.map((b, bi) => ({

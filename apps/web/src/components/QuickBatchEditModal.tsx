@@ -14,6 +14,7 @@ export interface QuickBatchEditModalProps {
   onAddExpiresOnChange: (value: string) => void;
   onReset: () => void;
   onSave: () => void;
+  onEditProduct: () => void;
 }
 
 const STEPS = [-10, -5, -1, 1, 5, 10];
@@ -35,6 +36,7 @@ export function QuickBatchEditModal({
   onAddExpiresOnChange,
   onReset,
   onSave,
+  onEditProduct,
 }: QuickBatchEditModalProps) {
   const open = !!quick && !!product;
   const delta = quick ? quick.target - quick.base : 0;
@@ -153,13 +155,12 @@ export function QuickBatchEditModal({
               <Button type="button" variant="outline" size="sm" disabled>
                 Stock
               </Button>
-              <Button type="button" variant="outline" size="sm" disabled>
+              <Button type="button" variant="outline" size="sm" onClick={onEditProduct}>
                 Edit product
               </Button>
             </div>
             <p className="text-xs leading-relaxed text-ink-muted">
-              Batch detail and product edit screens don't exist yet. Open this by holding a row, or swiping it left
-              for the "•••" action — a tap still just expands the row.
+              The batch detail ("Stock") screen doesn't exist yet — per-batch corrections still need it.
             </p>
           </>
         )}

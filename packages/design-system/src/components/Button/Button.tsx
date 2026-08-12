@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/cn";
 
-export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "confirm";
 export type ButtonSize = "sm" | "md" | "lg";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -23,6 +23,14 @@ const variantClasses: Record<ButtonVariant, string> = {
   outline: "border border-border-strong bg-transparent text-ink-primary hover:bg-surface-2",
   ghost: "bg-transparent text-ink-primary hover:bg-surface-2",
   danger: "bg-danger text-ink-inverse hover:opacity-90 active:opacity-80",
+  // "Are you sure?" mid-state for a confirm-to-commit button: the SAME
+  // button relabels into this variant on first click instead of firing —
+  // a second click on it commits, any other interaction reverts it back to
+  // its normal variant. Warning (not danger) because arming Save isn't
+  // itself destructive — some of what it commits might be, but this variant
+  // reads as "pay attention, one more click," not "irreversible." See
+  // Product Edit.md's Save button for the first real use.
+  confirm: "bg-warning text-ink-inverse hover:opacity-90 active:opacity-80",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

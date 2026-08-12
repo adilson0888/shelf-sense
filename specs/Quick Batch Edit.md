@@ -21,7 +21,7 @@ As someone tracking pantry stock, I want to quickly adjust a product's quantity 
 - [ ] Given the user taps **Save** with a positive pending delta, when the save completes, then one new `Batch` is created for that product with quantity equal to the delta and the entered expiration (or `null` if the product doesn't expire) — appearing immediately in Product List, the same as a batch added via Product Add.
 - [ ] Given the user taps **Save** with a negative pending delta, when the save completes, then that quantity is subtracted starting from the **soonest-expiring batch**, cascading into the next-soonest as needed; any batch emptied to 0 is removed entirely. This assumes the user is consuming what expires soonest — if that assumption is wrong for a particular case, the user is expected to correct it on the (future) batches view, not here.
 - [ ] Given the modal is open, when the user looks at the "Stock" button, then it's visible but disabled — it will lead to the batches detail view for this product (see Out of scope), which doesn't exist yet; the button communicates what's coming without functioning.
-- [ ] Given the modal is open, when the user looks at the product-edit button, then it's visible but disabled the same way — the product-edit screen is separate future work (see Out of scope).
+- [ ] Given the modal is open, when the user taps the product-edit button, then it navigates to the Product Edit view for this product (`Product Edit.md`) — no longer stubbed as of that spec landing.
 
 ## Data
 
@@ -45,7 +45,7 @@ No new entities or fields — this feature only creates/mutates ordinary `Batch`
   - A stepper row: `−10 −5 −1 +1 +5 +10`, all adjusting the same pending target. Decreases clamp at 0.
   - Conditional expiry area, keyed to the pending delta's sign: a required "Expires on" date field when positive and the product expires (mirrors the conditional-field pattern already built in `AddProductModals.tsx`'s manual form); an explanatory line when positive and the product doesn't expire; a "no new batch" line when zero or negative.
   - A "Stock" button (disabled/stubbed) for the future batches-detail view.
-  - A product-edit button (disabled/stubbed) for the future product-edit view.
+  - A product-edit button, linking to `Product Edit.md`'s view — no longer stubbed.
   - Footer: **Reset** (ghost — restores the original total, clears any entered expiry date) / **Cancel** / **Save**. Reset and Save are both disabled when the pending delta is 0.
 
 ## Non-functional
@@ -56,7 +56,6 @@ No new entities or fields — this feature only creates/mutates ordinary `Batch`
 
 ## Out of scope
 
-- **Product Edit** — the screen for manually editing a product's own identity (`short_description`, `long_description`, `does_expire`, etc.). This spec only links to it (disabled, for now).
-- **Batches view** — the screen for viewing/editing individual batches directly, for correcting mistakes (e.g. the wrong batch was decremented). This spec only links to it (disabled, for now).
+- **Batches view** — the screen for viewing/editing individual batches directly, for correcting mistakes (e.g. the wrong batch was decremented). This spec only links to it (disabled, for now); `Product Edit.md` doesn't cover it either.
 - **Any percentage/fractional quantity updates** — deliberately dropped; see Non-functional.
 - **Undo or history** of quick edits made here.
