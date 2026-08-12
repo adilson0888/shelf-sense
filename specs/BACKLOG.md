@@ -4,6 +4,14 @@ Ideas that are real — we intend to build them eventually — but are deliberat
 
 When something's deferred out of a spec, leave a short pointer back to this file rather than deleting the requirement outright. When it's time to pick an entry up, promote it into a real spec via the normal loop (`specs/README.md`) — write/update the target spec's acceptance criteria, data, and UI requirements properly; don't just delete the entry here and start coding from these notes alone.
 
+## Additional Menu sections (Reports, Prices)
+
+Pulled from `Menu.md` (2026-08-12) — the drawer is scoped to Products and Settings for now; more sections are expected but not yet designed.
+
+Covers, when picked back up:
+- **Reports** and **Prices** as confirmed future sections — exact scope/UI for each is undefined, this is just a placeholder for "these will need a `MenuItem` entry and a real page."
+- Re-check at that point whether the flat, ungrouped list in `Menu.md` still holds, or whether the item count justifies grouping/categorizing the drawer.
+
 ## Product icons
 
 Pulled from `Product List.md` and `Product Add.md` (2026-08-11) — the approved Product List design didn't render an icon anywhere, which prompted deferring the whole feature rather than resolving the mismatch.
