@@ -3,6 +3,8 @@
 import "./styles/globals.css";
 
 export * from "./components/Button";
+export * from "./components/IconButton";
+export * from "./components/NavDrawer";
 export * from "./components/Badge";
 export * from "./components/StatusBadge";
 export * from "./components/FreshnessBadge";
