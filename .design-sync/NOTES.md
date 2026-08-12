@@ -39,6 +39,33 @@ Product Edit.md's confirm-to-commit Save button landed as a new `Button`
 components (reference-drift trigger, from the CSS-bug rebuild below) all
 confirmed still `match`, nothing rewritten.
 
+## 2026-08-12 re-sync — IconButton/NavDrawer not yet in scope (no stories)
+
+`Add IconButton and NavDrawer to shelf-sense-ds` (commit `a9b8d3e`) landed
+two new components, but neither has a `.stories.tsx` file, so the storybook
+shape's discovery (which walks `storybook-static`'s index, not the source
+tree) doesn't see them — the driver correctly reported 12/12 components,
+unchanged, with no `[ZERO_MATCH]` or other warning, because from its
+perspective nothing storied changed. **They will not appear in the Claude
+Design project until they get stories.** Next time either component is
+touched (or before the Menu feature that consumes them is designed against
+the synced project), add `IconButton.stories.tsx` / `NavDrawer.stories.tsx`
+and re-run the driver — NavDrawer will need `cfg.overrides.NavDrawer.cardMode:
+"single"` (or `"column"`) since it's an overlay/portal component like Modal.
+
+## 2026-08-12 re-sync — conventions.md drift found and fixed
+
+Validation pass (required whenever `conventions.md` already exists) found
+`bg-surface-3` documented as a standalone utility class that doesn't
+actually ship: Tailwind's JIT only emits classes literally present in
+scanned source, and the only real usage is `hover:bg-surface-3` /
+`active:bg-surface-3` in `Button.tsx`'s secondary variant — no component
+uses bare `bg-surface-3`, so it's purged. This predates today's IconButton/
+NavDrawer change (Button.tsx wasn't touched) — it slipped through the
+original authoring pass. Fixed the line to document the real
+`hover:`/`active:` variants instead of the nonexistent bare class. Rebuilt
+via the driver so the uploaded README carries the corrected header.
+
 ## Re-sync risks
 
 - **Font resolution** (above) — the one thing that can silently regress if devDependencies drift.

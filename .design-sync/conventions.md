@@ -9,7 +9,7 @@ Every color, spacing, radius, and shadow class here resolves to a `--ss-*` CSS c
 | Concern | Classes |
 |---|---|
 | Brand | `bg-brand-600` (default), `hover:bg-brand-700`, `active:bg-brand-800`, `focus-visible:ring-brand-400` |
-| Surfaces | `bg-surface-0` (page/card bg), `bg-surface-1` (app background), `bg-surface-2` (hover/subtle), `bg-surface-3` |
+| Surfaces | `bg-surface-0` (page/card bg), `bg-surface-1` (app background), `bg-surface-2` (hover/subtle), `hover:bg-surface-3`/`active:bg-surface-3` (pressed states — no bare `bg-surface-3` ships, only these variants) |
 | Text | `text-ink-primary`, `text-ink-secondary`, `text-ink-muted`, `text-ink-inverse` (on filled/brand backgrounds) |
 | Borders | `border-border`, `border-border-strong` |
 | **Stock status** (the DS's core vocabulary — always pair the dot + bg, never invent new status colors) | `bg-stock-in-stock`/`bg-stock-in-stock-bg`, `bg-stock-low`/`bg-stock-low-bg`, `bg-stock-out`/`bg-stock-out-bg`, `bg-stock-incoming`/`bg-stock-incoming-bg`, plus matching `text-stock-*` |
