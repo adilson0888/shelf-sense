@@ -438,8 +438,11 @@ export function ProductListPage() {
   }
 
   return (
-    <div className="dark mx-auto flex min-h-screen max-w-[420px] flex-col bg-surface-1 font-sans text-ink-primary">
-      <header className="sticky top-0 z-[3] flex flex-col gap-[14px] border-b border-border bg-surface-0 px-md pb-[12px] pt-[22px]">
+    <div className="flex flex-1 flex-col">
+      {/* top-[60px] instead of top-0: AppShell (Menu.md) now renders its
+          own sticky app bar above this page, so this header needs to stick
+          just below it rather than at the very top of the viewport. */}
+      <header className="sticky top-[60px] z-[3] flex flex-col gap-[14px] border-b border-border bg-surface-0 px-md pb-[12px] pt-[22px]">
         <div className="flex items-end justify-between gap-[12px]">
           <div className="flex flex-col gap-[2px]">
             <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">Pantry</span>

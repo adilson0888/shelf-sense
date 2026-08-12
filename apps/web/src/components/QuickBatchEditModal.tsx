@@ -67,7 +67,7 @@ export function QuickBatchEditModal({
     quick && delta < 0 ? "Removing stock only — no new batch, no date needed." : "Increase the count to add a new batch.";
 
   return (
-    <Modal open={open} onClose={onClose} aria-label="Quick batch edit" className="dark max-w-sm">
+    <Modal open={open} onClose={onClose} aria-label="Quick batch edit" className="max-w-sm">
       <ModalHeader>
         <ModalTitle>{product?.short_description ?? ""}</ModalTitle>
       </ModalHeader>

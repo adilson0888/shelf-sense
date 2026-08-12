@@ -1,20 +1,28 @@
 <!doctype html>
 <!--
-  class="dark" lives here, not just on ProductListPage's own root div, so
-  html/body themselves are in dark scope too — see apps/web/src/index.css's
-  html/body background rule. This app has no light theme built yet (see
-  Product List.md's "Dark theme by default" note), so without this, any
-  gap between the real viewport and the app's content box (safe-area
-  insets, elastic overscroll, subpixel rounding — mobile Safari does all
-  three, Chromium headless doesn't reproduce them the same way) reveals
-  globals.css's *light*-theme body background as a thin white line on
-  real devices, even though it never showed up in local screenshots.
+  class="dark" here is the pre-JS default — kept for the same reason as
+  before (see apps/web/src/index.css's html background rule): a gap
+  between the real viewport and the app's content box on real mobile
+  Safari reveals globals.css's *light*-theme body background as a thin
+  white line unless html itself carries the theme class, not just some
+  inner wrapper. The inline script below corrects this to "light" before
+  first paint if that's the stored preference (see src/lib/theme.ts) — the
+  runtime toggle only ever touches <html> too, never a React-rendered
+  wrapper, so this fallback and the toggle can't drift out of sync.
 -->
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/brand/favicon.ico" />
     <title>ShelfSense</title>
+    <script>
+      (function () {
+        if (localStorage.getItem("ss-theme") === "light") {
+          document.documentElement.classList.remove("dark");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

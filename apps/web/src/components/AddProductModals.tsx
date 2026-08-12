@@ -69,7 +69,7 @@ export function AddProductModals({
   return (
     <>
       {/* Step 1 — method choice */}
-      <Modal open={step === "method"} onClose={onCloseAll} aria-label="Add a product" className="dark max-w-sm">
+      <Modal open={step === "method"} onClose={onCloseAll} aria-label="Add a product" className="max-w-sm">
         <ModalHeader>
           <ModalTitle>Add a product</ModalTitle>
         </ModalHeader>
@@ -85,7 +85,7 @@ export function AddProductModals({
         open={step === "scan" || step === "photo"}
         onClose={onCloseAll}
         aria-label="Capture"
-        className="dark max-w-sm"
+        className="max-w-sm"
       >
         <ModalHeader>
           <ModalTitle>{step === "photo" ? "Take a photo" : "Scan barcode"}</ModalTitle>
@@ -113,7 +113,7 @@ export function AddProductModals({
       </Modal>
 
       {/* Step 3 — match review */}
-      <Modal open={step === "match"} onClose={onCloseAll} aria-label="We found a match" className="dark max-w-sm">
+      <Modal open={step === "match"} onClose={onCloseAll} aria-label="We found a match" className="max-w-sm">
         <ModalHeader>
           <ModalTitle>We found a match</ModalTitle>
         </ModalHeader>
@@ -142,7 +142,7 @@ export function AddProductModals({
       </Modal>
 
       {/* Step 4 — unlink warning */}
-      <Modal open={step === "unlink"} onClose={onBackToMatch} aria-label="Move this barcode?" className="dark max-w-sm">
+      <Modal open={step === "unlink"} onClose={onBackToMatch} aria-label="Move this barcode?" className="max-w-sm">
         <ModalHeader>
           <ModalTitle>Move this barcode?</ModalTitle>
         </ModalHeader>
@@ -163,7 +163,7 @@ export function AddProductModals({
       </Modal>
 
       {/* Step 5 — form */}
-      <Modal open={step === "form"} onClose={onCloseAll} aria-label="Product details" className="dark max-w-sm">
+      <Modal open={step === "form"} onClose={onCloseAll} aria-label="Product details" className="max-w-sm">
         <ModalHeader>
           <ModalTitle>Product details</ModalTitle>
         </ModalHeader>

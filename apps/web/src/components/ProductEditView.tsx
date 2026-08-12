@@ -72,7 +72,7 @@ export function ProductEditView({
 
   return (
     <>
-      <div className="dark fixed inset-0 z-[6] flex justify-center bg-surface-1 font-sans text-ink-primary">
+      <div className="fixed inset-0 z-[6] flex justify-center bg-surface-1 font-sans text-ink-primary">
         <div className="flex w-full max-w-[420px] flex-col bg-surface-1">
           <div className="flex flex-shrink-0 items-center gap-md border-b border-border bg-surface-0 px-md pb-[14px] pt-[18px]">
             <button
@@ -307,7 +307,7 @@ export function ProductEditView({
         open={edit.confirm?.type === "barcode" || edit.confirm?.type === "alias"}
         onClose={onCancelConfirm}
         aria-label="Move this?"
-        className="dark max-w-sm"
+        className="max-w-sm"
       >
         <ModalHeader>
           <ModalTitle>{edit.confirm?.type === "alias" ? "Move this alias?" : "Move this barcode?"}</ModalTitle>
