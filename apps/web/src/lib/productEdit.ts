@@ -44,7 +44,6 @@ export interface ProductEditState {
 export type EditConfirm =
   | { type: "barcode"; code: string; description: string; ownerId: string; ownerName: string }
   | { type: "alias"; alias: string; ownerId: string; ownerName: string }
-  | { type: "removeBarcodes" }
   | null;
 
 interface Snapshot {
@@ -238,27 +237,15 @@ export function confirmBarcodeMove(state: ProductEditState): ProductEditState {
   return { ...next, unlinkBarcodesFrom: [...next.unlinkBarcodesFrom, { productId: ownerId, code }] };
 }
 
-/** Opens the "Remove barcodes?" confirm — the one place this spec keeps a modal-style confirmation, per the approved prototype. */
-export function askRemoveSelectedBarcodes(state: ProductEditState): ProductEditState {
+/** No confirmation needed — like alias removal, this is just staged and fully reversible via Cancel; Save's own confirm-to-commit step is the one confirmation this edit session needs. */
+export function removeSelectedBarcodes(state: ProductEditState): ProductEditState {
   if (state.selectedBarcodeIds.length === 0) return state;
-  return { ...state, confirm: { type: "removeBarcodes" } };
-}
-
-export function confirmRemoveSelectedBarcodes(state: ProductEditState): ProductEditState {
   return {
     ...state,
     barcodes: state.barcodes.filter((b) => !state.selectedBarcodeIds.includes(b.id)),
     selectedBarcodeIds: [],
-    confirm: null,
     saveArmed: false,
   };
-}
-
-export function removeBarcodesMessage(state: ProductEditState): string {
-  const n = state.selectedBarcodeIds.length;
-  const subject = n === 1 ? "This barcode" : `These ${n} barcodes`;
-  const pronoun = n === 1 ? "it" : "them";
-  return `${subject} will no longer point to "${state.short.trim()}." Scanning ${pronoun} again will be treated as a new product.`;
 }
 
 export function cancelConfirm(state: ProductEditState): ProductEditState {

@@ -23,16 +23,15 @@ import {
   addAlias,
   addBarcode,
   armSave,
-  askRemoveSelectedBarcodes,
   buildSaveResult,
   cancelConfirm,
   changeBarcodeDesc,
   commitBarcodeDescEdit,
   confirmAliasMove,
   confirmBarcodeMove,
-  confirmRemoveSelectedBarcodes,
   openProductEditState,
   removeAlias,
+  removeSelectedBarcodes,
   setDoesExpire,
   setField,
   setNewAlias,
@@ -310,11 +309,8 @@ export function ProductListPage() {
   function editAddBarcode() {
     if (edit) setEdit(addBarcode(edit, products));
   }
-  function editAskRemoveSelectedBarcodes() {
-    if (edit) setEdit(askRemoveSelectedBarcodes(edit));
-  }
-  function editConfirmRemoveSelectedBarcodes() {
-    if (edit) setEdit(confirmRemoveSelectedBarcodes(edit));
+  function editRemoveSelectedBarcodes() {
+    if (edit) setEdit(removeSelectedBarcodes(edit));
   }
   function editConfirmMove() {
     if (!edit || !edit.confirm) return;
@@ -602,8 +598,7 @@ export function ProductListPage() {
         onNewBarcodeDescChange={editNewBarcodeDescChange}
         onNewBarcodeCodeChange={editNewBarcodeCodeChange}
         onAddBarcode={editAddBarcode}
-        onAskRemoveSelectedBarcodes={editAskRemoveSelectedBarcodes}
-        onConfirmRemoveSelectedBarcodes={editConfirmRemoveSelectedBarcodes}
+        onRemoveSelectedBarcodes={editRemoveSelectedBarcodes}
         onConfirmMove={editConfirmMove}
         onCancelConfirm={editCancelConfirm}
         onSave={editSave}

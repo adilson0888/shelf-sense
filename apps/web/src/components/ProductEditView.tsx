@@ -1,12 +1,5 @@
 import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Switch } from "shelf-sense-ds";
-import {
-  canSave,
-  isRenamed,
-  newBarcodeValid,
-  removeBarcodesMessage,
-  saveSummary,
-  type ProductEditState,
-} from "../lib/productEdit";
+import { canSave, isRenamed, newBarcodeValid, saveSummary, type ProductEditState } from "../lib/productEdit";
 
 export interface ProductEditViewProps {
   edit: ProductEditState | null;
@@ -27,8 +20,7 @@ export interface ProductEditViewProps {
   onNewBarcodeDescChange: (value: string) => void;
   onNewBarcodeCodeChange: (value: string) => void;
   onAddBarcode: () => void;
-  onAskRemoveSelectedBarcodes: () => void;
-  onConfirmRemoveSelectedBarcodes: () => void;
+  onRemoveSelectedBarcodes: () => void;
   /** Confirms whichever move is pending — a barcode conflict or an alias conflict (edit.confirm names which). */
   onConfirmMove: () => void;
   onCancelConfirm: () => void;
@@ -68,8 +60,7 @@ export function ProductEditView({
   onNewBarcodeDescChange,
   onNewBarcodeCodeChange,
   onAddBarcode,
-  onAskRemoveSelectedBarcodes,
-  onConfirmRemoveSelectedBarcodes,
+  onRemoveSelectedBarcodes,
   onConfirmMove,
   onCancelConfirm,
   onSave,
@@ -202,7 +193,7 @@ export function ProductEditView({
                 {edit.selectedBarcodeIds.length > 0 && (
                   <div className="flex items-center gap-sm">
                     <span className="text-[11px] text-ink-muted">{edit.selectedBarcodeIds.length} selected</span>
-                    <Button type="button" variant="danger" size="sm" onClick={onAskRemoveSelectedBarcodes}>
+                    <Button type="button" variant="danger" size="sm" onClick={onRemoveSelectedBarcodes}>
                       Remove
                     </Button>
                   </div>
@@ -311,28 +302,6 @@ export function ProductEditView({
           </div>
         </div>
       </div>
-
-      <Modal
-        open={edit.confirm?.type === "removeBarcodes"}
-        onClose={onCancelConfirm}
-        aria-label="Remove barcodes?"
-        className="dark max-w-sm"
-      >
-        <ModalHeader>
-          <ModalTitle>Remove barcodes?</ModalTitle>
-        </ModalHeader>
-        <ModalBody>
-          <p className="text-sm leading-relaxed text-ink-secondary">{removeBarcodesMessage(edit)}</p>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="outline" size="sm" onClick={onCancelConfirm}>
-            Cancel
-          </Button>
-          <Button variant="danger" size="sm" onClick={onConfirmRemoveSelectedBarcodes}>
-            Remove
-          </Button>
-        </ModalFooter>
-      </Modal>
 
       <Modal
         open={edit.confirm?.type === "barcode" || edit.confirm?.type === "alias"}

@@ -27,7 +27,7 @@ As someone maintaining their pantry inventory, I want to edit a product's own de
 - [ ] Given the user clicks "+ Add barcode", when the inline form opens, then it asks for both `description` and `code` directly (not a camera scan) — editing an already-identified product by typing its barcode is simpler than the full scan flow Product Add uses to identify a brand-new one. Disabled until description is non-empty and the code has at least 8 digits.
 - [ ] Given the entered code is not linked to any other product, when submitted, then it's added to this product's pending barcode list immediately — staged only, not yet persisted.
 - [ ] Given the entered code **is** linked to another product, when submitted, then the same "Move this barcode?" confirm dialog Product Add already built is shown, naming the other product. Confirming stages the move (added here; marked to unlink from the other product at Save). Declining discards the attempt — no staged change either way.
-- [ ] Given the user checks one or more barcode rows and clicks "Remove", when pressed, then a "Remove barcodes?" confirmation dialog appears naming what's about to be unlinked; confirming removes them from the pending list, canceling leaves them untouched. (This is the one place this spec keeps a modal-style confirmation, rather than the silent-staged pattern aliases use — barcodes carry more real-world weight, since a removed barcode "forgets" what a physical scan resolves to.)
+- [ ] Given the user checks one or more barcode rows and clicks "Remove", when pressed, then they're removed from the pending list immediately — no confirmation dialog. Same reasoning as aliases: the removal is only staged, fully reversible via Cancel, and Save's own confirm-to-commit step is already the one confirmation this edit session needs — a second, earlier confirmation for the same eventual commit would be redundant.
 
 ### Save / Cancel
 
@@ -79,7 +79,6 @@ Everything the user touches on this view — field edits, the barcode table's ad
 - **Barcodes table**: `DataTable`-shaped layout (checkbox column + Description + Code) — a real, if hand-rolled rather than `shelf-sense-ds` `DataTable`, table. Toolbar: a "Remove" button (only shown with ≥1 row checked) and a "+ Add barcode" button that expands into an inline `description` + `code` form.
 - **Barcode add / conflict**: no scan step — reuses only `AddProductModals.tsx`'s "Move this barcode?" conflict modal, not its scan-capture flow.
 - **Confirm-to-commit Save**: implemented as a new `shelf-sense-ds` `Button` variant, `variant="confirm"` (warning-amber, distinct from `primary`/`danger`) — the first real use of the pattern this spec originally just called for. The same button relabels itself and swaps variant on arm; no second button is spawned. This flavor assumes a persistent "Cancel" already exists in the surrounding UI (it does, in the bottom bar) and doesn't need its own way to back out.
-- **"Remove barcodes?" confirm**: reuses the existing `Modal`/`ModalHeader`/`ModalBody`/`ModalFooter` components, same shape as Product Add's "Move this barcode?" dialog.
 
 ## Non-functional
 
