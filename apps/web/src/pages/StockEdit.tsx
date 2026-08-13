@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
 import { formatExpiryLabel, freshnessStatus } from "../lib/freshness";
+import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
 import {
   addBatch,
@@ -42,6 +43,7 @@ export function StockEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { products, batches, setBatches } = useProductsStore();
+  const { preferences } = usePreferencesStore();
   const product = products.find((p) => p.id === id);
 
   const [edit, setEdit] = useState<StockEditState | null>(null);
@@ -84,9 +86,9 @@ export function StockEditPage() {
     batch: b,
     isNew: isNewRow(edit, b.id),
     isEdited: isEditedRow(edit, b.id),
-    status: freshnessStatus(b.expires_on, product.freshness_threshold_days, today),
+    status: freshnessStatus(b.expires_on, product.freshness_threshold_days, preferences.default_freshness_threshold_days, today),
     expLabel: product.does_expire
-      ? formatExpiryLabel(b.expires_on, product.freshness_threshold_days, today)
+      ? formatExpiryLabel(b.expires_on, product.freshness_threshold_days, preferences.default_freshness_threshold_days, today)
       : "Does not expire",
   }));
   const allChecked = edit.batches.length > 0 && edit.sel.length === edit.batches.length;

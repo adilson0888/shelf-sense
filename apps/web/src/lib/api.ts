@@ -74,3 +74,34 @@ export function updateProduct(
 ): Promise<{ product: Product; batches: Batch[] }> {
   return request(`/products/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
 }
+
+/** Mirrors apps/api/src/routes/preferences.ts's toPreferencesJson() — see specs/Settings.md's Data section. */
+export interface PreferencesResponse {
+  ai_api_base_url: string | null;
+  ai_api_key_set: boolean;
+  ai_api_key_hint: string | null;
+  ai_model: string | null;
+  default_minimal_quantity: number;
+  default_freshness_threshold_days: number;
+  default_does_expire: boolean;
+  language: "en-US" | "pt-BR";
+}
+
+/** Built by apps/web/src/pages/Settings.tsx's Save handler. */
+export interface UpdatePreferencesPayload {
+  ai_api_base_url: string | null;
+  ai_api_key?: string | null;
+  ai_model: string | null;
+  default_minimal_quantity: number;
+  default_freshness_threshold_days: number;
+  default_does_expire: boolean;
+  language: "en-US" | "pt-BR";
+}
+
+export function fetchPreferences(): Promise<PreferencesResponse> {
+  return request("/preferences");
+}
+
+export function updatePreferences(payload: UpdatePreferencesPayload): Promise<PreferencesResponse> {
+  return request("/preferences", { method: "PATCH", body: JSON.stringify(payload) });
+}

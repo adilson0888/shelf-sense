@@ -1,8 +1,11 @@
 import type { Batch, FreshnessStatus, Product } from "../types";
 import { formatExpiryLabel, freshnessStatus } from "./freshness";
 
-/** Stand-in for the not-yet-built user preferences feature (see Product.minimal_quantity). */
-export const DEFAULT_MINIMAL_QUANTITY = 3;
+/** specs/Settings.md's Default Options, read live via usePreferencesStore. */
+export interface ProductListDefaults {
+  freshnessThresholdDays: number;
+  minimalQuantity: number;
+}
 
 export interface EnrichedBatch extends Batch {
   status: FreshnessStatus;
@@ -34,13 +37,13 @@ export function sortBatchesByExpiry<T extends Batch>(batches: T[]): T[] {
   });
 }
 
-export function enrichProduct(product: Product, batches: Batch[], today: Date): EnrichedProduct {
+export function enrichProduct(product: Product, batches: Batch[], today: Date, defaults: ProductListDefaults): EnrichedProduct {
   const sortedBatches: EnrichedBatch[] = sortBatchesByExpiry(batches)
     .map((b) => ({
       ...b,
-      status: freshnessStatus(b.expires_on, product.freshness_threshold_days, today),
+      status: freshnessStatus(b.expires_on, product.freshness_threshold_days, defaults.freshnessThresholdDays, today),
       qtyLabel: `×${b.quantity}`,
-      expiryLabel: formatExpiryLabel(b.expires_on, product.freshness_threshold_days, today),
+      expiryLabel: formatExpiryLabel(b.expires_on, product.freshness_threshold_days, defaults.freshnessThresholdDays, today),
     }));
 
   const totalQty = sortedBatches.reduce((sum, b) => sum + b.quantity, 0);
@@ -55,7 +58,7 @@ export function enrichProduct(product: Product, batches: Batch[], today: Date): 
     totalQty,
     status: soonest?.status ?? "no-expiration",
     soonestExpiresOn: soonest?.expires_on ?? null,
-    isLow: totalQty < (product.minimal_quantity ?? DEFAULT_MINIMAL_QUANTITY),
+    isLow: totalQty < (product.minimal_quantity ?? defaults.minimalQuantity),
   };
 }
 

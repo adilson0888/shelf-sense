@@ -4,6 +4,7 @@ import express from "express";
 import { runMigrations } from "./db/migrate.js";
 import { errorHandler } from "./lib/http-error.js";
 import { healthRouter } from "./routes/health.js";
+import { preferencesRouter } from "./routes/preferences.js";
 import { productsRouter } from "./routes/products.js";
 
 const app = express();
@@ -18,6 +19,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/health", healthRouter);
 app.use("/products", productsRouter);
+app.use("/preferences", preferencesRouter);
 
 // Domain routes land here once specs define them — e.g. app.use("/shelves", shelvesRouter)
 
