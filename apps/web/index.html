@@ -9,6 +9,12 @@
   first paint if that's the stored preference (see src/lib/theme.ts) — the
   runtime toggle only ever touches <html> too, never a React-rendered
   wrapper, so this fallback and the toggle can't drift out of sync.
+
+  lang="en" below is only the pre-JS placeholder — unlike the theme class
+  above, a stale lang has no paint-flash consequence (only an
+  accessibility-timing one), so there's no equivalent inline script here.
+  AppLocaleProvider (src/lib/AppLocaleProvider.tsx) corrects it
+  synchronously, before paint, via a layout effect — see specs/i18n.md.
 -->
 <html lang="en" class="dark">
   <head>

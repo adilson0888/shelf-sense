@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { AppLocaleProvider } from "./lib/AppLocaleProvider";
 import { PreferencesProvider } from "./lib/preferencesStore";
 import { ProductsProvider } from "./lib/productsStore";
 import { ProductListPage } from "./pages/ProductList";
@@ -26,14 +27,16 @@ function ShellRoutes() {
 export function App() {
   return (
     <PreferencesProvider>
-      <ProductsProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/products/:id/stock" element={<StockEditPage />} />
-            <Route path="/*" element={<ShellRoutes />} />
-          </Routes>
-        </BrowserRouter>
-      </ProductsProvider>
+      <AppLocaleProvider>
+        <ProductsProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/products/:id/stock" element={<StockEditPage />} />
+              <Route path="/*" element={<ShellRoutes />} />
+            </Routes>
+          </BrowserRouter>
+        </ProductsProvider>
+      </AppLocaleProvider>
     </PreferencesProvider>
   );
 }
