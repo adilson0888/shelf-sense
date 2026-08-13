@@ -1,4 +1,4 @@
-import type { Batch, Product } from "../types";
+import type { CreateProductPayload } from "./api";
 
 export type AddFlowStep = "idle" | "method" | "scan" | "photo" | "match" | "unlink" | "form";
 
@@ -27,10 +27,13 @@ export const BLANK_FORM: AddProductFormState = {
 
 /**
  * Simulated barcode match — apps/api has no real barcode-lookup or local
- * match-search endpoint yet (see Product Add.md's Data section), so every
- * "scan" in this demo resolves to this same canned product. It deliberately
- * matches mocks/products.ts's "Queijo Ralado" (id "p1") — scanning "finds"
- * a product already in the list, same as the approved prototype simulated.
+ * match-search endpoint yet (see Product Add.md's Data section and
+ * specs/Persistence.md's scope note), so every "scan" in this demo resolves
+ * to this same canned product regardless of what's actually been saved for
+ * real. "Use this"/"add as new" still just prefill the create form with
+ * these fixed values — saving always creates a brand-new product either
+ * way (see buildCreateProductPayload below), a simplification carried over
+ * unchanged from the mocked flow.
  */
 export const MOCK_BARCODE_MATCH = {
   barcode: "7 891234 560123",
@@ -42,31 +45,20 @@ export const MOCK_BARCODE_MATCH = {
   doesExpire: true,
 };
 
-/** Builds the Product (+ optional Batch, per Product Add.md's quantity=0-means-no-batch rule) to save. */
-export function buildNewProduct(form: AddProductFormState): { product: Product; batch: Batch | null } {
-  const id = `new-${Date.now()}`;
-  const qty = Number.parseInt(form.qty, 10) || 0;
-
-  const product: Product = {
-    id,
+/**
+ * Builds the POST /products request body — the server owns id assignment
+ * and, per Product Add.md's quantity=0-means-no-batch rule, decides
+ * whether a batch gets created at all (quantity 0 here just means "don't
+ * ask for one").
+ */
+export function buildCreateProductPayload(form: AddProductFormState): CreateProductPayload {
+  return {
     short_description: form.short.trim(),
     long_description: form.long.trim(),
-    aliases: [],
+    does_expire: form.doesExpire,
     freshness_threshold_days: form.fresh ? Number.parseInt(form.fresh, 10) : null,
     minimal_quantity: form.minQty ? Number.parseInt(form.minQty, 10) : null,
-    does_expire: form.doesExpire,
-    barcodes: [],
+    quantity: Number.parseInt(form.qty, 10) || 0,
+    expires_on: form.doesExpire && form.expiresOn ? form.expiresOn : null,
   };
-
-  const batch: Batch | null =
-    qty > 0
-      ? {
-          id: `${id}-b1`,
-          product_id: id,
-          quantity: qty,
-          expires_on: form.doesExpire && form.expiresOn ? form.expiresOn : null,
-        }
-      : null;
-
-  return { product, batch };
 }
