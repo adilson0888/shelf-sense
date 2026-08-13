@@ -74,8 +74,6 @@
   "settings.languageOptions.enUS": "English (US)",
   "settings.languageOptions.ptBR": "Português do Brasil",
 
-  "inventory.eyebrow": "Pantry",
-  "inventory.title": "Inventory",
   "inventory.addButton": "+ Add",
   "inventory.searchPlaceholder": "Search name or alias",
   "inventory.scopeAllItems": "All items",

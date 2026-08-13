@@ -514,22 +514,34 @@ export function InventoryPage() {
           own sticky app bar above this page, so this header needs to stick
           just below it rather than at the very top of the viewport. */}
       <header className="sticky top-[60px] z-[3] flex flex-col gap-[14px] border-b border-border bg-surface-0 px-md pb-[12px] pt-[22px]">
-        <div className="flex items-end justify-between gap-[12px]">
-          <div className="flex flex-col gap-[2px]">
-            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">{t("inventory.eyebrow")}</span>
-            <h1 className="m-0 text-[26px] font-bold leading-[1.1] tracking-[-0.02em]">{t("inventory.title")}</h1>
+        <div className="flex items-center gap-sm">
+          <div className="relative flex-1">
+            {/* Discrete search glyph, not shelf-sense-ds's plain-emoji icon
+                convention (Menu.md's ▤/⚙/☰) — a colorful 🔍 emoji read as
+                too loud sitting inside a text field. currentColor inline
+                SVG instead, same construction Button.tsx's own spinner
+                uses, so it's monochrome and themes with ink-muted. */}
+            <svg
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+              <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <Input
+              className="h-11"
+              style={{ paddingLeft: 34 }}
+              placeholder={t("inventory.searchPlaceholder")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           </div>
-          <Button size="sm" onClick={openAddMethod}>
+          <Button size="sm" className="h-11 flex-shrink-0" onClick={openAddMethod}>
             {t("inventory.addButton")}
           </Button>
         </div>
-
-        <Input
-          className="h-11"
-          placeholder={t("inventory.searchPlaceholder")}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
 
         <div className="grid grid-cols-3 gap-sm">
           <ScopeTile

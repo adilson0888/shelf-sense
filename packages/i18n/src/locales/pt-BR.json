@@ -74,8 +74,6 @@
   "settings.languageOptions.enUS": "English (US)",
   "settings.languageOptions.ptBR": "Português do Brasil",
 
-  "inventory.eyebrow": "Despensa",
-  "inventory.title": "Inventário",
   "inventory.addButton": "+ Adicionar",
   "inventory.searchPlaceholder": "Buscar nome ou apelido",
   "inventory.scopeAllItems": "Todos os itens",
