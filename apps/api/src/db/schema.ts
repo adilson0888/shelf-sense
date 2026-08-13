@@ -69,3 +69,19 @@ export const barcodes = pgTable(
     uniqueIndex("barcodes_code_unique").on(table.code),
   ],
 );
+
+// Schema for specs/Settings.md. Single-user, single active row — no
+// per-provider list, no user_id (matches specs/Persistence.md's stated
+// single-user scope).
+export const preferences = pgTable("preferences", {
+  // Fixed singleton id — PATCH always upserts this one row via
+  // onConflictDoUpdate; there is never more than one row in this table.
+  id: text("id").primaryKey().default("singleton"),
+  aiApiBaseUrl: text("ai_api_base_url"), // null = not configured
+  aiApiKey: text("ai_api_key"), // plaintext; null = not configured. Never serialized back to a client in full — see routes/preferences.ts.
+  aiModel: text("ai_model"), // e.g. "gpt-4o-mini"; null = not configured
+  defaultMinimalQuantity: integer("default_minimal_quantity").notNull().default(3), // was apps/web's DEFAULT_MINIMAL_QUANTITY constant
+  defaultFreshnessThresholdDays: integer("default_freshness_threshold_days").notNull().default(7), // was apps/web's DEFAULT_FRESHNESS_THRESHOLD_DAYS constant
+  defaultDoesExpire: boolean("default_does_expire").notNull().default(true), // was apps/web's BLANK_FORM.doesExpire literal
+  language: text("language").notNull().default("en-US"), // "en-US" | "pt-BR" — see specs/i18n.md
+});
