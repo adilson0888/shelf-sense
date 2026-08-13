@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Alert, Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
+import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
 import { ApiError, createProduct, updateProduct } from "../lib/api";
 import {
@@ -13,7 +14,7 @@ import {
   matchesSearch,
 } from "../lib/productList";
 import {
-  BLANK_FORM,
+  buildBlankForm,
   buildCreateProductPayload,
   type AddFlowStep,
   type AddProductFormState,
@@ -82,12 +83,13 @@ export function ProductListPage() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const { products, batches, setProducts, setBatches, loading, error, refetch } = useProductsStore();
+  const { preferences } = usePreferencesStore();
   const navigate = useNavigate();
   const [justSavedMessage, setJustSavedMessage] = useState<string | null>(null);
 
   const [addStep, setAddStep] = useState<AddFlowStep>("idle");
   const [addSource, setAddSource] = useState<PrefillSource>(null);
-  const [addForm, setAddForm] = useState<AddProductFormState>(BLANK_FORM);
+  const [addForm, setAddForm] = useState<AddProductFormState>(() => buildBlankForm(preferences.default_does_expire));
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -119,6 +121,14 @@ export function ProductListPage() {
 
   const today = useMemo(() => new Date(), []);
 
+  const listDefaults = useMemo(
+    () => ({
+      freshnessThresholdDays: preferences.default_freshness_threshold_days,
+      minimalQuantity: preferences.default_minimal_quantity,
+    }),
+    [preferences.default_freshness_threshold_days, preferences.default_minimal_quantity],
+  );
+
   const all = useMemo(
     () =>
       products.map((p) =>
@@ -126,9 +136,10 @@ export function ProductListPage() {
           p,
           batches.filter((b) => b.product_id === p.id),
           today,
+          listDefaults,
         ),
       ),
-    [products, batches, today],
+    [products, batches, today, listDefaults],
   );
 
   const filtered = useMemo(
@@ -392,7 +403,7 @@ export function ProductListPage() {
   function openAddMethod() {
     setAddStep("method");
     setAddSource(null);
-    setAddForm(BLANK_FORM);
+    setAddForm(buildBlankForm(preferences.default_does_expire));
     setJustSavedMessage(null);
     setSaveError(null);
   }
@@ -403,13 +414,13 @@ export function ProductListPage() {
   }
   function openManual() {
     setAddSource(null);
-    setAddForm(BLANK_FORM);
+    setAddForm(buildBlankForm(preferences.default_does_expire));
     setAddStep("form");
   }
   function completeCapture() {
     if (addStep === "photo") {
       setAddSource("photo");
-      setAddForm({ ...BLANK_FORM, short: "Grated cheese", long: MOCK_BARCODE_MATCH.long, qty: "1" });
+      setAddForm({ ...buildBlankForm(preferences.default_does_expire), short: "Grated cheese", long: MOCK_BARCODE_MATCH.long, qty: "1" });
       setAddStep("form");
     } else {
       setAddStep("match");
@@ -418,7 +429,7 @@ export function ProductListPage() {
   function useMatchedProduct() {
     setAddSource("match-use");
     setAddForm({
-      ...BLANK_FORM,
+      ...buildBlankForm(preferences.default_does_expire),
       short: MOCK_BARCODE_MATCH.short,
       long: MOCK_BARCODE_MATCH.long,
       qty: "1",
@@ -443,7 +454,7 @@ export function ProductListPage() {
   }
   function clearPrefill() {
     setAddSource(null);
-    setAddForm(BLANK_FORM);
+    setAddForm(buildBlankForm(preferences.default_does_expire));
   }
   function setFormField<K extends keyof AddProductFormState>(key: K, value: AddProductFormState[K]) {
     setAddForm((f) => ({ ...f, [key]: value }));
@@ -459,7 +470,7 @@ export function ProductListPage() {
       setJustSavedMessage("Product added.");
       setAddStep("idle");
       setAddSource(null);
-      setAddForm(BLANK_FORM);
+      setAddForm(buildBlankForm(preferences.default_does_expire));
       setQuery("");
       setScope("all");
 

@@ -15,15 +15,22 @@ export interface AddProductFormState {
   expiresOn: string;
 }
 
-export const BLANK_FORM: AddProductFormState = {
-  short: "",
-  long: "",
-  doesExpire: true, // per Product Add.md: required, defaults on — user opts out
-  qty: "",
-  minQty: "",
-  fresh: "",
-  expiresOn: "",
-};
+/**
+ * Per Product Add.md: `does_expire` defaults to the user's global "products
+ * expire by default" preference (specs/Settings.md) — the user still opts
+ * in/out explicitly per product from there.
+ */
+export function buildBlankForm(defaultDoesExpire: boolean): AddProductFormState {
+  return {
+    short: "",
+    long: "",
+    doesExpire: defaultDoesExpire,
+    qty: "",
+    minQty: "",
+    fresh: "",
+    expiresOn: "",
+  };
+}
 
 /**
  * Simulated barcode match — apps/api has no real barcode-lookup or local

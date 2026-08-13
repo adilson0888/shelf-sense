@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { PreferencesProvider } from "./lib/preferencesStore";
 import { ProductsProvider } from "./lib/productsStore";
 import { ProductListPage } from "./pages/ProductList";
 import { SettingsPage } from "./pages/Settings";
@@ -24,13 +25,15 @@ function ShellRoutes() {
 
 export function App() {
   return (
-    <ProductsProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/products/:id/stock" element={<StockEditPage />} />
-          <Route path="/*" element={<ShellRoutes />} />
-        </Routes>
-      </BrowserRouter>
-    </ProductsProvider>
+    <PreferencesProvider>
+      <ProductsProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/products/:id/stock" element={<StockEditPage />} />
+            <Route path="/*" element={<ShellRoutes />} />
+          </Routes>
+        </BrowserRouter>
+      </ProductsProvider>
+    </PreferencesProvider>
   );
 }
