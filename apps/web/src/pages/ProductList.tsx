@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { Alert, Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
-import { mockBatches, mockProducts } from "../mocks/products";
+import { useProductsStore } from "../lib/productsStore";
 import {
   type EnrichedProduct,
   type ListScope,
@@ -46,7 +47,6 @@ import {
 import { AddProductModals } from "../components/AddProductModals";
 import { QuickBatchEditModal } from "../components/QuickBatchEditModal";
 import { ProductEditView } from "../components/ProductEditView";
-import type { Batch, Product } from "../types";
 
 const SAVED_MESSAGE_DELAY_MS = 2600;
 
@@ -71,8 +71,8 @@ export function ProductListPage() {
   const [sortBy, setSortBy] = useState<"soonest" | "alpha">("soonest");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [batches, setBatches] = useState<Batch[]>(mockBatches);
+  const { products, batches, setProducts, setBatches } = useProductsStore();
+  const navigate = useNavigate();
   const [justSavedMessage, setJustSavedMessage] = useState<string | null>(null);
 
   const [addStep, setAddStep] = useState<AddFlowStep>("idle");
@@ -254,6 +254,13 @@ export function ProductListPage() {
       setBatches((bs) => [...bs.filter((b) => b.product_id !== quick.productId), ...updated]);
     }
     setQuick(null);
+  }
+
+  // --- Stock Edit (Stock Edit.md) — a real route, not local modal state,
+  // so it can stay mounted/reachable after ProductListPage unmounts.
+  function openStock(id: string) {
+    setQuick(null);
+    navigate(`/products/${id}/stock`);
   }
 
   // --- Product Edit -----------------------------------------------------
@@ -580,6 +587,7 @@ export function ProductListPage() {
         onAddExpiresOnChange={quickAddExpiresOnChange}
         onReset={quickReset}
         onSave={quickSave}
+        onStock={() => quick && openStock(quick.productId)}
         onEditProduct={() => quick && openProductEdit(quick.productId)}
       />
 

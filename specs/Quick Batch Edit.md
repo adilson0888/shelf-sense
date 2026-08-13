@@ -19,8 +19,8 @@ As someone tracking pantry stock, I want to quickly adjust a product's quantity 
 - [ ] Given the pending delta is positive and `Product.does_expire` is `true`, when the modal renders, then an "Expires on" date field appears and is required before Save — same hard-validation rule as Product Add (quantity > 0 + does_expire + no `expires_on` is a hard error, not a soft warning). Given the product doesn't expire, an explanatory line appears instead of the date field. Given the pending delta is zero or negative, a "no new batch" line appears instead — no expiry input for a decrease.
 - [ ] Given the user taps **Reset**, when pressed, then the pending target reverts to the originally-stored total and any entered expiry date clears. Reset and Save are both disabled whenever the pending delta is exactly 0.
 - [ ] Given the user taps **Save** with a positive pending delta, when the save completes, then one new `Batch` is created for that product with quantity equal to the delta and the entered expiration (or `null` if the product doesn't expire) — appearing immediately in Product List, the same as a batch added via Product Add.
-- [ ] Given the user taps **Save** with a negative pending delta, when the save completes, then that quantity is subtracted starting from the **soonest-expiring batch**, cascading into the next-soonest as needed; any batch emptied to 0 is removed entirely. This assumes the user is consuming what expires soonest — if that assumption is wrong for a particular case, the user is expected to correct it on the (future) batches view, not here.
-- [ ] Given the modal is open, when the user looks at the "Stock" button, then it's visible but disabled — it will lead to the batches detail view for this product (see Out of scope), which doesn't exist yet; the button communicates what's coming without functioning.
+- [ ] Given the user taps **Save** with a negative pending delta, when the save completes, then that quantity is subtracted starting from the **soonest-expiring batch**, cascading into the next-soonest as needed; any batch emptied to 0 is removed entirely. This assumes the user is consuming what expires soonest — if that assumption is wrong for a particular case, the user is expected to correct it on `Stock Edit.md`'s view, not here.
+- [ ] Given the modal is open, when the user taps the "Stock" button, then it navigates to the Stock Edit view for this product (`Stock Edit.md`) — no longer stubbed as of that spec landing.
 - [ ] Given the modal is open, when the user taps the product-edit button, then it navigates to the Product Edit view for this product (`Product Edit.md`) — no longer stubbed as of that spec landing.
 
 ## Data
@@ -56,6 +56,6 @@ No new entities or fields — this feature only creates/mutates ordinary `Batch`
 
 ## Out of scope
 
-- **Batches view** — the screen for viewing/editing individual batches directly, for correcting mistakes (e.g. the wrong batch was decremented). This spec only links to it (disabled, for now); `Product Edit.md` doesn't cover it either.
+- **Editing individual batches directly** (fixing a wrong quantity/date, removing a mistaken entry, logging a new one outside this modal's delta flow) — covered by `Stock Edit.md`, linked via the "Stock" button above.
 - **Any percentage/fractional quantity updates** — deliberately dropped; see Non-functional.
 - **Undo or history** of quick edits made here.
