@@ -1,6 +1,6 @@
 # Product List
 
-**Status:** in-progress — UI built in `apps/web` against the approved design and mock data; no real `apps/api` wiring yet
+**Status:** in-progress — UI built in `apps/web` against the approved design, now reading from a real `apps/api` (`GET /products`, Postgres via Drizzle — see `specs/Persistence.md`) instead of mock data.
 
 ## User story
 
