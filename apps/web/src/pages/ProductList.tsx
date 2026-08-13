@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { useNavigate } from "react-router-dom";
 import { Alert, Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
 import { useProductsStore } from "../lib/productsStore";
+import { ApiError, createProduct } from "../lib/api";
 import {
   type EnrichedProduct,
   type ListScope,
@@ -11,7 +12,14 @@ import {
   matchesScope,
   matchesSearch,
 } from "../lib/productList";
-import { BLANK_FORM, buildNewProduct, type AddFlowStep, type AddProductFormState, type PrefillSource, MOCK_BARCODE_MATCH } from "../lib/addProduct";
+import {
+  BLANK_FORM,
+  buildCreateProductPayload,
+  type AddFlowStep,
+  type AddProductFormState,
+  type PrefillSource,
+  MOCK_BARCODE_MATCH,
+} from "../lib/addProduct";
 import {
   applyQuickEdit,
   bumpQuickEdit,
@@ -60,10 +68,11 @@ const SAVED_MESSAGE_DELAY_MS = 2600;
  * per-product minimal_quantity not a flat 3, group labels no longer
  * promise a fixed day count).
  *
- * Real data wiring (apps/api) doesn't exist yet — see mocks/products.ts.
- * The Add flow's scan/photo/match steps are simulated (MOCK_BARCODE_MATCH)
- * for the same reason — no real barcode-lookup or vision-identify endpoint
- * exists yet (Product Add.md).
+ * Product list/save now wired to real apps/api endpoints (GET/POST
+ * /products — see productsStore.tsx and lib/api.ts). The Add flow's scan/
+ * photo/match steps stay simulated (MOCK_BARCODE_MATCH) — no real
+ * barcode-lookup or vision-identify endpoint exists yet (Product Add.md);
+ * see specs/Persistence.md for the scope split.
  */
 export function ProductListPage() {
   const [query, setQuery] = useState("");
@@ -71,13 +80,15 @@ export function ProductListPage() {
   const [sortBy, setSortBy] = useState<"soonest" | "alpha">("soonest");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const { products, batches, setProducts, setBatches } = useProductsStore();
+  const { products, batches, setProducts, setBatches, loading, error, refetch } = useProductsStore();
   const navigate = useNavigate();
   const [justSavedMessage, setJustSavedMessage] = useState<string | null>(null);
 
   const [addStep, setAddStep] = useState<AddFlowStep>("idle");
   const [addSource, setAddSource] = useState<PrefillSource>(null);
   const [addForm, setAddForm] = useState<AddProductFormState>(BLANK_FORM);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // --- Product Edit ------------------------------------------------------
   const [edit, setEdit] = useState<ProductEditState | null>(null);
@@ -367,10 +378,12 @@ export function ProductListPage() {
     setAddSource(null);
     setAddForm(BLANK_FORM);
     setJustSavedMessage(null);
+    setSaveError(null);
   }
   function closeAddFlow() {
     setAddStep("idle");
     setAddSource(null);
+    setSaveError(null);
   }
   function openManual() {
     setAddSource(null);
@@ -420,19 +433,27 @@ export function ProductListPage() {
     setAddForm((f) => ({ ...f, [key]: value }));
   }
 
-  function saveProduct() {
-    const { product, batch } = buildNewProduct(addForm);
-    setProducts((ps) => [product, ...ps]);
-    if (batch) setBatches((bs) => [batch, ...bs]);
-    setJustSavedMessage("Product added.");
-    setAddStep("idle");
-    setAddSource(null);
-    setAddForm(BLANK_FORM);
-    setQuery("");
-    setScope("all");
+  async function saveProduct() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const { product, batch } = await createProduct(buildCreateProductPayload(addForm));
+      setProducts((ps) => [product, ...ps]);
+      if (batch) setBatches((bs) => [batch, ...bs]);
+      setJustSavedMessage("Product added.");
+      setAddStep("idle");
+      setAddSource(null);
+      setAddForm(BLANK_FORM);
+      setQuery("");
+      setScope("all");
 
-    if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
-    savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
+      if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
+      savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
+    } catch (err) {
+      setSaveError(err instanceof ApiError ? err.message : "Couldn't save this product. Try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function onEmptyAction() {
@@ -514,7 +535,20 @@ export function ProductListPage() {
       )}
 
       <div className="flex flex-1 flex-col">
-        {filtered.length > 0 ? (
+        {loading ? (
+          <div className="flex flex-1 items-center justify-center py-[64px] text-[13px] text-ink-muted">
+            Loading your pantry…
+          </div>
+        ) : error ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-md px-[28px] py-[64px] text-center">
+            <Alert variant="danger" title="Couldn't load your pantry">
+              {error}
+            </Alert>
+            <Button variant="outline" onClick={refetch}>
+              Try again
+            </Button>
+          </div>
+        ) : filtered.length > 0 ? (
           groups.map((g) => (
             <div key={g.key} className="flex flex-col">
               <div className="sticky top-0 z-[1] flex items-center gap-[10px] bg-surface-1 px-md pb-[8px] pt-[14px]">
@@ -574,6 +608,8 @@ export function ProductListPage() {
         onClearPrefill={clearPrefill}
         onFieldChange={setFormField}
         onSave={saveProduct}
+        saving={saving}
+        saveError={saveError}
       />
 
       <QuickBatchEditModal

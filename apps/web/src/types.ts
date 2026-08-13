@@ -1,6 +1,6 @@
 // Mirrors specs/Product List.md + specs/Product Add.md's Data sections.
-// No backend yet (see apps/web/src/mocks/products.ts) — these are the
-// shapes apps/api's future /products endpoints should return.
+// These are exactly the shapes apps/api's GET/POST /products endpoints
+// return (see apps/web/src/lib/api.ts, apps/api/src/routes/products.ts).
 
 export interface Barcode {
   id: string;

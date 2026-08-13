@@ -1,6 +1,6 @@
 # Add Product
 
-**Status:** draft
+**Status:** in-progress — UI built in `apps/web` (`src/components/AddProductModals.tsx`, `src/lib/addProduct.ts`); Save now creates a real Product (+ optional Batch) via `apps/api`'s `POST /products` (Postgres via Drizzle — see `specs/Persistence.md`). Scan/photo/match steps are still simulated (`MOCK_BARCODE_MATCH`) — no real barcode-lookup or vision-identify endpoint yet. (This line was stuck at `draft` even after the flow was implemented in `a7b73ae` — corrected 2026-08-12 to match reality.)
 
 ## User story
 

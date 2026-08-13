@@ -1,4 +1,4 @@
-import { Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Switch } from "shelf-sense-ds";
+import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Switch } from "shelf-sense-ds";
 import type { AddFlowStep, AddProductFormState, PrefillSource } from "../lib/addProduct";
 import { MOCK_BARCODE_MATCH } from "../lib/addProduct";
 
@@ -18,6 +18,10 @@ export interface AddProductModalsProps {
   onClearPrefill: () => void;
   onFieldChange: <K extends keyof AddProductFormState>(key: K, value: AddProductFormState[K]) => void;
   onSave: () => void;
+  /** True while the POST /products request from a prior Save click is in flight. */
+  saving: boolean;
+  /** Set when that request failed — shown inline, form stays open so nothing typed is lost. */
+  saveError: string | null;
 }
 
 /**
@@ -46,6 +50,8 @@ export function AddProductModals({
   onClearPrefill,
   onFieldChange,
   onSave,
+  saving,
+  saveError,
 }: AddProductModalsProps) {
   const qtyNum = Number.parseInt(form.qty, 10) || 0;
   const showExpiresOn = form.doesExpire && qtyNum > 0;
@@ -56,8 +62,11 @@ export function AddProductModals({
   // Product Add.md's Non-functional section: does_expire=true + quantity>0
   // + no expires_on is a hard validation error, not a soft warning. (The
   // prototype this was translated from didn't enforce this — checked, and
-  // it doesn't — production code should.)
-  const saveDisabled = form.short.trim().length === 0 || (showExpiresOn && form.expiresOn.trim().length === 0);
+  // it doesn't — production code should.) apps/api enforces this too, but
+  // the client shouldn't rely on a round-trip to catch something it already
+  // knows.
+  const saveDisabled =
+    saving || form.short.trim().length === 0 || (showExpiresOn && form.expiresOn.trim().length === 0);
 
   let prefillNote = "";
   if (prefillSource === "match") {
@@ -235,13 +244,18 @@ export function AddProductModals({
           ) : (
             <p className="text-xs text-ink-muted">{expiresHiddenReason}</p>
           )}
+          {saveError && (
+            <Alert variant="danger" title="Couldn't save">
+              {saveError}
+            </Alert>
+          )}
         </ModalBody>
         <ModalFooter>
           <Button variant="outline" size="sm" onClick={onCloseAll}>
             Cancel
           </Button>
           <Button size="sm" disabled={saveDisabled} onClick={onSave}>
-            Save product
+            {saving ? "Saving…" : "Save product"}
           </Button>
         </ModalFooter>
       </Modal>

@@ -7,8 +7,30 @@
 #   docker compose up --build
 #   api  -> http://localhost:3001/health
 #   web  -> http://localhost:8080
+#
+# db's credentials below are the frictionless-by-default local values —
+# override via a .env file next to this one (docker compose reads it
+# automatically) for anything beyond local/single-user self-hosting. See
+# specs/Persistence.md for why Postgres + auto-migrate-on-boot, not SQLite
+# or a manual migration step.
 
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-shelfsense}
+      POSTGRES_USER: ${POSTGRES_USER:-shelf}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shelf}
+    # Published to the host so `npm run dev -w shelf-sense-api` (outside
+    # Docker) can reach it at localhost:5432 — see apps/api/.env.example.
+    # api itself talks to it over the compose network via the "db" hostname
+    # regardless of this mapping.
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -17,6 +39,9 @@ services:
       - "3001:3001"
     environment:
       PORT: 3001
+      DATABASE_URL: postgres://${POSTGRES_USER:-shelf}:${POSTGRES_PASSWORD:-shelf}@db:5432/${POSTGRES_DB:-shelfsense}
+    depends_on:
+      - db
     restart: unless-stopped
 
   web:
@@ -28,3 +53,6 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+
+volumes:
+  db-data:
