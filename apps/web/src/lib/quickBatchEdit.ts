@@ -1,5 +1,5 @@
 import type { Batch } from "../types";
-import { sortBatchesByExpiry } from "./productList";
+import { sortBatchesByExpiry } from "./inventory";
 
 /**
  * Local, unsaved state for one open Quick Batch Edit modal (Quick Batch
@@ -37,7 +37,7 @@ export function resetQuickEdit(state: QuickEditState): QuickEditState {
  * Applies a Quick Batch Edit save to one product's batches (Quick Batch
  * Edit.md's Data section). A negative net delta subtracts from the
  * soonest-expiring batch first (sortBatchesByExpiry — the same order
- * Product List already computes), cascading into the next batch as needed;
+ * Inventory already computes), cascading into the next batch as needed;
  * anything emptied to 0 is dropped. A positive net delta appends exactly
  * one new batch — the intermediate stepper taps that got the user to that
  * final number don't each create their own record, only the net result at

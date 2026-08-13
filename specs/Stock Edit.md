@@ -9,7 +9,7 @@ As someone tracking pantry stock, I want to see and correct every individual bat
 ## Acceptance criteria
 
 - [ ] Given the user taps "Stock" in the Quick Batch Edit modal, when it loads, then they're taken to this product's Stock Edit view at `/products/:id/stock` — no longer stubbed/disabled as of this spec.
-- [ ] Given the view renders, when displaying batches, then every batch for this product is listed as a row: quantity, expiration (formatted, or "Does not expire"), and that batch's own `FreshnessBadge` — same per-batch freshness rule already established in `Product List.md`'s expanded row.
+- [ ] Given the view renders, when displaying batches, then every batch for this product is listed as a row: quantity, expiration (formatted, or "Does not expire"), and that batch's own `FreshnessBadge` — same per-batch freshness rule already established in `Inventory.md`'s expanded row.
 - [ ] Given the table renders, when displayed, then each row has a checkbox for selection.
 - [ ] Given the user clicks "+ Add batch", when the inline form opens, then it asks for quantity (required, > 0) and, only when `Product.does_expire` is `true`, an expiration date (required) — same hard-validation rule as `Product Add.md`/`Quick Batch Edit.md`: `does_expire` + quantity > 0 + no `expires_on` is a hard error, not a soft warning.
 - [ ] Given the add form is valid and submitted, when added, then a new row appears in the pending list immediately — staged only, not yet persisted.
@@ -19,15 +19,15 @@ As someone tracking pantry stock, I want to see and correct every individual bat
 - [ ] Given the user checks one or more rows and clicks "Remove", when pressed, then they're removed from the pending list immediately — no confirmation dialog, same reasoning as `Product Edit.md`'s barcodes: staged, fully reversible via Cancel.
 - [ ] Given the user has made zero pending changes (no adds/edits/removes), when viewing the bottom bar, then Save is disabled; Cancel is always enabled.
 - [ ] Given the user has pending changes, when they click Save, then it relabels to "Confirm?" (`shelf-sense-ds`'s `Button` `variant="confirm"`) with a one-line summary of what's about to change (e.g. "2 batches added, 1 updated, 1 removed") shown above it — same confirm-to-commit pattern as `Product Edit.md`, not `Quick Batch Edit.md`'s plain Save (see Non-functional).
-- [ ] Given Save is showing "Confirm?", when the user clicks it again, then all pending adds/edits/removes persist together, atomically, and the view returns to Product List.
+- [ ] Given Save is showing "Confirm?", when the user clicks it again, then all pending adds/edits/removes persist together, atomically, and the view returns to Inventory.
 - [ ] Given Save is showing "Confirm?", when the user instead edits, adds, or removes anything else, then Save silently reverts to its normal label — same rule as `Product Edit.md`.
-- [ ] Given the user clicks Cancel at any point, when pressed, then all pending changes are discarded and the view returns to Product List without persisting anything.
+- [ ] Given the user clicks Cancel at any point, when pressed, then all pending changes are discarded and the view returns to Inventory without persisting anything.
 - [ ] Given a row was added this session (not present when the view opened) or edited (quantity or expiration changed from what it opened with), when the table renders, then that row is visually distinguished from untouched rows — a tinted left-border background plus a small "New"/"Edited" pill — so pending changes are legible before Confirm, not just implied by the summary line.
 - [ ] Given every batch has been removed (via Remove or a quantity edit reaching 0), when the table would otherwise render, then an empty state appears instead — "All batches consumed" with an explanation that adding a batch below or saving at zero are both valid — not an empty table with no explanation.
 
 ## Data
 
-No new entities — reuses `Batch` exactly as defined in `Product List.md`:
+No new entities — reuses `Batch` exactly as defined in `Inventory.md`:
 
 ```ts
 interface Batch {
@@ -44,7 +44,7 @@ Whether the expiration field is shown/required for an add or edit is governed by
 
 ## UI requirements
 
-- **Full-screen view**, own header, reached via a **real route**: `/products/:id/stock`. **Not** wrapped in the app's `AppShell` (no hamburger/drawer here) — deliberately consistent with `Product Edit.md`'s existing chrome, applied to both by the same reasoning: a focused edit screen with unsaved pending state shouldn't invite navigating away through the drawer, and `AppShell`'s top-bar title logic (keyed to `Menu.md`'s fixed item list) has no way to represent a per-product route without new work neither page currently needs. **Header structure matches `Product Edit.md`'s exactly**: a "‹" back-to-Product-List control, a "STOCK EDIT" eyebrow label, and the product name — same visual family, different screen.
+- **Full-screen view**, own header, reached via a **real route**: `/products/:id/stock`. **Not** wrapped in the app's `AppShell` (no hamburger/drawer here) — deliberately consistent with `Product Edit.md`'s existing chrome, applied to both by the same reasoning: a focused edit screen with unsaved pending state shouldn't invite navigating away through the drawer, and `AppShell`'s top-bar title logic (keyed to `Menu.md`'s fixed item list) has no way to represent a per-product route without new work neither page currently needs. **Header structure matches `Product Edit.md`'s exactly**: a "‹" back-to-Inventory control, a "STOCK EDIT" eyebrow label, and the product name — same visual family, different screen.
 - **Table**: same hand-rolled, `DataTable`-shaped layout as `Product Edit.md`'s barcode table — checkbox column + Quantity (mono, click-to-edit, "×N") + Expiration (click-to-edit date, or fixed "Does not expire" text when the product doesn't track expiry) + `FreshnessBadge` — not `shelf-sense-ds`'s `DataTable` component, same reasoning as that spec (a row-shaped list with add/edit/remove doesn't fit a generic table shape well).
 - **Pending-row treatment**: a new row gets a subtle success-tinted left border + background wash and a small "New" pill; an edited row gets the same treatment in the info color with an "Edited" pill. A row staged for removal doesn't get a visual treatment of its own — it's simply gone from the table immediately (see acceptance criteria), same as barcode/alias removal elsewhere.
 - **Empty state** (all batches removed/consumed): a dashed-border card — "All batches consumed" / "No stock left for this product. Add a batch below, or save to leave it at zero." — replaces the table, not just an empty table with a header row.
@@ -68,5 +68,5 @@ Whether the expiration field is shown/required for an add or edit is governed by
 - **Batch cost/price tracking, and retaining emptied ("consumed") batches as purchase-history data instead of deleting them** — real, and expected to change this spec's zero-quantity behavior — deferred to `specs/BACKLOG.md`.
 - **Cross-product batch moves or conflict resolution** — batches aren't shared across products the way barcodes can be, so no "move" flow is needed here, unlike the barcode-table pattern this view is modeled on.
 - **Undo or history** of edits made here.
-- **Entry points beyond the Quick Batch Edit "Stock" button** — e.g. linking here from Product List's expanded batch rows — considered, deliberately left for a future pass.
+- **Entry points beyond the Quick Batch Edit "Stock" button** — e.g. linking here from Inventory's expanded batch rows — considered, deliberately left for a future pass.
 - **Giving Product Edit a real URL route** — still out of scope per `Product Edit.md`; that spec is unaffected by this one beyond now sharing the same confirm-to-commit / no-`AppShell`-chrome pattern.

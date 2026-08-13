@@ -3,7 +3,7 @@ import type { Batch, FreshnessStatus, Product } from "../types";
 import { formatExpiryLabel, freshnessStatus } from "./freshness";
 
 /** specs/Settings.md's Default Options, read live via usePreferencesStore. */
-export interface ProductListDefaults {
+export interface InventoryDefaults {
   freshnessThresholdDays: number;
   minimalQuantity: number;
 }
@@ -42,7 +42,7 @@ export function enrichProduct(
   product: Product,
   batches: Batch[],
   today: Date,
-  defaults: ProductListDefaults,
+  defaults: InventoryDefaults,
   i18n: Pick<TFunctions, "t" | "tPlural" | "formatDate">,
 ): EnrichedProduct {
   const sortedBatches: EnrichedBatch[] = sortBatchesByExpiry(batches)
@@ -73,6 +73,16 @@ export function matchesSearch(product: EnrichedProduct, query: string): boolean 
   const q = query.trim().toLowerCase();
   if (!q) return true;
   return [product.short_description, ...product.aliases].join(" ").toLowerCase().includes(q);
+}
+
+/**
+ * specs/Inventory.md: this screen is "what's on the shelf," not a general
+ * product catalog — a product with nothing in stock (0 total quantity
+ * across all batches, including products with no batches at all, e.g. one
+ * saved via Product Add with quantity left blank) has no place here.
+ */
+export function isVisibleInInventory(product: EnrichedProduct): boolean {
+  return product.totalQty > 0;
 }
 
 export type ListScope = "all" | "attention" | "low";
@@ -124,5 +134,5 @@ export function groupByStatus(products: EnrichedProduct[], t: TFunctions["t"]): 
 export function groupAlphabetically(products: EnrichedProduct[], t: TFunctions["t"]): ProductGroup[] {
   const list = products.slice().sort((a, b) => a.short_description.localeCompare(b.short_description));
   if (list.length === 0) return [];
-  return [{ key: "alpha", label: t("productListGroups.alphabetical"), status: "alpha", count: list.length, products: list }];
+  return [{ key: "alpha", label: t("inventoryGroups.alphabetical"), status: "alpha", count: list.length, products: list }];
 }

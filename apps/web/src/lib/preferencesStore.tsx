@@ -9,7 +9,7 @@ import { ApiError, fetchPreferences, updatePreferences, type PreferencesResponse
  *
  * Unlike ProductsStore, `preferences` is never null: its initial value
  * (before the GET resolves) is the same literal defaults as the DB schema's
- * column defaults, so callers like ProductList.tsx's initial
+ * column defaults, so callers like Inventory.tsx's initial
  * useState(buildBlankForm(...)) and enrichProduct(...) never need a
  * null-check while the fetch is in flight.
  */

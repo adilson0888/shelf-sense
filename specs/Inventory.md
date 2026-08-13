@@ -1,13 +1,14 @@
-# Product List
+# Inventory
 
-**Status:** in-progress — UI built in `apps/web` against the approved design, now reading from a real `apps/api` (`GET /products`, Postgres via Drizzle — see `specs/Persistence.md`) instead of mock data.
+**Status:** in-progress — UI built in `apps/web` against the approved design, now reading from a real `apps/api` (`GET /products`, Postgres via Drizzle — see `specs/Persistence.md`) instead of mock data. (Renamed 2026-08-13 from `Product List.md` — this screen is what's physically on the shelf, not a general product catalog, so it's now scoped and named accordingly; see the zero-quantity acceptance criterion and the note at the end of UI requirements. A separately specced, differently-scoped **Product List** screen and a new **Grocery List** screen are planned to cover what this rename removes.)
 
 ## User story
 
-As someone tracking what's in their pantry, I want to see all my stored products at a glance — grouped by generic product regardless of brand or package size — with a clear signal for what's expiring soonest, so that I can use things up before they spoil and see what's running low.
+As someone tracking what's in their pantry, I want to see what I actually have on the shelf at a glance — grouped by generic product regardless of brand or package size — with a clear signal for what's expiring soonest, so that I can use things up before they spoil and see what's running low.
 
 ## Acceptance criteria
 
+- [ ] Given a product's total quantity across all its batches is 0 — including a product with no batches at all — when the list renders, then that product does not appear at all (see the note at the end of UI requirements for where it's expected to surface instead).
 - [ ] Given two batches of the same product exist (e.g. one 150g pack, one 200g pack of "queijo ralado"), when the list renders, then they appear as one product row with quantity summed across both batches.
 - [ ] Given a product has multiple batches with different `expires_on` values, when the list renders that row's freshness badge, then it reflects the **soonest-expiring** batch, not any other.
 - [ ] Given a batch has `expires_on = null` (does not expire), when computing that product's freshness badge, then that batch is excluded from the calculation — a product whose batches are all non-expiring shows no freshness warning.
@@ -47,14 +48,15 @@ interface Batch {
 type FreshnessStatus = "fresh" | "expiring-soon" | "expired" | "no-expiration";
 ```
 
-`aliases` is populated by a different, future spec (product addition — see Out of scope); Product List only *reads* it for search matching. Both descriptions live on `Product`, not `Batch` — brand and size stay out of the model entirely, at every level, per your note. A `Batch` is purely "how much, expiring when" — it exists only to keep different purchases' expiration dates separate, nothing else varies per batch. `Product.icon` is deferred — see `specs/BACKLOG.md`.
+`aliases` is populated by a different, future spec (product addition — see Out of scope); Inventory only *reads* it for search matching. Both descriptions live on `Product`, not `Batch` — brand and size stay out of the model entirely, at every level, per your note. A `Batch` is purely "how much, expiring when" — it exists only to keep different purchases' expiration dates separate, nothing else varies per batch. `Product.icon` is deferred — see `specs/BACKLOG.md`.
 
 ## UI requirements
 
-Implemented in `apps/web` (`src/pages/ProductList.tsx`) against the approved Claude Design prototype (`templates/product-list-alt/ProductListAlt.approved.dc.html`, "Product List — Triage", approved 2026-08-11). That design superseded most of what this section used to say — the differences are called out below rather than silently absorbed.
+Implemented in `apps/web` (`src/pages/Inventory.tsx`) against the approved Claude Design prototype (`templates/product-list-alt/ProductListAlt.approved.dc.html`, "Product List — Triage", approved 2026-08-11). That design superseded most of what this section used to say — the differences are called out below rather than silently absorbed.
 
 - **Dark theme by default** on this screen (per the design's own implementation notes — a theme switcher exists but lives in the main menu, not here).
 - **Header**: "Pantry" eyebrow label + "Inventory" title, a "+ Add" button (wired to the future `Product Add` flow), and a search box matching against `short_description` and `aliases`.
+- **Zero-quantity products are excluded entirely** — a product whose total quantity across all its batches is 0 (including one saved with no batch at all, e.g. via `Product Add`'s quantity-left-blank path) does not render, is not counted in any scope tile, and is not reachable via search on this screen. This is this feature's defining scope: Inventory shows what's on the shelf, not everything the user has ever added.
 - **Scope tiles** (three, side by side, each showing a live count): **All items**, **Attention** (`expired` or `expiring-soon`), **Low stock** (below `minimal_quantity`). Tapping Attention/Low toggles it on; tapping again returns to All items. This *replaces* the old "minimum quantity filter" idea — there's no free-typed numeric filter, just the fixed per-product `minimal_quantity` threshold driving a toggle.
 - **Sort**: a two-way **Soonest / A–Z** control. **Soonest is the default** (not alphabetical, which is what this section previously said) — it groups products under sticky section headers (Expired / Expiring soon / Fresh / No expiry), each internally sorted by soonest-expiring batch then name. A–Z drops grouping for one flat alphabetical list.
 - **Product row**: `short_description`, a "LOW" badge when applicable, a meta line (batch count + relative expiry phrasing, e.g. "Expires in 3 days" / "Best before Aug 20, 2026"), total quantity, a `FreshnessBadge` for the row's rolled-up status, and a chevron to expand.
@@ -63,6 +65,7 @@ Implemented in `apps/web` (`src/pages/ProductList.tsx`) against the approved Cla
 - **Product icons**: out of scope for this phase — see `specs/BACKLOG.md`.
 - **Gap to resolve**: the approved design drops the "i" detail affordance for `long_description` that this section used to call for — it didn't survive into what got approved and built. Flag whether that's intentional (maybe deferred to a later visual pass) or should be added back; as built, this screen doesn't show it.
 - **Components**: `Button`, `Input`, `FreshnessBadge` from `shelf-sense-ds` (all exist and are synced) — layout is custom Tailwind, not `DataTable` (a row-grouped list doesn't fit a table shape well). Mobile still has no `shelf-sense-ds` equivalent to draw from (web-only package) and needs native RN components built fresh when this screen's mobile version happens.
+- **Open gap, not resolved by this spec**: once a product's quantity reaches 0, it disappears from here with no replacement surface yet — no screen currently shows "products I'm out of." A redesigned, differently-scoped **Product List** (full catalog) and a new **Grocery List** (surfaces what's missing) are planned to fill that gap; both are separate specs, not yet written. Until one of those lands, a 0-qty product is invisible in the app entirely once saved. See `specs/BACKLOG.md`.
 
 ## Non-functional
 
@@ -73,7 +76,8 @@ Implemented in `apps/web` (`src/pages/ProductList.tsx`) against the approved Cla
 
 ## Out of scope
 
-- **Adding a product** — barcode scanning, external product-database lookup, the alias-suggestion-and-accept flow, manual alias management. Explicitly a separate future spec per this conversation; Product List only *displays and searches* what already exists.
+- **Adding a product** — barcode scanning, external product-database lookup, the alias-suggestion-and-accept flow, manual alias management. Explicitly a separate future spec per this conversation; Inventory only *displays and searches* what's currently in stock.
+- **A full product catalog / "products I'm out of" view** — deliberately not this screen's job; see the "Open gap" note in UI requirements and `specs/BACKLOG.md`.
 - **Updating/consuming stock** (increasing or decreasing quantity) — a mutation flow distinct from listing/viewing; covered by `Quick Batch Edit.md`. Quantity changes there are always absolute unit counts, never a percentage (a % of an unknown pack size isn't a real number — see that spec's Non-functional section).
 - **Product categories** — explicitly ruled out.
 - **Category-based freshness thresholds** — still ruled out; the override is per-product, not per-category.

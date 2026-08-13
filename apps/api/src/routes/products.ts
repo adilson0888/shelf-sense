@@ -32,7 +32,7 @@ function toBatchJson(b: typeof batches.$inferSelect) {
 }
 
 /**
- * GET / — everything Product List.md needs: every product with its
+ * GET / — everything Inventory.md needs: every product with its
  * aliases/barcodes nested, and a separate flat Batch[] (product_id links
  * them) — shaped to match apps/web/src/types.ts exactly, so the client does
  * no reshaping of the response.
@@ -90,8 +90,10 @@ const createProductSchema = z
 
 /**
  * POST / — creates a Product and, if quantity > 0, its first Batch.
- * quantity left blank/0 → Product saved with no batch (Product Add.md's
- * acceptance criteria: appears in Product List as present but out of stock).
+ * quantity left blank/0 → Product saved with no batch. It does NOT appear
+ * in Inventory (specs/Inventory.md excludes 0-total-quantity products) —
+ * where a 0-qty product surfaces instead is an open gap, deferred to the
+ * forthcoming Product List / Grocery List specs; see specs/BACKLOG.md.
  */
 productsRouter.post(
   "/",

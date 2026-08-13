@@ -8,7 +8,7 @@ As someone building out their pantry inventory, I want a fast way to add a new p
 
 ## Acceptance criteria
 
-- [ ] Given the user is on the Product List screen, when they tap "add product", then a choice of three entry methods is shown: barcode/QR scan, photo, or manual.
+- [ ] Given the user is on the Inventory screen, when they tap "add product", then a choice of three entry methods is shown: barcode/QR scan, photo, or manual.
 - [ ] Given the user picks manual entry, when the form opens, then it is blank — no lookup, no prefill.
 - [ ] Given a barcode is scanned and it matches a barcode already linked to one of the user's own products, when the match is shown, then the user can either confirm it (proceed straight to entering quantity/`expires_on` for a new batch of that existing product) or say "add as new" (opens the manual form, prefilled from the matched product — see below).
 - [ ] Given the user says "add as new" from a match, when the manual form opens, then every field prefills from the matched product **except `short_description`, which is left blank** — `short_description` must be unique, so it can't default to the value of the product it's diverging from.
@@ -17,7 +17,7 @@ As someone building out their pantry inventory, I want a fast way to add a new p
 - [ ] Given a barcode is scanned and it does **not** match anything the user has added before, when the app looks it up, then it queries an external barcode-lookup service by the barcode value and prefills the manual form with whatever it finds (or opens it blank if the lookup finds nothing).
 - [ ] Given a photo is taken, when the app processes it, then it sends the photo to a vision-capable AI call (via `apps/api`) and prefills the manual form with the suggested `short_description`/`long_description`.
 - [ ] Given either scan path produced a suggestion, when the user reviews it, then an explicit "this isn't right, edit manually" action is always available, even when the suggestion looks plausible — the user is never stuck with a wrong auto-fill.
-- [ ] Given the user is on the manual form (blank or prefilled, from any path), when they save with quantity left blank or `0`, then the `Product` is created with **no batch** — it appears in Product List as present but out of stock, and `expires_on` is never asked.
+- [ ] Given the user is on the manual form (blank or prefilled, from any path), when they save with quantity left blank or `0`, then the `Product` is created with **no batch**, and `expires_on` is never asked. It does **not** appear in Inventory (`specs/Inventory.md` excludes 0-total-quantity products) — where it surfaces instead is an open gap, deferred to the forthcoming Product List / Grocery List specs; see `specs/BACKLOG.md`.
 - [ ] Given the user saves with a quantity greater than `0`, when `Product.does_expire` is `true`, then `expires_on` is a required field for that batch; when `does_expire` is `false`, `expires_on` is hidden/disabled entirely.
 - [ ] Given the manual form is open, when the user views the `minimal_quantity` field and (if `does_expire`) the freshness threshold field, then each shows the user's current global default (`specs/Settings.md`'s `default_minimal_quantity`/`default_freshness_threshold_days`) as placeholder text — a live preview of what gets saved if the field is left untouched, not a real value the user typed.
 - [ ] Given the user leaves `minimal_quantity` blank, when the product is saved, then it is stored as the current `default_minimal_quantity` value — **snapshotted at creation time**, not `null`. If the user later changes the global default in Settings, this product's stored value does not retroactively follow it — same as if the user had typed that number themselves. (This differs from Product Edit, which is unchanged: editing an existing product's `minimal_quantity` back to blank still stores `null`, and that product keeps following the live global default — see `specs/Product Edit.md`.)
@@ -26,12 +26,12 @@ As someone building out their pantry inventory, I want a fast way to add a new p
 
 ## Data
 
-Extends `Product` from `Product List.md` — same entity, these are the fields this spec adds to it. `Batch` is unchanged.
+Extends `Product` from `Inventory.md` — same entity, these are the fields this spec adds to it. `Batch` is unchanged.
 
 ```ts
 interface Product {
   // ...id, short_description, long_description, aliases, freshness_threshold_days
-  // (see Product List.md — unchanged here)
+  // (see Inventory.md — unchanged here)
   // ...barcodes (see Product Edit.md for the Barcode entity shape — not redefined here to avoid two specs drifting out of sync)
 
   does_expire: boolean; // required — always has a value, never null. Defaults to `true` in the UI (most products expire); the user switches it off explicitly for things like toilet paper. Governs whether future batch-add screens require or hide `expires_on` — does not itself change Batch's shape
@@ -59,7 +59,7 @@ interface PhotoIdentifyResult {
 
 ## UI requirements
 
-- **Entry point**: "add product" affordance on the Product List screen (already gestured at in that spec's empty state).
+- **Entry point**: "add product" affordance on the Inventory screen (already gestured at in that spec's empty state).
 - **Method choice**: a modal/sheet with three options — barcode/QR scan, photo, manual.
 - **Barcode scan screen**: reuses the camera-scanning flow already built in `apps/mobile`'s `ScanScreen` — this spec extends it with the match/lookup logic above rather than building scanning from scratch.
 - **Photo capture screen**: camera, single shot, sent for identification; loading state while `identify-from-photo` runs.

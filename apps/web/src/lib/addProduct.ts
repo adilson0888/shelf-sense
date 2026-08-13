@@ -1,5 +1,5 @@
 import type { CreateProductPayload } from "./api";
-import type { ProductListDefaults } from "./productList";
+import type { InventoryDefaults } from "./inventory";
 
 export type AddFlowStep = "idle" | "method" | "scan" | "photo" | "match" | "unlink" | "form";
 
@@ -68,7 +68,7 @@ export const MOCK_BARCODE_MATCH = {
  * isn't shown at all otherwise, so `null` still means "not applicable"
  * there, same as before.
  */
-export function buildCreateProductPayload(form: AddProductFormState, defaults: ProductListDefaults): CreateProductPayload {
+export function buildCreateProductPayload(form: AddProductFormState, defaults: InventoryDefaults): CreateProductPayload {
   return {
     short_description: form.short.trim(),
     long_description: form.long.trim(),

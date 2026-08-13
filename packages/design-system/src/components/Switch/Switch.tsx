@@ -20,8 +20,8 @@ export interface SwitchProps {
  * yes/no setting (e.g. "does it expire?"), where Select's multi-option
  * affordance would be misleading for a two-state choice.
  *
- * Visual language matches ProductList's Sort control exactly (SortButton in
- * apps/web/src/pages/ProductList.tsx): a rounded-full bg-surface-2 track
+ * Visual language matches Inventory's Sort control exactly (SortButton in
+ * apps/web/src/pages/Inventory.tsx): a rounded-full bg-surface-2 track
  * holding two segments, the active one raised. Unlike Sort — which stays
  * neutral (bg-surface-0) because it's just a view preference — the active
  * segment here uses bg-brand-600/text-ink-inverse, the same color

@@ -1,7 +1,7 @@
 import { boolean, date, integer, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 /**
- * Schema for the entities defined in specs/Product List.md, specs/Product
+ * Schema for the entities defined in specs/Inventory.md, specs/Product
  * Add.md, and specs/Product Edit.md — see specs/Persistence.md for the
  * decisions behind engine/ORM/migration choices.
  *
@@ -17,7 +17,7 @@ export const products = pgTable(
     shortDescription: text("short_description").notNull(),
     longDescription: text("long_description").notNull().default(""),
     doesExpire: boolean("does_expire").notNull().default(true),
-    // null = follow the global preference (see Product List.md's Non-functional section)
+    // null = follow the global preference (see Inventory.md's Non-functional section)
     freshnessThresholdDays: integer("freshness_threshold_days"),
     minimalQuantity: integer("minimal_quantity"),
   },

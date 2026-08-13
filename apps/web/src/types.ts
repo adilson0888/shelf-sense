@@ -1,4 +1,4 @@
-// Mirrors specs/Product List.md + specs/Product Add.md's Data sections.
+// Mirrors specs/Inventory.md + specs/Product Add.md's Data sections.
 // These are exactly the shapes apps/api's GET/POST /products endpoints
 // return (see apps/web/src/lib/api.ts, apps/api/src/routes/products.ts).
 

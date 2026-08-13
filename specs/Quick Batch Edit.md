@@ -8,8 +8,8 @@ As someone tracking pantry stock, I want to quickly adjust a product's quantity 
 
 ## Acceptance criteria
 
-- [ ] Given the user is on Product List, when they hold (long-press, ~480ms) on a product row, then the Quick Batch Edit modal opens for that product.
-- [ ] Given the user is on Product List, when they swipe a row left past a small threshold, then a compact "•••" action affordance is revealed behind the row; tapping it opens the same Quick Batch Edit modal. Only one row's action affordance is open at a time — opening another row's, or tapping elsewhere, closes it.
+- [ ] Given the user is on Inventory, when they hold (long-press, ~480ms) on a product row, then the Quick Batch Edit modal opens for that product.
+- [ ] Given the user is on Inventory, when they swipe a row left past a small threshold, then a compact "•••" action affordance is revealed behind the row; tapping it opens the same Quick Batch Edit modal. Only one row's action affordance is open at a time — opening another row's, or tapping elsewhere, closes it.
 - [ ] Given a row was just held or swiped, when that gesture ends, then the row's normal tap-to-expand click is suppressed for it — triggering the modal (or revealing the swipe affordance) never also toggles the row's expand state.
 - [ ] Given the modal is open, when it renders, then it shows the product's `short_description`, its current total quantity (large and prominent — the same total already on the list row), a `FreshnessBadge` for its rolled-up status, and its batch count.
 - [ ] Given the modal is open, when the user taps a stepper (`−10 −5 −1 +1 +5 +10`), then it adjusts a **pending target value** — nothing is written to storage yet.
@@ -18,17 +18,17 @@ As someone tracking pantry stock, I want to quickly adjust a product's quantity 
 - [ ] Given a stepper tap or typed value would take the pending target below 0, when applied, then it's clamped at 0 instead — the pending target can never go negative.
 - [ ] Given the pending delta is positive and `Product.does_expire` is `true`, when the modal renders, then an "Expires on" date field appears and is required before Save — same hard-validation rule as Product Add (quantity > 0 + does_expire + no `expires_on` is a hard error, not a soft warning). Given the product doesn't expire, an explanatory line appears instead of the date field. Given the pending delta is zero or negative, a "no new batch" line appears instead — no expiry input for a decrease.
 - [ ] Given the user taps **Reset**, when pressed, then the pending target reverts to the originally-stored total and any entered expiry date clears. Reset and Save are both disabled whenever the pending delta is exactly 0.
-- [ ] Given the user taps **Save** with a positive pending delta, when the save completes, then one new `Batch` is created for that product with quantity equal to the delta and the entered expiration (or `null` if the product doesn't expire) — appearing immediately in Product List, the same as a batch added via Product Add.
+- [ ] Given the user taps **Save** with a positive pending delta, when the save completes, then one new `Batch` is created for that product with quantity equal to the delta and the entered expiration (or `null` if the product doesn't expire) — appearing immediately in Inventory, the same as a batch added via Product Add.
 - [ ] Given the user taps **Save** with a negative pending delta, when the save completes, then that quantity is subtracted starting from the **soonest-expiring batch**, cascading into the next-soonest as needed; any batch emptied to 0 is removed entirely. This assumes the user is consuming what expires soonest — if that assumption is wrong for a particular case, the user is expected to correct it on `Stock Edit.md`'s view, not here.
 - [ ] Given the modal is open, when the user taps the "Stock" button, then it navigates to the Stock Edit view for this product (`Stock Edit.md`) — no longer stubbed as of that spec landing.
 - [ ] Given the modal is open, when the user taps the product-edit button, then it navigates to the Product Edit view for this product (`Product Edit.md`) — no longer stubbed as of that spec landing.
 
 ## Data
 
-No new entities or fields — this feature only creates/mutates ordinary `Batch` records using the shape already defined in `Product List.md`. The stepper/type-to-edit/delta-chip interaction is local UI state only (a "pending target" held in the modal); nothing is written until Save, at which point only the net delta between the pending target and the stored total matters:
+No new entities or fields — this feature only creates/mutates ordinary `Batch` records using the shape already defined in `Inventory.md`. The stepper/type-to-edit/delta-chip interaction is local UI state only (a "pending target" held in the modal); nothing is written until Save, at which point only the net delta between the pending target and the stored total matters:
 
-- **A negative net delta** (Save) reuses the sort `enrichProduct` already computes (`apps/web/src/lib/productList.ts`): batches sorted by `expires_on` ascending, with `null` (does-not-expire) batches sorting last. Subtracting "from the soonest-expiring batch first" means walking that same array from the front — no new sort key needed.
-- **A positive net delta** (Save) creates one new `Batch` (`id`, `product_id`, `quantity`, `expires_on`) — structurally identical to what Product Add's manual-entry save path already produces. It is not a special case of an existing batch; each purchase/lot is its own record, same rationale as everywhere else in this data model (see `Product List.md`'s Data section). The intermediate stepper taps that got the user to that final number don't each create their own record — only the net result at Save does.
+- **A negative net delta** (Save) reuses the sort `enrichProduct` already computes (`apps/web/src/lib/inventory.ts`): batches sorted by `expires_on` ascending, with `null` (does-not-expire) batches sorting last. Subtracting "from the soonest-expiring batch first" means walking that same array from the front — no new sort key needed.
+- **A positive net delta** (Save) creates one new `Batch` (`id`, `product_id`, `quantity`, `expires_on`) — structurally identical to what Product Add's manual-entry save path already produces. It is not a special case of an existing batch; each purchase/lot is its own record, same rationale as everywhere else in this data model (see `Inventory.md`'s Data section). The intermediate stepper taps that got the user to that final number don't each create their own record — only the net result at Save does.
 
 ## UI requirements
 
@@ -52,7 +52,7 @@ No new entities or fields — this feature only creates/mutates ordinary `Batch`
 
 - **Validation**: `does_expire = true` + increase amount > 0 + no `expires_on` is a hard validation error, not a soft warning — same rule as Product Add.md.
 - **Absolute quantities only**: no percentage-based updates. A "%" of an unknown pack size isn't a real number — e.g. reducing a 40-unit pack of toilet paper by "50%" stores a meaningless value once the user later buys a differently-sized pack. Every change here is a whole-unit count.
-- **Data source**: like Product List and Product Add, this operates on `apps/web`'s in-memory mock state for now — no real `apps/api` wiring yet.
+- **Data source**: like Inventory and Product Add, this operates on `apps/web`'s in-memory mock state for now — no real `apps/api` wiring yet.
 
 ## Out of scope
 

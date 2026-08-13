@@ -3,9 +3,9 @@ import { ApiError, fetchProducts } from "./api";
 import type { Batch, Product } from "../types";
 
 /**
- * Shared product/batch state, lifted out of ProductListPage so a real
+ * Shared product/batch state, lifted out of InventoryPage so a real
  * route (Stock Edit.md, at /products/:id/stock) can read and mutate the
- * same data without ProductListPage staying mounted.
+ * same data without InventoryPage staying mounted.
  *
  * Seeded from a real apps/api GET /products call (see specs/Persistence.md)
  * rather than mocks/products.ts. Everything downstream of the initial load
