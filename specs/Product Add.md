@@ -20,7 +20,7 @@ As someone building out their pantry inventory, I want a fast way to add a new p
 - [ ] Given the user is on the manual form (blank or prefilled, from any path), when they save with quantity left blank or `0`, then the `Product` is created with **no batch** — it appears in Product List as present but out of stock, and `expires_on` is never asked.
 - [ ] Given the user saves with a quantity greater than `0`, when `Product.does_expire` is `true`, then `expires_on` is a required field for that batch; when `does_expire` is `false`, `expires_on` is hidden/disabled entirely.
 - [ ] Given the user leaves `minimal_quantity` or the per-product freshness threshold blank, when the product is saved, then both are stored as `null` — Product List falls back to the user's global preference for each, read live rather than frozen at save time.
-- [ ] Given the manual/edit form opens (blank or prefilled, any path), when `does_expire` hasn't been touched yet, then it defaults to `true` — the user explicitly switches it off, rather than explicitly switching it on.
+- [ ] Given the manual/edit form opens (blank or prefilled, any path), when `does_expire` hasn't been touched yet, then it defaults to the user's global "products expire by default" preference (`specs/Settings.md`, itself defaulting to `true` out of the box) — the user explicitly switches it off/on per product from there, same as before.
 
 ## Data
 
