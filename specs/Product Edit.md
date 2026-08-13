@@ -91,6 +91,6 @@ Everything the user touches on this view — field edits, the barcode table's ad
 ## Out of scope
 
 - **Deleting the entire product** — not covered by this spec; only its fields and barcode/alias links.
-- **Batches view** — the screen for viewing/editing individual batches, linked (disabled) from Quick Batch Edit — still separate future work, unaffected by this spec.
+- **Editing individual batches** — that's `Stock Edit.md`'s job, linked from Quick Batch Edit's "Stock" button, unaffected by this spec.
 - **A dedicated URL route** for this view — implemented as a full-screen overlay within the existing single-page app instead (see UI requirements); real routing is future work independent of this feature.
 - **A separate read-only product-details view** — this edit view is the only screen this spec introduces.
