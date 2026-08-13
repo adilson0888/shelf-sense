@@ -24,8 +24,13 @@ const DEFAULT_ROW: typeof preferences.$inferSelect = {
 };
 
 // --- Shared row -> JSON reshaping (GET and PATCH both need this). Never
-// echoes the real ai_api_key — only whether one is set, plus a masked hint. ---
-function toPreferencesJson(row: typeof preferences.$inferSelect) {
+// echoes the real ai_api_key — only whether one is set, plus a masked hint.
+// `hasSavedPreferences` is derived, not a column — GET is the only caller
+// that can pass `false` (no row ever existed); PATCH always upserts a real
+// row, so it always passes `true`. specs/i18n.md's client needs this to
+// tell "nobody has ever saved a preference" apart from "someone explicitly
+// chose en-US" — both cases return an otherwise-identical response. ---
+function toPreferencesJson(row: typeof preferences.$inferSelect, hasSavedPreferences: boolean) {
   return {
     ai_api_base_url: row.aiApiBaseUrl,
     ai_api_key_set: row.aiApiKey !== null,
@@ -35,6 +40,7 @@ function toPreferencesJson(row: typeof preferences.$inferSelect) {
     default_freshness_threshold_days: row.defaultFreshnessThresholdDays,
     default_does_expire: row.defaultDoesExpire,
     language: row.language,
+    has_saved_preferences: hasSavedPreferences,
   };
 }
 
@@ -46,7 +52,7 @@ preferencesRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
     const [row] = await db.select().from(preferences).where(eq(preferences.id, SINGLETON_ID)).limit(1);
-    res.json(toPreferencesJson(row ?? DEFAULT_ROW));
+    res.json(toPreferencesJson(row ?? DEFAULT_ROW, row !== undefined));
   }),
 );
 
@@ -108,6 +114,6 @@ preferencesRouter.patch(
       })
       .returning();
 
-    res.json(toPreferencesJson(row));
+    res.json(toPreferencesJson(row, true));
   }),
 );
