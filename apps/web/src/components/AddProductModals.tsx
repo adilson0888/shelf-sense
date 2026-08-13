@@ -1,11 +1,14 @@
 import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Switch } from "shelf-sense-ds";
 import type { AddFlowStep, AddProductFormState, PrefillSource } from "../lib/addProduct";
 import { MOCK_BARCODE_MATCH } from "../lib/addProduct";
+import type { ProductListDefaults } from "../lib/productList";
 
 export interface AddProductModalsProps {
   step: AddFlowStep;
   form: AddProductFormState;
   prefillSource: PrefillSource;
+  /** Current global defaults (specs/Settings.md) — previewed as placeholder text on the Minimum quantity/Freshness threshold fields, and what gets saved if either is left blank. */
+  defaults: ProductListDefaults;
   onCloseAll: () => void;
   onScan: () => void;
   onPhoto: () => void;
@@ -38,6 +41,7 @@ export function AddProductModals({
   step,
   form,
   prefillSource,
+  defaults,
   onCloseAll,
   onScan,
   onPhoto,
@@ -218,8 +222,8 @@ export function AddProductModals({
             label="Minimum quantity"
             type="number"
             min={0}
-            placeholder="Optional"
-            hint="Warn me when stock falls to this."
+            placeholder={String(defaults.minimalQuantity)}
+            hint={`Warn me when stock falls to this. Leave blank to use your default (${defaults.minimalQuantity}).`}
             value={form.minQty}
             onChange={(e) => onFieldChange("minQty", e.target.value)}
           />
@@ -228,8 +232,8 @@ export function AddProductModals({
               label="Freshness threshold"
               type="number"
               min={0}
-              placeholder="Optional"
-              hint="Days before expiry to flag as expiring soon."
+              placeholder={String(defaults.freshnessThresholdDays)}
+              hint={`Days before expiry to flag as expiring soon. Leave blank to use your default (${defaults.freshnessThresholdDays}).`}
               value={form.fresh}
               onChange={(e) => onFieldChange("fresh", e.target.value)}
             />

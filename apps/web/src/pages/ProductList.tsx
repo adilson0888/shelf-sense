@@ -464,7 +464,7 @@ export function ProductListPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const { product, batch } = await createProduct(buildCreateProductPayload(addForm));
+      const { product, batch } = await createProduct(buildCreateProductPayload(addForm, listDefaults));
       setProducts((ps) => [product, ...ps]);
       if (batch) setBatches((bs) => [batch, ...bs]);
       setJustSavedMessage("Product added.");
@@ -623,6 +623,7 @@ export function ProductListPage() {
         step={addStep}
         form={addForm}
         prefillSource={addSource}
+        defaults={listDefaults}
         onCloseAll={closeAddFlow}
         onScan={() => setAddStep("scan")}
         onPhoto={() => setAddStep("photo")}

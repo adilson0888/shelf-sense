@@ -1,4 +1,5 @@
 import type { CreateProductPayload } from "./api";
+import type { ProductListDefaults } from "./productList";
 
 export type AddFlowStep = "idle" | "method" | "scan" | "photo" | "match" | "unlink" | "form";
 
@@ -57,14 +58,27 @@ export const MOCK_BARCODE_MATCH = {
  * and, per Product Add.md's quantity=0-means-no-batch rule, decides
  * whether a batch gets created at all (quantity 0 here just means "don't
  * ask for one").
+ *
+ * `minimal_quantity`/`freshness_threshold_days` left blank are snapshotted
+ * to the current global default (`defaults`) rather than saved as `null` —
+ * a deliberate Add-time-only behavior (Product Edit's own blank → `null`
+ * handling, which keeps following the live global default forever, is
+ * unchanged — see Product Add.md's acceptance criteria). The freshness
+ * threshold only gets the default when `does_expire` is true; the field
+ * isn't shown at all otherwise, so `null` still means "not applicable"
+ * there, same as before.
  */
-export function buildCreateProductPayload(form: AddProductFormState): CreateProductPayload {
+export function buildCreateProductPayload(form: AddProductFormState, defaults: ProductListDefaults): CreateProductPayload {
   return {
     short_description: form.short.trim(),
     long_description: form.long.trim(),
     does_expire: form.doesExpire,
-    freshness_threshold_days: form.fresh ? Number.parseInt(form.fresh, 10) : null,
-    minimal_quantity: form.minQty ? Number.parseInt(form.minQty, 10) : null,
+    freshness_threshold_days: form.fresh
+      ? Number.parseInt(form.fresh, 10)
+      : form.doesExpire
+        ? defaults.freshnessThresholdDays
+        : null,
+    minimal_quantity: form.minQty ? Number.parseInt(form.minQty, 10) : defaults.minimalQuantity,
     quantity: Number.parseInt(form.qty, 10) || 0,
     expires_on: form.doesExpire && form.expiresOn ? form.expiresOn : null,
   };
