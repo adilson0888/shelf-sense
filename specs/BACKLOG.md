@@ -4,9 +4,18 @@ Ideas that are real — we intend to build them eventually — but are deliberat
 
 When something's deferred out of a spec, leave a short pointer back to this file rather than deleting the requirement outright. When it's time to pick an entry up, promote it into a real spec via the normal loop (`specs/README.md`) — write/update the target spec's acceptance criteria, data, and UI requirements properly; don't just delete the entry here and start coding from these notes alone.
 
+## Where a zero-quantity product surfaces (Product List, Grocery List)
+
+Pulled from `Inventory.md` (2026-08-13) — that spec was renamed from `Product List.md` and narrowed to exclude any product with 0 total quantity across all batches, since it's meant to show what's on the shelf, not a general catalog. That leaves an open gap: once a product's stock hits 0, it disappears from the app entirely — nothing shows "products I'm out of" today.
+
+Covers, when picked back up:
+- A redesigned **Product List** screen — a full catalog view, differently emphasized than `Inventory.md`, not yet specced.
+- A new **Grocery List** screen — surfaces what's missing/needed, the more direct answer to "what am I out of."
+- Both need their own spec via the normal loop (`specs/README.md`) before implementation — this entry is a placeholder pointer, not a design.
+
 ## Additional Menu sections (Reports, Prices)
 
-Pulled from `Menu.md` (2026-08-12) — the drawer is scoped to Products and Settings for now; more sections are expected but not yet designed.
+Pulled from `Menu.md` (2026-08-12) — the drawer is scoped to Inventory and Settings for now; more sections are expected but not yet designed.
 
 Covers, when picked back up:
 - **Reports** and **Prices** as confirmed future sections — exact scope/UI for each is undefined, this is just a placeholder for "these will need a `MenuItem` entry and a real page."
@@ -18,7 +27,7 @@ Pulled from `Stock Edit.md` (2026-08-12) — raised while deciding what happens 
 
 Covers, when picked back up:
 - **A per-batch cost/price attribute** — batches represent individual purchases/lots, so cost naturally lives there, not on `Product`.
-- **Emptied batches are retained, not deleted** — once a batch hits 0 quantity it becomes "consumed" rather than removed, so it can still serve as purchase/price history. Consumed batches must **not** appear in any active view (Product List rollups, Quick Batch Edit, Stock Edit's table) — they're history-only.
+- **Emptied batches are retained, not deleted** — once a batch hits 0 quantity it becomes "consumed" rather than removed, so it can still serve as purchase/price history. Consumed batches must **not** appear in any active view (Inventory rollups, Quick Batch Edit, Stock Edit's table) — they're history-only.
 - **Open question, not yet decided**: whether "consumed" is a state on `Batch` itself (e.g. a status field) or price history moves to its own separate entity keyed off the purchase rather than the batch. Needs a real design pass, not just a field bolted on.
 - **Touches two existing specs when this lands**: `Quick Batch Edit.md`'s Save behavior ("any batch emptied to 0 is removed entirely") and `Stock Edit.md`'s zero-quantity handling both hard-delete via the same underlying mechanism today — both need updating together, not independently, or they'll drift back out of sync.
 
@@ -33,7 +42,7 @@ Covers, when picked back up:
 
 ## Product icons
 
-Pulled from `Product List.md` and `Product Add.md` (2026-08-11) — the approved Product List design didn't render an icon anywhere, which prompted deferring the whole feature rather than resolving the mismatch.
+Pulled from `Inventory.md` (née `Product List.md`) and `Product Add.md` (2026-08-11) — the approved Product List design didn't render an icon anywhere, which prompted deferring the whole feature rather than resolving the mismatch.
 
 Covers, when picked back up:
 - **Generation**: on save (any entry path, once `short_description` has a value), an icon-generation request fires in the background; the product appears immediately in a pending-icon state, replaced by the real icon once generation resolves. Doesn't block saving or navigating away.
@@ -47,7 +56,7 @@ Covers, when picked back up:
   }
   ```
   Not something Claude does natively — needs an image-generation-capable provider (e.g. OpenAI's image models, Google Imagen); vendor unpinned. The call must apply one consistent, predefined style prompt to every product so icons stay visually coherent across the list.
-- **`Product.icon: string` field** (optional, product-level, not per-batch) — back on the `Product` interface in `Product List.md`/`Product Add.md` when this is picked up.
-- **Rendering**: on Product List rows, and in Product Add's match-review step (alongside the matched product's `short_description`/`long_description`).
+- **`Product.icon: string` field** (optional, product-level, not per-batch) — back on the `Product` interface in `Inventory.md`/`Product Add.md` when this is picked up.
+- **Rendering**: on Inventory rows, and in Product Add's match-review step (alongside the matched product's `short_description`/`long_description`).
 - **Pending state UX**: spinner/placeholder treatment while generation is in flight.
 - **Icon regeneration** after the fact — not applicable until general product editing exists either (see that same gap noted in `Product Add.md`'s Out of scope).

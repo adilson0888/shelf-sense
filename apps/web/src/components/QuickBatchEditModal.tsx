@@ -1,7 +1,7 @@
 import { Button, cn, FreshnessBadge, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { freshnessBadgeLabel } from "../lib/freshness";
-import type { EnrichedProduct } from "../lib/productList";
+import type { EnrichedProduct } from "../lib/inventory";
 import type { QuickEditState } from "../lib/quickBatchEdit";
 
 export interface QuickBatchEditModalProps {
@@ -25,7 +25,7 @@ const STEPS = [-10, -5, -1, 1, 5, 10];
 /**
  * Translated from the merged Claude Design prototype's Quick Batch Edit
  * modal (templates/product-list-alt/ProductListAlt.dc.html). Purely
- * presentational — ProductListPage owns the gesture handling, the
+ * presentational — InventoryPage owns the gesture handling, the
  * QuickEditState, and the actual batch mutation (see quickBatchEdit.ts).
  */
 export function QuickBatchEditModal({

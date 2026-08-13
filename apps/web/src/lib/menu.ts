@@ -13,7 +13,7 @@ export interface MenuItem {
 // consumer) calls this inline in its render body via useT().
 export function getMenuItems(t: (key: string) => string): MenuItem[] {
   return [
-    { key: "products", label: t("menu.products"), route: "/", icon: "▤" },
+    { key: "inventory", label: t("menu.inventory"), route: "/", icon: "▤" },
     { key: "settings", label: t("menu.settings"), route: "/settings", icon: "⚙" },
   ];
 }

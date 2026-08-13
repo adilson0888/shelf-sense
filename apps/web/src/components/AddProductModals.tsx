@@ -2,14 +2,14 @@ import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, Modal
 import { useT } from "shelf-sense-i18n/react";
 import type { AddFlowStep, AddProductFormState, PrefillSource } from "../lib/addProduct";
 import { MOCK_BARCODE_MATCH } from "../lib/addProduct";
-import type { ProductListDefaults } from "../lib/productList";
+import type { InventoryDefaults } from "../lib/inventory";
 
 export interface AddProductModalsProps {
   step: AddFlowStep;
   form: AddProductFormState;
   prefillSource: PrefillSource;
   /** Current global defaults (specs/Settings.md) — previewed as placeholder text on the Minimum quantity/Freshness threshold fields, and what gets saved if either is left blank. */
-  defaults: ProductListDefaults;
+  defaults: InventoryDefaults;
   onCloseAll: () => void;
   onScan: () => void;
   onPhoto: () => void;
@@ -31,7 +31,7 @@ export interface AddProductModalsProps {
 /**
  * The five Add Product modals, translated from the merged Claude Design
  * prototype (templates/product-list-alt/ProductListAlt.dc.html). Purely
- * presentational — ProductListPage owns all the state and step transitions.
+ * presentational — InventoryPage owns all the state and step transitions.
  *
  * Scan/photo capture and the barcode match are simulated (MOCK_BARCODE_MATCH)
  * — apps/api has no real barcode-lookup or vision-identify endpoint yet (see

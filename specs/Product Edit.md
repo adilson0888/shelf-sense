@@ -33,10 +33,10 @@ As someone maintaining their pantry inventory, I want to edit a product's own de
 
 - [ ] Given the user has made zero pending changes (no field edits, no alias/barcode adds/removes/moves), when viewing the bottom bar, then **Save** is disabled. **Cancel** is always enabled.
 - [ ] Given the user has pending changes, when they click **Save**, then the button relabels itself to "Confirm?" in a distinct color (`shelf-sense-ds`'s `Button` `variant="confirm"`), with a one-line summary of what's about to be saved shown above it — no new button is added, no other buttons change.
-- [ ] Given **Save** is showing "Confirm?", when the user clicks it again, then all pending changes persist together, atomically, as one operation — field edits, alias adds/removes/moves, barcode adds/removes/moves — and the view closes back to Product List.
+- [ ] Given **Save** is showing "Confirm?", when the user clicks it again, then all pending changes persist together, atomically, as one operation — field edits, alias adds/removes/moves, barcode adds/removes/moves — and the view closes back to Inventory.
 - [ ] Given **Save** is showing "Confirm?", when the user instead edits any field, toggles anything, or changes a table row, then **Save** silently reverts to its normal label — a stale confirm-click never carries over past a change of mind expressed by continuing to edit.
-- [ ] Given **Save** is showing "Confirm?", when the user clicks **Cancel** instead, then it behaves exactly as it always does — discards every pending change and returns to Product List. No separate "back out of confirming" affordance exists; the view's own Cancel already covers it.
-- [ ] Given the user clicks **Cancel**, when pressed, then all pending changes are discarded and the app returns to Product List without persisting anything.
+- [ ] Given **Save** is showing "Confirm?", when the user clicks **Cancel** instead, then it behaves exactly as it always does — discards every pending change and returns to Inventory. No separate "back out of confirming" affordance exists; the view's own Cancel already covers it.
+- [ ] Given the user clicks **Cancel**, when pressed, then all pending changes are discarded and the app returns to Inventory without persisting anything.
 
 ## Data
 
@@ -54,10 +54,10 @@ interface Barcode {
 
 interface Product {
   // ...id, short_description, long_description, freshness_threshold_days, minimal_quantity, does_expire
-  // (see Product List.md / Product Add.md — unchanged here)
+  // (see Inventory.md / Product Add.md — unchanged here)
 
   aliases: string[]; // unchanged shape; this spec is the first to give it an editing UI
-  barcodes: Barcode[]; // was string[] in Product Add.md/Product List.md's Data sections — this spec upgrades every
+  barcodes: Barcode[]; // was string[] in Product Add.md/Inventory.md's Data sections — this spec upgrades every
                         // product's barcode list from a raw string array to Barcode records, so each carries its own
                         // description. Ripples into apps/web/src/types.ts and both of those specs' Data sections.
 }

@@ -41,7 +41,7 @@ export interface ProductEditViewProps {
  * placeholder "Save changes?" modal, which only existed because that button
  * pattern didn't exist in the DS yet when this was prototyped.
  *
- * Purely presentational — ProductListPage owns the ProductEditState and all
+ * Purely presentational — InventoryPage owns the ProductEditState and all
  * the business logic (lib/productEdit.ts), including the barcode/alias
  * cross-product conflict checks the prototype's own mock didn't simulate.
  */

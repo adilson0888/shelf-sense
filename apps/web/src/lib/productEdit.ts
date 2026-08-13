@@ -327,7 +327,7 @@ export interface ProductEditResult {
   otherProductUpdates: { productId: string; removeBarcodeCodes: string[]; removeAliases: string[] }[];
 }
 
-/** Resolves the staged edits (and any moves) into the concrete writes Save must apply — see ProductList.tsx's save handler. */
+/** Resolves the staged edits (and any moves) into the concrete writes Save must apply — see Inventory.tsx's save handler. */
 export function buildSaveResult(state: ProductEditState, currentProduct: Product): ProductEditResult {
   const updatedProduct: Product = {
     ...currentProduct,

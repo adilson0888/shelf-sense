@@ -103,7 +103,7 @@ export function StockEditPage() {
           <button
             type="button"
             onClick={goBack}
-            title={t("stockEdit.backToProductList")}
+            title={t("stockEdit.backToInventory")}
             className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-border bg-surface-1 text-base text-ink-primary"
           >
             ‹

@@ -12,9 +12,10 @@ import {
   enrichProduct,
   groupAlphabetically,
   groupByStatus,
+  isVisibleInInventory,
   matchesScope,
   matchesSearch,
-} from "../lib/productList";
+} from "../lib/inventory";
 import {
   buildBlankForm,
   buildCreateProductPayload,
@@ -72,13 +73,20 @@ const SAVED_MESSAGE_DELAY_MS = 2600;
  * per-product minimal_quantity not a flat 3, group labels no longer
  * promise a fixed day count).
  *
- * Product list/save now wired to real apps/api endpoints (GET/POST
+ * Renamed from "Product List" to "Inventory" (specs/Inventory.md) — this
+ * screen is what's physically on the shelf, not a general product catalog,
+ * so it now also excludes any product with 0 total quantity across all
+ * batches (see isVisibleInInventory in lib/inventory.ts). A separately
+ * specced Product List screen (full catalog) and Grocery List screen
+ * (what's missing) are planned to cover what this screen no longer shows.
+ *
+ * Inventory list/save now wired to real apps/api endpoints (GET/POST
  * /products — see productsStore.tsx and lib/api.ts). The Add flow's scan/
  * photo/match steps stay simulated (MOCK_BARCODE_MATCH) — no real
  * barcode-lookup or vision-identify endpoint exists yet (Product Add.md);
  * see specs/Persistence.md for the scope split.
  */
-export function ProductListPage() {
+export function InventoryPage() {
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<ListScope>("all");
   const [sortBy, setSortBy] = useState<"soonest" | "alpha">("soonest");
@@ -135,15 +143,17 @@ export function ProductListPage() {
 
   const all = useMemo(
     () =>
-      products.map((p) =>
-        enrichProduct(
-          p,
-          batches.filter((b) => b.product_id === p.id),
-          today,
-          listDefaults,
-          i18n,
-        ),
-      ),
+      products
+        .map((p) =>
+          enrichProduct(
+            p,
+            batches.filter((b) => b.product_id === p.id),
+            today,
+            listDefaults,
+            i18n,
+          ),
+        )
+        .filter(isVisibleInInventory),
     // i18n's own identity changes exactly when locale/dict change (see useT()'s memo), so this is exhaustive.
     [products, batches, today, listDefaults, i18n],
   );
@@ -288,7 +298,7 @@ export function ProductListPage() {
   }
 
   // --- Stock Edit (Stock Edit.md) — a real route, not local modal state,
-  // so it can stay mounted/reachable after ProductListPage unmounts.
+  // so it can stay mounted/reachable after InventoryPage unmounts.
   function openStock(id: string) {
     setQuick(null);
     navigate(`/products/${id}/stock`);
@@ -393,12 +403,12 @@ export function ProductListPage() {
         }),
       );
       setBatches((bs) => [...bs.filter((b) => b.product_id !== updatedProduct.id), ...updatedBatches]);
-      setJustSavedMessage(t("productList.savedProductUpdated", { name: updatedProduct.short_description }));
+      setJustSavedMessage(t("inventory.savedProductUpdated", { name: updatedProduct.short_description }));
       if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
       savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
       setEdit(null);
     } catch (err) {
-      setEditSaveError(err instanceof ApiError ? err.message : t("productList.genericSaveError"));
+      setEditSaveError(err instanceof ApiError ? err.message : t("inventory.genericSaveError"));
     } finally {
       setEditSaving(false);
     }
@@ -473,7 +483,7 @@ export function ProductListPage() {
       const { product, batch } = await createProduct(buildCreateProductPayload(addForm, listDefaults));
       setProducts((ps) => [product, ...ps]);
       if (batch) setBatches((bs) => [batch, ...bs]);
-      setJustSavedMessage(t("productList.productAdded"));
+      setJustSavedMessage(t("inventory.productAdded"));
       setAddStep("idle");
       setAddSource(null);
       setAddForm(buildBlankForm(preferences.default_does_expire));
@@ -483,7 +493,7 @@ export function ProductListPage() {
       if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
       savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : t("productList.genericSaveError"));
+      setSaveError(err instanceof ApiError ? err.message : t("inventory.genericSaveError"));
     } finally {
       setSaving(false);
     }
@@ -506,17 +516,17 @@ export function ProductListPage() {
       <header className="sticky top-[60px] z-[3] flex flex-col gap-[14px] border-b border-border bg-surface-0 px-md pb-[12px] pt-[22px]">
         <div className="flex items-end justify-between gap-[12px]">
           <div className="flex flex-col gap-[2px]">
-            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">{t("productList.eyebrow")}</span>
-            <h1 className="m-0 text-[26px] font-bold leading-[1.1] tracking-[-0.02em]">{t("productList.title")}</h1>
+            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">{t("inventory.eyebrow")}</span>
+            <h1 className="m-0 text-[26px] font-bold leading-[1.1] tracking-[-0.02em]">{t("inventory.title")}</h1>
           </div>
           <Button size="sm" onClick={openAddMethod}>
-            {t("productList.addButton")}
+            {t("inventory.addButton")}
           </Button>
         </div>
 
         <Input
           className="h-11"
-          placeholder={t("productList.searchPlaceholder")}
+          placeholder={t("inventory.searchPlaceholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -525,14 +535,14 @@ export function ProductListPage() {
           <ScopeTile
             active={scope === "all"}
             count={all.length}
-            label={t("productList.scopeAllItems")}
+            label={t("inventory.scopeAllItems")}
             activeClassName="border-ink-primary bg-surface-2 text-ink-primary"
             onClick={() => setScope("all")}
           />
           <ScopeTile
             active={scope === "attention"}
             count={countAttention}
-            label={t("productList.scopeAttention")}
+            label={t("inventory.scopeAttention")}
             activeClassName="border-warning bg-warning-bg text-warning"
             hoverClassName="hover:border-warning"
             onClick={() => setScope((s) => (s === "attention" ? "all" : "attention"))}
@@ -540,7 +550,7 @@ export function ProductListPage() {
           <ScopeTile
             active={scope === "low"}
             count={countLow}
-            label={t("productList.scopeLowStock")}
+            label={t("inventory.scopeLowStock")}
             activeClassName="border-info bg-info-bg text-info"
             hoverClassName="hover:border-info"
             onClick={() => setScope((s) => (s === "low" ? "all" : "low"))}
@@ -549,13 +559,13 @@ export function ProductListPage() {
 
         <div className="flex items-center justify-between gap-[12px] pb-[2px]">
           <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-muted">
-            {i18n.tPlural("productList.count", filtered.length)}
+            {i18n.tPlural("inventory.count", filtered.length)}
           </span>
           <div className="flex items-center gap-[6px]">
-            <span className="text-[11px] uppercase tracking-[0.04em] text-ink-muted">{t("productList.sort")}</span>
+            <span className="text-[11px] uppercase tracking-[0.04em] text-ink-muted">{t("inventory.sort")}</span>
             <div className="flex gap-[2px] rounded-full bg-surface-2 p-[2px]">
-              <SortButton active={sortBy === "soonest"} onClick={() => setSortBy("soonest")} label={t("productList.sortSoonest")} />
-              <SortButton active={sortBy === "alpha"} onClick={() => setSortBy("alpha")} label={t("productList.sortAlpha")} />
+              <SortButton active={sortBy === "soonest"} onClick={() => setSortBy("soonest")} label={t("inventory.sortSoonest")} />
+              <SortButton active={sortBy === "alpha"} onClick={() => setSortBy("alpha")} label={t("inventory.sortAlpha")} />
             </div>
           </div>
         </div>
@@ -570,11 +580,11 @@ export function ProductListPage() {
       <div className="flex flex-1 flex-col">
         {loading ? (
           <div className="flex flex-1 items-center justify-center py-[64px] text-[13px] text-ink-muted">
-            {t("productList.loading")}
+            {t("inventory.loading")}
           </div>
         ) : error ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-md px-[28px] py-[64px] text-center">
-            <Alert variant="danger" title={t("productList.loadError")}>
+            <Alert variant="danger" title={t("inventory.loadError")}>
               {error}
             </Alert>
             <Button variant="outline" onClick={refetch}>
@@ -615,12 +625,12 @@ export function ProductListPage() {
               0
             </div>
             <div className="text-[16px] font-semibold">
-              {hasFilters ? t("productList.emptyNothingMatches") : t("productList.emptyPantryEmpty")}
+              {hasFilters ? t("inventory.emptyNothingMatches") : t("inventory.emptyPantryEmpty")}
             </div>
             <div className="max-w-[260px] text-[13px] text-ink-secondary">
-              {hasFilters ? t("productList.emptyClearFiltersHint") : t("productList.emptyAddFirstHint")}
+              {hasFilters ? t("inventory.emptyClearFiltersHint") : t("inventory.emptyAddFirstHint")}
             </div>
-            <Button onClick={onEmptyAction}>{hasFilters ? t("productList.clearFilters") : t("productList.addFirstProduct")}</Button>
+            <Button onClick={onEmptyAction}>{hasFilters ? t("inventory.clearFilters") : t("inventory.addFirstProduct")}</Button>
           </div>
         )}
       </div>
@@ -788,7 +798,7 @@ function ProductRow({
 }) {
   const { t } = useT();
   const metaLabel =
-    (p.batches.length > 1 ? t("productList.batchesCountPrefix", { count: p.batches.length }) : "") +
+    (p.batches.length > 1 ? t("inventory.batchesCountPrefix", { count: p.batches.length }) : "") +
     (p.batches[0]?.expiryLabel ?? t("freshness.doesNotExpire"));
 
   return (
@@ -829,7 +839,7 @@ function ProductRow({
                 <span className="truncate text-[15px] font-semibold">{p.short_description}</span>
                 {p.isLow && (
                   <span className="flex-shrink-0 rounded-full bg-info-bg px-sm py-[2px] font-mono text-[10px] tracking-[0.06em] text-info">
-                    {t("productList.lowBadge")}
+                    {t("inventory.lowBadge")}
                   </span>
                 )}
               </div>

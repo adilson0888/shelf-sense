@@ -34,14 +34,14 @@ Items at launch, in order:
 
 | key | label | route | icon |
 |---|---|---|---|
-| `products` | Products | `/` | ▤ |
+| `inventory` | Inventory | `/` | ▤ |
 | `settings` | Settings | `/settings` | ⚙ |
 
 The theme toggle is not a `MenuItem` — it's not a navigable section, just a control that lives in the drawer alongside the item list (see UI requirements). Its state is a simple client-side preference (`"light" | "dark"`), not something `apps/api` needs to know about for this pass.
 
 ## UI requirements
 
-Implemented against the approved Claude Design prototype (`templates/nav-drawer/NavDrawer.dc.html`, "Nav Drawer"). Superseded a couple of things this section used to say — differences called out below rather than silently absorbed, same convention as `Product List.md`.
+Implemented against the approved Claude Design prototype (`templates/nav-drawer/NavDrawer.dc.html`, "Nav Drawer"). Superseded a couple of things this section used to say — differences called out below rather than silently absorbed, same convention as `Inventory.md`.
 
 - **Top app bar**: sticky, `IconButton` hamburger trigger (☰, `aria-label="Open navigation"`) on the left, current screen title next to it. Present on every page.
 - **Drawer**: overlay + scrim over the current page, sliding in from the left (`transform: translateX`, 288px wide / max 86vw). Dismissible by tapping the scrim, the drawer's own close (`✕`) `IconButton`, Escape, or picking an item.
@@ -53,7 +53,7 @@ Implemented against the approved Claude Design prototype (`templates/nav-drawer/
 - **Items at launch**: Products, Settings (see Data) — each rendered as a full-width pill button with a leading icon glyph and label. **Icons resolved as plain text/emoji glyphs** (▤, ⚙), not an icon library — this settles the icon-set question the previous draft left open as "TBD": the approved design uses no icon dependency at all, and there's no need to introduce one.
 - **Active item**: filled pill using `--ss-info` / `--ss-info-bg` (background + text), matching the current route; inactive items are plain text, `--ss-surface-2` on hover.
 - **Mobile-first**: the primary target is a phone-width browser viewport (this app is used mostly on a phone); wider viewports shouldn't break but aren't the design target for this pass.
-- **Theme toggle**: lives in the drawer's footer, below the item list behind a divider — resolves the cross-reference from `Product List.md` ("a theme switcher exists but lives in the main menu, not here"). **Built as a round `IconButton`** showing a sun/moon glyph (☀/☾) that flips the theme on click, **not** the `Switch` component — the previous draft assumed `Switch` would be reused here, but the approved design uses the same circular icon-button pattern as the hamburger/close controls instead, and that's what shipped.
+- **Theme toggle**: lives in the drawer's footer, below the item list behind a divider — resolves the cross-reference from `Inventory.md` ("a theme switcher exists but lives in the main menu, not here"). **Built as a round `IconButton`** showing a sun/moon glyph (☀/☾) that flips the theme on click, **not** the `Switch` component — the previous draft assumed `Switch` would be reused here, but the approved design uses the same circular icon-button pattern as the hamburger/close controls instead, and that's what shipped.
 - **Components — new in `shelf-sense-ds`**:
   - `IconButton` — circular icon-only button (used for the hamburger trigger, drawer close, and theme toggle); didn't exist before this feature.
   - `NavDrawer` — the overlay + sliding panel + item list, composed with `IconButton` internally.

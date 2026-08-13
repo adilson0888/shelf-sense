@@ -2,7 +2,7 @@ import type { Barcode, Batch, Product } from "../types";
 
 /**
  * Placeholder data standing in for apps/api's future /products endpoint —
- * see Product List.md's Non-functional section (offline caching / real
+ * see Inventory.md's Non-functional section (offline caching / real
  * data wiring is a follow-up once that API exists).
  *
  * Dates are offsets from "today" (computed at load time) rather than fixed
