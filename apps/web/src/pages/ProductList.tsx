@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { useNavigate } from "react-router-dom";
 import { Alert, Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
 import { useProductsStore } from "../lib/productsStore";
-import { ApiError, createProduct } from "../lib/api";
+import { ApiError, createProduct, updateProduct } from "../lib/api";
 import {
   type EnrichedProduct,
   type ListScope,
@@ -32,6 +32,7 @@ import {
   addAlias,
   addBarcode,
   armSave,
+  buildEditProductPayload,
   buildSaveResult,
   cancelConfirm,
   changeBarcodeDesc,
@@ -92,6 +93,8 @@ export function ProductListPage() {
 
   // --- Product Edit ------------------------------------------------------
   const [edit, setEdit] = useState<ProductEditState | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editSaveError, setEditSaveError] = useState<string | null>(null);
 
   // --- Quick Batch Edit: hold-to-open / swipe-to-reveal row gestures -----
   const [quick, setQuick] = useState<QuickEditState | null>(null);
@@ -280,10 +283,12 @@ export function ProductListPage() {
     const product = products.find((p) => p.id === id);
     if (!product) return;
     setQuick(null);
+    setEditSaveError(null);
     setEdit(openProductEditState(product));
   }
   function editClose() {
     setEdit(null);
+    setEditSaveError(null);
   }
   function editFieldChange(key: "short" | "long" | "minQty" | "fresh", value: string) {
     if (edit) setEdit(setField(edit, key, value));
@@ -338,9 +343,10 @@ export function ProductListPage() {
   function editCancelConfirm() {
     if (edit) setEdit(cancelConfirm(edit));
   }
-  function editSave() {
+  async function editSave() {
     if (!edit) return;
     if (!edit.saveArmed) {
+      setEditSaveError(null);
       setEdit(armSave(edit, products));
       return;
     }
@@ -349,26 +355,36 @@ export function ProductListPage() {
       setEdit(null);
       return;
     }
-    const { updatedProduct, otherProductUpdates } = buildSaveResult(edit, product);
-    setProducts((ps) =>
-      ps.map((p) => {
-        if (p.id === updatedProduct.id) return updatedProduct;
-        const upd = otherProductUpdates.find((u) => u.productId === p.id);
-        if (!upd) return p;
-        return {
-          ...p,
-          barcodes: p.barcodes.filter((b) => !upd.removeBarcodeCodes.includes(b.code)),
-          aliases: p.aliases.filter((a) => !upd.removeAliases.includes(a)),
-        };
-      }),
-    );
-    if (!updatedProduct.does_expire) {
-      setBatches((bs) => bs.map((b) => (b.product_id === updatedProduct.id ? { ...b, expires_on: null } : b)));
+    const saveResult = buildSaveResult(edit, product);
+    setEditSaving(true);
+    setEditSaveError(null);
+    try {
+      const { product: updatedProduct, batches: updatedBatches } = await updateProduct(
+        edit.productId,
+        buildEditProductPayload(saveResult),
+      );
+      setProducts((ps) =>
+        ps.map((p) => {
+          if (p.id === updatedProduct.id) return updatedProduct;
+          const upd = saveResult.otherProductUpdates.find((u) => u.productId === p.id);
+          if (!upd) return p;
+          return {
+            ...p,
+            barcodes: p.barcodes.filter((b) => !upd.removeBarcodeCodes.includes(b.code)),
+            aliases: p.aliases.filter((a) => !upd.removeAliases.includes(a)),
+          };
+        }),
+      );
+      setBatches((bs) => [...bs.filter((b) => b.product_id !== updatedProduct.id), ...updatedBatches]);
+      setJustSavedMessage(`"${updatedProduct.short_description}" updated.`);
+      if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
+      savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
+      setEdit(null);
+    } catch (err) {
+      setEditSaveError(err instanceof ApiError ? err.message : "Couldn't save this product. Try again.");
+    } finally {
+      setEditSaving(false);
     }
-    setJustSavedMessage(`"${updatedProduct.short_description}" updated.`);
-    if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
-    savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
-    setEdit(null);
   }
 
   // --- Add Product flow -----------------------------------------------
@@ -649,6 +665,8 @@ export function ProductListPage() {
         onConfirmMove={editConfirmMove}
         onCancelConfirm={editCancelConfirm}
         onSave={editSave}
+        saving={editSaving}
+        saveError={editSaveError}
       />
     </div>
   );

@@ -53,3 +53,24 @@ export interface CreateProductPayload {
 export function createProduct(payload: CreateProductPayload): Promise<{ product: Product; batch: Batch | null }> {
   return request("/products", { method: "POST", body: JSON.stringify(payload) });
 }
+
+/** Built by apps/web/src/lib/productEdit.ts's buildEditProductPayload(). */
+export interface UpdateProductPayload {
+  short_description: string;
+  long_description: string;
+  does_expire: boolean;
+  minimal_quantity: number | null;
+  freshness_threshold_days: number | null;
+  aliases: string[];
+  barcodes: { code: string; description: string }[];
+  // Cross-product unlinks the confirm-move flow already resolved before
+  // Save was clickable — see Product Edit.md's Data section.
+  other_product_updates: { product_id: string; remove_barcode_codes: string[]; remove_aliases: string[] }[];
+}
+
+export function updateProduct(
+  id: string,
+  payload: UpdateProductPayload,
+): Promise<{ product: Product; batches: Batch[] }> {
+  return request(`/products/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+}
