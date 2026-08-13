@@ -1,3 +1,4 @@
+import type { UpdateProductPayload } from "./api";
 import type { Barcode, Product } from "../types";
 
 /**
@@ -332,5 +333,23 @@ export function buildSaveResult(state: ProductEditState, currentProduct: Product
   return {
     updatedProduct,
     otherProductUpdates: Array.from(byProduct.entries()).map(([productId, v]) => ({ productId, ...v })),
+  };
+}
+
+/** Reshapes a ProductEditResult into apps/api's PATCH /products/:id request body. */
+export function buildEditProductPayload(result: ProductEditResult): UpdateProductPayload {
+  return {
+    short_description: result.updatedProduct.short_description,
+    long_description: result.updatedProduct.long_description,
+    does_expire: result.updatedProduct.does_expire,
+    minimal_quantity: result.updatedProduct.minimal_quantity,
+    freshness_threshold_days: result.updatedProduct.freshness_threshold_days,
+    aliases: result.updatedProduct.aliases,
+    barcodes: result.updatedProduct.barcodes.map((b) => ({ code: b.code, description: b.description })),
+    other_product_updates: result.otherProductUpdates.map((u) => ({
+      product_id: u.productId,
+      remove_barcode_codes: u.removeBarcodeCodes,
+      remove_aliases: u.removeAliases,
+    })),
   };
 }

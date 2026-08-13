@@ -1,6 +1,6 @@
 # Product Edit
 
-**Status:** in-progress — UI built in `apps/web` against the approved design and mock data; no real `apps/api` wiring yet
+**Status:** in-progress — UI built in `apps/web` against the approved design, now saving for real through `apps/api`'s `PATCH /products/:id` (Postgres via Drizzle — see `specs/Persistence.md`)
 
 ## User story
 

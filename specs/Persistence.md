@@ -1,6 +1,6 @@
 # Persistence & Migrations
 
-**Status:** in-progress — Postgres + Drizzle wired into `apps/api` (`GET`/`POST /products`, auto-migrate-on-boot); `apps/web`'s Product List + Product Add now read/write through it instead of `mocks/products.ts`. Quick Batch Edit / Product Edit / Stock Edit still local-state only (unchanged, per their own specs). Decided in conversation (2026-08-12) rather than via a Claude Design prototype — this is backend infra with no UI, so the spec loop's prototyping step doesn't apply.
+**Status:** in-progress — Postgres + Drizzle wired into `apps/api` (`GET`/`POST /products`, `PATCH /products/:id`, auto-migrate-on-boot); `apps/web`'s Product List, Product Add, and Product Edit now read/write through it instead of `mocks/products.ts`. Quick Batch Edit / Stock Edit still local-state only (unchanged, per their own specs). Decided in conversation (2026-08-12) rather than via a Claude Design prototype — this is backend infra with no UI, so the spec loop's prototyping step doesn't apply.
 
 ## User story
 
@@ -71,6 +71,7 @@ export const barcodes = pgTable("barcodes", {
 **What this unblocks — initial API surface:**
 - `GET /products` — all products with their batches/aliases/barcodes, for `Product List.md`.
 - `POST /products` — create a product, optionally with one initial batch (`quantity > 0` per `Product Add.md`'s rules); enforces `short_description` uniqueness (409 on conflict) and the `does_expire`+`quantity`+`expires_on` validation at the data layer, not just the form.
+- `PATCH /products/:id` — persist `Product Edit.md`'s Save: field edits, alias/barcode add/remove/move (via an explicit `other_product_updates` unlink list the client's own confirm-move flow already resolved), and the `does_expire`-off batch-`expires_on`-clearing cascade, all as one transaction.
 
 Exact request/response shapes get finalized during implementation against these tables — this is the contract that makes both specs' data durable, not a full route-by-route API spec.
 

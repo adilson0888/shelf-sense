@@ -26,6 +26,8 @@ export interface ProductEditViewProps {
   onCancelConfirm: () => void;
   /** First click arms Save ("Confirm?"); a second click while armed commits. */
   onSave: () => void;
+  saving: boolean;
+  saveError: string | null;
 }
 
 /**
@@ -64,11 +66,13 @@ export function ProductEditView({
   onConfirmMove,
   onCancelConfirm,
   onSave,
+  saving,
+  saveError,
 }: ProductEditViewProps) {
   if (!edit) return null;
 
   const allBarcodesSelected = edit.barcodes.length > 0 && edit.selectedBarcodeIds.length === edit.barcodes.length;
-  const saveEnabled = edit.saveArmed || canSave(edit);
+  const saveEnabled = (edit.saveArmed || canSave(edit)) && !saving;
 
   return (
     <>
@@ -284,7 +288,12 @@ export function ProductEditView({
           </div>
 
           <div className="flex flex-shrink-0 flex-col gap-sm border-t border-border bg-surface-0 px-md py-md">
-            {edit.saveArmed && <p className="text-xs text-ink-muted">{saveSummary(edit)}</p>}
+            {saveError && (
+              <Alert variant="danger" title="Couldn't save">
+                {saveError}
+              </Alert>
+            )}
+            {edit.saveArmed && !saving && <p className="text-xs text-ink-muted">{saveSummary(edit)}</p>}
             <div className="flex justify-end gap-sm">
               <Button type="button" variant="outline" size="sm" onClick={onClose}>
                 Cancel
@@ -296,7 +305,7 @@ export function ProductEditView({
                 disabled={!saveEnabled}
                 onClick={onSave}
               >
-                {edit.saveArmed ? "Confirm?" : "Save changes"}
+                {saving ? "Saving…" : edit.saveArmed ? "Confirm?" : "Save changes"}
               </Button>
             </div>
           </div>
