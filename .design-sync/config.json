@@ -11,6 +11,10 @@
     "Modal": {
       "cardMode": "single",
       "primaryStory": "MethodChoice"
+    },
+    "NavDrawer": {
+      "cardMode": "single",
+      "primaryStory": "Open"
     }
   }
 }
