@@ -14,14 +14,31 @@
 # To pick up a newer push instead of whatever was last pulled:
 #   docker compose -f docker-compose.registry.yml pull
 #   docker compose -f docker-compose.registry.yml up -d
+#
+# db's credentials below are the frictionless-by-default local values —
+# override via a .env file next to this one for anything beyond
+# local/single-user self-hosting. See specs/Persistence.md.
 
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-shelfsense}
+      POSTGRES_USER: ${POSTGRES_USER:-shelf}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shelf}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   api:
     image: ghcr.io/adilson0888/shelf-sense-api:latest
     ports:
       - "3001:3001"
     environment:
       PORT: 3001
+      DATABASE_URL: postgres://${POSTGRES_USER:-shelf}:${POSTGRES_PASSWORD:-shelf}@db:5432/${POSTGRES_DB:-shelfsense}
+    depends_on:
+      - db
     restart: unless-stopped
 
   web:
@@ -31,3 +48,6 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+
+volumes:
+  db-data:
