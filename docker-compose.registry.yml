@@ -32,6 +32,10 @@ services:
 
   api:
     image: ghcr.io/adilson0888/shelf-sense-api:latest
+    # Fixed name (matches prod) so apps/web/nginx.conf's /api/ proxy_pass
+    # can find it by hostname regardless of compose's own service-alias
+    # behavior — see apps/web/nginx.conf.
+    container_name: shelf-api
     ports:
       - "3001:3001"
     environment:
@@ -43,6 +47,7 @@ services:
 
   web:
     image: ghcr.io/adilson0888/shelf-sense-web:latest
+    container_name: shelf-web
     ports:
       - "8080:80"
     depends_on:
