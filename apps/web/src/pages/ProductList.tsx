@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Alert, Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
+import { useT } from "shelf-sense-i18n/react";
+import { freshnessBadgeLabel } from "../lib/freshness";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
 import { ApiError, createProduct, updateProduct } from "../lib/api";
@@ -84,6 +86,8 @@ export function ProductListPage() {
 
   const { products, batches, setProducts, setBatches, loading, error, refetch } = useProductsStore();
   const { preferences } = usePreferencesStore();
+  const i18n = useT();
+  const { t } = i18n;
   const navigate = useNavigate();
   const [justSavedMessage, setJustSavedMessage] = useState<string | null>(null);
 
@@ -137,9 +141,11 @@ export function ProductListPage() {
           batches.filter((b) => b.product_id === p.id),
           today,
           listDefaults,
+          i18n,
         ),
       ),
-    [products, batches, today, listDefaults],
+    // i18n's own identity changes exactly when locale/dict change (see useT()'s memo), so this is exhaustive.
+    [products, batches, today, listDefaults, i18n],
   );
 
   const filtered = useMemo(
@@ -148,8 +154,8 @@ export function ProductListPage() {
   );
 
   const groups = useMemo(
-    () => (sortBy === "alpha" ? groupAlphabetically(filtered) : groupByStatus(filtered)),
-    [filtered, sortBy],
+    () => (sortBy === "alpha" ? groupAlphabetically(filtered, t) : groupByStatus(filtered, t)),
+    [filtered, sortBy, t],
   );
 
   const countAttention = all.filter((p) => p.status === "expired" || p.status === "expiring-soon").length;
@@ -311,7 +317,7 @@ export function ProductListPage() {
     if (edit) setEdit(setNewAlias(edit, value));
   }
   function editAddAlias() {
-    if (edit) setEdit(addAlias(edit, products));
+    if (edit) setEdit(addAlias(edit, products, t));
   }
   function editRemoveAlias(alias: string) {
     if (edit) setEdit(removeAlias(edit, alias));
@@ -358,7 +364,7 @@ export function ProductListPage() {
     if (!edit) return;
     if (!edit.saveArmed) {
       setEditSaveError(null);
-      setEdit(armSave(edit, products));
+      setEdit(armSave(edit, products, t));
       return;
     }
     const product = products.find((p) => p.id === edit.productId);
@@ -387,12 +393,12 @@ export function ProductListPage() {
         }),
       );
       setBatches((bs) => [...bs.filter((b) => b.product_id !== updatedProduct.id), ...updatedBatches]);
-      setJustSavedMessage(`"${updatedProduct.short_description}" updated.`);
+      setJustSavedMessage(t("productList.savedProductUpdated", { name: updatedProduct.short_description }));
       if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
       savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
       setEdit(null);
     } catch (err) {
-      setEditSaveError(err instanceof ApiError ? err.message : "Couldn't save this product. Try again.");
+      setEditSaveError(err instanceof ApiError ? err.message : t("productList.genericSaveError"));
     } finally {
       setEditSaving(false);
     }
@@ -467,7 +473,7 @@ export function ProductListPage() {
       const { product, batch } = await createProduct(buildCreateProductPayload(addForm, listDefaults));
       setProducts((ps) => [product, ...ps]);
       if (batch) setBatches((bs) => [batch, ...bs]);
-      setJustSavedMessage("Product added.");
+      setJustSavedMessage(t("productList.productAdded"));
       setAddStep("idle");
       setAddSource(null);
       setAddForm(buildBlankForm(preferences.default_does_expire));
@@ -477,7 +483,7 @@ export function ProductListPage() {
       if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
       savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : "Couldn't save this product. Try again.");
+      setSaveError(err instanceof ApiError ? err.message : t("productList.genericSaveError"));
     } finally {
       setSaving(false);
     }
@@ -500,17 +506,17 @@ export function ProductListPage() {
       <header className="sticky top-[60px] z-[3] flex flex-col gap-[14px] border-b border-border bg-surface-0 px-md pb-[12px] pt-[22px]">
         <div className="flex items-end justify-between gap-[12px]">
           <div className="flex flex-col gap-[2px]">
-            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">Pantry</span>
-            <h1 className="m-0 text-[26px] font-bold leading-[1.1] tracking-[-0.02em]">Inventory</h1>
+            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">{t("productList.eyebrow")}</span>
+            <h1 className="m-0 text-[26px] font-bold leading-[1.1] tracking-[-0.02em]">{t("productList.title")}</h1>
           </div>
           <Button size="sm" onClick={openAddMethod}>
-            + Add
+            {t("productList.addButton")}
           </Button>
         </div>
 
         <Input
           className="h-11"
-          placeholder="Search name or alias"
+          placeholder={t("productList.searchPlaceholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -519,14 +525,14 @@ export function ProductListPage() {
           <ScopeTile
             active={scope === "all"}
             count={all.length}
-            label="All items"
+            label={t("productList.scopeAllItems")}
             activeClassName="border-ink-primary bg-surface-2 text-ink-primary"
             onClick={() => setScope("all")}
           />
           <ScopeTile
             active={scope === "attention"}
             count={countAttention}
-            label="Attention"
+            label={t("productList.scopeAttention")}
             activeClassName="border-warning bg-warning-bg text-warning"
             hoverClassName="hover:border-warning"
             onClick={() => setScope((s) => (s === "attention" ? "all" : "attention"))}
@@ -534,7 +540,7 @@ export function ProductListPage() {
           <ScopeTile
             active={scope === "low"}
             count={countLow}
-            label="Low stock"
+            label={t("productList.scopeLowStock")}
             activeClassName="border-info bg-info-bg text-info"
             hoverClassName="hover:border-info"
             onClick={() => setScope((s) => (s === "low" ? "all" : "low"))}
@@ -543,13 +549,13 @@ export function ProductListPage() {
 
         <div className="flex items-center justify-between gap-[12px] pb-[2px]">
           <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-muted">
-            {filtered.length} {filtered.length === 1 ? "product" : "products"}
+            {i18n.tPlural("productList.count", filtered.length)}
           </span>
           <div className="flex items-center gap-[6px]">
-            <span className="text-[11px] uppercase tracking-[0.04em] text-ink-muted">Sort</span>
+            <span className="text-[11px] uppercase tracking-[0.04em] text-ink-muted">{t("productList.sort")}</span>
             <div className="flex gap-[2px] rounded-full bg-surface-2 p-[2px]">
-              <SortButton active={sortBy === "soonest"} onClick={() => setSortBy("soonest")} label="Soonest" />
-              <SortButton active={sortBy === "alpha"} onClick={() => setSortBy("alpha")} label="A–Z" />
+              <SortButton active={sortBy === "soonest"} onClick={() => setSortBy("soonest")} label={t("productList.sortSoonest")} />
+              <SortButton active={sortBy === "alpha"} onClick={() => setSortBy("alpha")} label={t("productList.sortAlpha")} />
             </div>
           </div>
         </div>
@@ -564,15 +570,15 @@ export function ProductListPage() {
       <div className="flex flex-1 flex-col">
         {loading ? (
           <div className="flex flex-1 items-center justify-center py-[64px] text-[13px] text-ink-muted">
-            Loading your pantry…
+            {t("productList.loading")}
           </div>
         ) : error ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-md px-[28px] py-[64px] text-center">
-            <Alert variant="danger" title="Couldn't load your pantry">
+            <Alert variant="danger" title={t("productList.loadError")}>
               {error}
             </Alert>
             <Button variant="outline" onClick={refetch}>
-              Try again
+              {t("common.tryAgain")}
             </Button>
           </div>
         ) : filtered.length > 0 ? (
@@ -608,13 +614,13 @@ export function ProductListPage() {
             <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full border border-dashed border-border-strong font-mono text-[13px] text-ink-muted">
               0
             </div>
-            <div className="text-[16px] font-semibold">{hasFilters ? "Nothing matches" : "Your pantry is empty"}</div>
-            <div className="max-w-[260px] text-[13px] text-ink-secondary">
-              {hasFilters
-                ? "Clear the search or switch back to All items."
-                : "Add your first product to start tracking batches and expirations."}
+            <div className="text-[16px] font-semibold">
+              {hasFilters ? t("productList.emptyNothingMatches") : t("productList.emptyPantryEmpty")}
             </div>
-            <Button onClick={onEmptyAction}>{hasFilters ? "Clear filters" : "+ Add a product"}</Button>
+            <div className="max-w-[260px] text-[13px] text-ink-secondary">
+              {hasFilters ? t("productList.emptyClearFiltersHint") : t("productList.emptyAddFirstHint")}
+            </div>
+            <Button onClick={onEmptyAction}>{hasFilters ? t("productList.clearFilters") : t("productList.addFirstProduct")}</Button>
           </div>
         )}
       </div>
@@ -780,9 +786,10 @@ function ProductRow({
   onPressAbort: () => void;
   onOpenQuick: () => void;
 }) {
+  const { t } = useT();
   const metaLabel =
-    (p.batches.length > 1 ? `${p.batches.length} batches · ` : "") +
-    (p.batches[0]?.expiryLabel ?? "Does not expire");
+    (p.batches.length > 1 ? t("productList.batchesCountPrefix", { count: p.batches.length }) : "") +
+    (p.batches[0]?.expiryLabel ?? t("freshness.doesNotExpire"));
 
   return (
     <div className="-mb-px flex border-b border-t border-border">
@@ -793,7 +800,7 @@ function ProductRow({
           <button
             type="button"
             onClick={onOpenQuick}
-            title="Quick batch edit"
+            title={t("common.quickBatchEditLabel")}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface-0 text-sm tracking-[0.08em] text-ink-primary"
           >
             •••
@@ -822,14 +829,14 @@ function ProductRow({
                 <span className="truncate text-[15px] font-semibold">{p.short_description}</span>
                 {p.isLow && (
                   <span className="flex-shrink-0 rounded-full bg-info-bg px-sm py-[2px] font-mono text-[10px] tracking-[0.06em] text-info">
-                    LOW
+                    {t("productList.lowBadge")}
                   </span>
                 )}
               </div>
               <span className="truncate text-[12px] text-ink-muted">{metaLabel}</span>
             </div>
             <span className="flex-shrink-0 font-mono text-[17px] font-semibold text-ink-primary">{p.totalQty}</span>
-            <FreshnessBadge status={p.status} />
+            <FreshnessBadge status={p.status} label={freshnessBadgeLabel(p.status, t)} />
             <span
               className={cn(
                 "flex-shrink-0 text-[11px] text-ink-muted transition-transform",
@@ -847,7 +854,7 @@ function ProductRow({
                     {b.qtyLabel}
                   </span>
                   <span className="flex-1 truncate text-[12px] text-ink-secondary">{b.expiryLabel}</span>
-                  <FreshnessBadge status={b.status} />
+                  <FreshnessBadge status={b.status} label={freshnessBadgeLabel(b.status, t)} />
                 </div>
               ))}
             </div>

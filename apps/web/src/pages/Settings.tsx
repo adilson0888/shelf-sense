@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, Button, Input, Select, Switch, cn } from "shelf-sense-ds";
+import { useT } from "shelf-sense-i18n/react";
 import { ApiError, type PreferencesResponse, type UpdatePreferencesPayload } from "../lib/api";
 import { usePreferencesStore } from "../lib/preferencesStore";
 
 const SAVED_MESSAGE_DELAY_MS = 2600;
 
 const EYEBROW_CLASS = "text-xs font-semibold uppercase tracking-wide text-ink-muted";
-
-const LANGUAGE_OPTIONS = [
-  { value: "en-US", label: "English (US)" },
-  { value: "pt-BR", label: "Português do Brasil" },
-];
 
 interface SettingsFormState {
   aiApiBaseUrl: string;
@@ -21,14 +17,22 @@ interface SettingsFormState {
   language: "en-US" | "pt-BR";
 }
 
-function toFormState(p: PreferencesResponse): SettingsFormState {
+// Seeds `language` from the active *resolved* locale (from useT(), i.e.
+// what the app is actually rendering right now), not raw
+// `preferences.language` — that matters before any preference row has
+// ever been saved: `preferences.language` is just the server's bare
+// column default then, not necessarily what the browser detected and the
+// app is currently showing. Without this, saving an unrelated field (e.g.
+// Default Options) before ever touching the language picker could
+// silently persist the wrong language. See AppLocaleProvider.tsx.
+function toFormState(p: PreferencesResponse, activeLocale: "en-US" | "pt-BR"): SettingsFormState {
   return {
     aiApiBaseUrl: p.ai_api_base_url ?? "",
     aiModel: p.ai_model ?? "",
     defaultMinimalQuantity: String(p.default_minimal_quantity),
     defaultFreshnessThresholdDays: String(p.default_freshness_threshold_days),
     defaultDoesExpire: p.default_does_expire,
-    language: p.language,
+    language: activeLocale,
   };
 }
 
@@ -67,12 +71,17 @@ function SectionHeader({ label, open, onToggle }: { label: string; open: boolean
  */
 export function SettingsPage() {
   const { preferences, loading, error, refetch, save } = usePreferencesStore();
+  const { t, locale } = useT();
+  const languageOptions = [
+    { value: "en-US", label: t("settings.languageOptions.enUS") },
+    { value: "pt-BR", label: t("settings.languageOptions.ptBR") },
+  ];
 
-  const [form, setForm] = useState<SettingsFormState>(() => toFormState(preferences));
+  const [form, setForm] = useState<SettingsFormState>(() => toFormState(preferences, locale));
   // Resets only when `preferences` itself changes — a successful GET or a
   // successful save, exactly the two moments the form should reset. A
   // failed save leaves `preferences` untouched, so the form stays as typed.
-  useEffect(() => setForm(toFormState(preferences)), [preferences]);
+  useEffect(() => setForm(toFormState(preferences, locale)), [preferences, locale]);
 
   const [aiOpen, setAiOpen] = useState(true);
   const [defaultsOpen, setDefaultsOpen] = useState(false);
@@ -133,7 +142,7 @@ export function SettingsPage() {
       if (savedTimer.current) clearTimeout(savedTimer.current);
       savedTimer.current = window.setTimeout(() => setJustSaved(false), SAVED_MESSAGE_DELAY_MS);
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : "Couldn't save your settings. Try again.");
+      setSaveError(err instanceof ApiError ? err.message : t("settings.saveErrorFallback"));
     } finally {
       setSaving(false);
     }
@@ -142,7 +151,7 @@ export function SettingsPage() {
   if (loading) {
     return (
       <div className="flex flex-1 items-center justify-center py-[64px] text-[13px] text-ink-muted">
-        Loading your settings…
+        {t("settings.loading")}
       </div>
     );
   }
@@ -150,11 +159,11 @@ export function SettingsPage() {
   if (error) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-md px-[28px] py-[64px] text-center">
-        <Alert variant="danger" title="Couldn't load your settings">
+        <Alert variant="danger" title={t("settings.loadError")}>
           {error}
         </Alert>
         <Button variant="outline" onClick={refetch}>
-          Try again
+          {t("common.tryAgain")}
         </Button>
       </div>
     );
@@ -166,44 +175,51 @@ export function SettingsPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-lg overflow-y-auto p-md pb-[24px]">
-      {justSaved && <Alert variant="success" title="Saved" />}
+      {justSaved && <Alert variant="success" title={t("settings.saved")} />}
       {saveError && (
-        <Alert variant="danger" title="Couldn't save">
+        <Alert variant="danger" title={t("settings.saveError")}>
           {saveError}
         </Alert>
       )}
 
       <section className="flex flex-col gap-md">
-        <SectionHeader label="AI Settings" open={aiOpen} onToggle={() => setAiOpen((v) => !v)} />
+        <SectionHeader label={t("settings.aiSettings.heading")} open={aiOpen} onToggle={() => setAiOpen((v) => !v)} />
         {aiOpen && (
           <>
             <Input
-              label="API base URL"
-              placeholder="https://api.openai.com/v1"
+              label={t("settings.aiSettings.baseUrlLabel")}
+              placeholder={t("settings.aiSettings.baseUrlPlaceholder")}
               value={form.aiApiBaseUrl}
               onChange={(e) => setField("aiApiBaseUrl", e.target.value)}
             />
             <div className="flex flex-col gap-xs">
-              <Input label="API key" type="password" value={newApiKey} onChange={(e) => handleApiKeyChange(e.target.value)} />
+              <Input
+                label={t("settings.aiSettings.apiKeyLabel")}
+                type="password"
+                value={newApiKey}
+                onChange={(e) => handleApiKeyChange(e.target.value)}
+              />
               {showSavedKeyRow && (
                 <div className="flex items-center gap-sm">
-                  <span className="text-xs text-ink-muted">A key is saved ({preferences.ai_api_key_hint}).</span>
+                  <span className="text-xs text-ink-muted">
+                    {t("settings.aiSettings.keySavedHint", { hint: preferences.ai_api_key_hint ?? "" })}
+                  </span>
                   <button type="button" onClick={handleClearKey} className="bg-transparent p-0 text-xs font-semibold text-brand-600 underline">
-                    Clear saved key
+                    {t("settings.aiSettings.clearSavedKey")}
                   </button>
                 </div>
               )}
-              {pendingClearKey && <p className="text-xs text-ink-muted">The saved key will be cleared when you save.</p>}
+              {pendingClearKey && <p className="text-xs text-ink-muted">{t("settings.aiSettings.keyWillBeCleared")}</p>}
             </div>
             <Input
-              label="Model"
-              placeholder="e.g. gpt-4o-mini"
+              label={t("settings.aiSettings.modelLabel")}
+              placeholder={t("settings.aiSettings.modelPlaceholder")}
               value={form.aiModel}
               onChange={(e) => setField("aiModel", e.target.value)}
             />
             <div className="flex justify-end">
               <Button size="sm" onClick={handleSave} disabled={!canSave}>
-                {saving ? "Saving…" : "Save"}
+                {saving ? t("common.saving") : t("common.save")}
               </Button>
             </div>
           </>
@@ -211,35 +227,37 @@ export function SettingsPage() {
       </section>
 
       <div className="flex flex-col gap-md border-t border-border pt-lg">
-        <SectionHeader label="Default Options" open={defaultsOpen} onToggle={() => setDefaultsOpen((v) => !v)} />
+        <SectionHeader label={t("settings.defaultOptions.heading")} open={defaultsOpen} onToggle={() => setDefaultsOpen((v) => !v)} />
         {defaultsOpen && (
           <>
             <Input
-              label="Default minimal quantity"
+              label={t("settings.defaultOptions.minQtyLabel")}
               type="number"
               min={0}
               value={form.defaultMinimalQuantity}
               onChange={(e) => setField("defaultMinimalQuantity", e.target.value)}
-              error={minQty === null ? "Enter a whole number, 0 or greater." : undefined}
+              error={minQty === null ? t("settings.defaultOptions.numberError") : undefined}
             />
             <Switch
-              label="Products expire by default"
+              label={t("settings.defaultOptions.expireByDefaultLabel")}
+              onLabel={t("common.yes")}
+              offLabel={t("common.no")}
               checked={form.defaultDoesExpire}
               onCheckedChange={(checked) => setField("defaultDoesExpire", checked)}
             />
             {form.defaultDoesExpire && (
               <Input
-                label="Default freshness threshold (days)"
+                label={t("settings.defaultOptions.freshnessLabel")}
                 type="number"
                 min={0}
                 value={form.defaultFreshnessThresholdDays}
                 onChange={(e) => setField("defaultFreshnessThresholdDays", e.target.value)}
-                error={freshDays === null ? "Enter a whole number, 0 or greater." : undefined}
+                error={freshDays === null ? t("settings.defaultOptions.numberError") : undefined}
               />
             )}
             <div className="flex justify-end">
               <Button size="sm" onClick={handleSave} disabled={!canSave}>
-                {saving ? "Saving…" : "Save"}
+                {saving ? t("common.saving") : t("common.save")}
               </Button>
             </div>
           </>
@@ -247,18 +265,18 @@ export function SettingsPage() {
       </div>
 
       <div className="flex flex-col gap-md border-t border-border pt-lg">
-        <SectionHeader label="User Preferences" open={prefsOpen} onToggle={() => setPrefsOpen((v) => !v)} />
+        <SectionHeader label={t("settings.userPreferences.heading")} open={prefsOpen} onToggle={() => setPrefsOpen((v) => !v)} />
         {prefsOpen && (
           <>
             <Select
-              label="Language"
-              options={LANGUAGE_OPTIONS}
+              label={t("settings.userPreferences.languageLabel")}
+              options={languageOptions}
               value={form.language}
               onChange={(e) => setField("language", e.target.value as SettingsFormState["language"])}
             />
             <div className="flex justify-end">
               <Button size="sm" onClick={handleSave} disabled={!canSave}>
-                {saving ? "Saving…" : "Save"}
+                {saving ? t("common.saving") : t("common.save")}
               </Button>
             </div>
           </>

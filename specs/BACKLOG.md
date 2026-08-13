@@ -22,6 +22,15 @@ Covers, when picked back up:
 - **Open question, not yet decided**: whether "consumed" is a state on `Batch` itself (e.g. a status field) or price history moves to its own separate entity keyed off the purchase rather than the batch. Needs a real design pass, not just a field bolted on.
 - **Touches two existing specs when this lands**: `Quick Batch Edit.md`'s Save behavior ("any batch emptied to 0 is removed entirely") and `Stock Edit.md`'s zero-quantity handling both hard-delete via the same underlying mechanism today — both need updating together, not independently, or they'll drift back out of sync.
 
+## Locale-correct date input
+
+Pulled from `i18n.md` (2026-08-13) — confirmed empirically while building Quick Batch Edit: the native `<input type="date">` picker's displayed format (`mm/dd/yyyy` vs `dd/mm/yyyy`) is controlled entirely by the visiting browser's own UI language, not the page's `<html lang>` attribute or anything set at the app/JS level (tested both — neither moved it). Every date input in the app today (`Product Add`, `Stock Edit`, `Quick Batch Edit`) inherits whatever format the user's own browser happens to be set to, regardless of the language chosen in Settings.
+
+Covers, when picked back up:
+- A custom `shelf-sense-ds` date-picker component, replacing every native `<input type="date">` in the app — needs its own Claude Design prototype pass first per `specs/README.md`'s spec loop (no prototype exists for this control yet).
+- Locale-driven calendar rendering (month/day names, week start, `dd/mm` vs `mm/dd` field order) sourced from the same active-locale mechanism `i18n.md` builds (`shelf-sense-i18n`'s `Locale`), not the browser's own language.
+- Re-check every existing date-input call site once built: `apps/web/src/components/AddProductModals.tsx` (Expires on), `apps/web/src/pages/StockEdit.tsx` (inline expiration edit + add-batch), `apps/web/src/components/QuickBatchEditModal.tsx` (Expires on).
+
 ## Product icons
 
 Pulled from `Product List.md` and `Product Add.md` (2026-08-11) — the approved Product List design didn't render an icon anywhere, which prompted deferring the whole feature rather than resolving the mismatch.
