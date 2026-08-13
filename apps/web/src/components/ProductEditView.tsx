@@ -1,4 +1,5 @@
 import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Switch } from "shelf-sense-ds";
+import { useT } from "shelf-sense-i18n/react";
 import { canSave, isRenamed, newBarcodeValid, saveSummary, type ProductEditState } from "../lib/productEdit";
 
 export interface ProductEditViewProps {
@@ -69,6 +70,8 @@ export function ProductEditView({
   saving,
   saveError,
 }: ProductEditViewProps) {
+  const i18n = useT();
+  const { t } = i18n;
   if (!edit) return null;
 
   const allBarcodesSelected = edit.barcodes.length > 0 && edit.selectedBarcodeIds.length === edit.barcodes.length;
@@ -82,77 +85,71 @@ export function ProductEditView({
             <button
               type="button"
               onClick={onClose}
-              title="Back"
+              title={t("productEdit.backTitle")}
               className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-border bg-surface-1 text-base text-ink-primary"
             >
               ‹
             </button>
             <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
-              <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">Edit product</span>
-              <span className="truncate text-[19px] font-bold tracking-[-0.02em]">{edit.short || "Untitled"}</span>
+              <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">{t("productEdit.eyebrow")}</span>
+              <span className="truncate text-[19px] font-bold tracking-[-0.02em]">{edit.short || t("productEdit.untitled")}</span>
             </div>
           </div>
 
           <div className="flex flex-1 flex-col gap-lg overflow-y-auto p-md">
             <div className="flex flex-col gap-md">
               <Input
-                label="Short description"
-                placeholder="e.g. Grated cheese"
+                label={t("common.shortDescriptionLabel")}
+                placeholder={t("common.shortDescriptionPlaceholder")}
                 value={edit.short}
                 onChange={(e) => onFieldChange("short", e.target.value)}
               />
               {edit.shortError && <Alert variant="danger" title={edit.shortError} />}
-              {!edit.shortError && isRenamed(edit) && (
-                <Alert
-                  variant="info"
-                  title="This rename applies everywhere this product is referenced — barcodes and batches key off its id, not this name, so nothing else technically changes."
-                />
-              )}
+              {!edit.shortError && isRenamed(edit) && <Alert variant="info" title={t("productEdit.renameNotice")} />}
               <Input
-                label="Long description"
-                placeholder="Brand, size, details"
+                label={t("common.longDescriptionLabel")}
+                placeholder={t("common.longDescriptionPlaceholder")}
                 value={edit.long}
                 onChange={(e) => onFieldChange("long", e.target.value)}
               />
             </div>
 
             <div className="flex flex-col gap-md border-t border-border pt-lg">
-              <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted">Tracking</span>
-              <Switch label="Does it expire?" checked={edit.doesExpire} onCheckedChange={onDoesExpireChange} />
+              <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted">{t("productEdit.trackingHeading")}</span>
+              <Switch
+                label={t("common.doesItExpire")}
+                onLabel={t("common.yes")}
+                offLabel={t("common.no")}
+                checked={edit.doesExpire}
+                onCheckedChange={onDoesExpireChange}
+              />
               {!edit.doesExpire && datedBatchCount > 0 && (
-                <Alert
-                  variant="warning"
-                  title={
-                    datedBatchCount === 1
-                      ? "1 batch still has an expiry date. Saving will clear it."
-                      : `${datedBatchCount} batches still have expiry dates. Saving will clear them.`
-                  }
-                />
+                <Alert variant="warning" title={i18n.tPlural("productEdit.expiryWarning", datedBatchCount)} />
               )}
               {edit.doesExpire && (
                 <Input
-                  label="Freshness threshold"
+                  label={t("common.freshnessThresholdLabel")}
                   type="number"
                   min={0}
-                  placeholder="Optional"
-                  hint="Days before expiry to flag as expiring soon."
+                  placeholder={t("common.optionalPlaceholder")}
+                  hint={t("productEdit.freshnessHint")}
                   value={edit.fresh}
                   onChange={(e) => onFieldChange("fresh", e.target.value)}
                 />
               )}
               <Input
-                label="Minimum quantity"
+                label={t("common.minimumQuantityLabel")}
                 type="number"
                 min={0}
-                placeholder="Optional"
-                hint="Warn me when stock falls to this."
+                placeholder={t("common.optionalPlaceholder")}
+                hint={t("productEdit.minQtyHint")}
                 value={edit.minQty}
                 onChange={(e) => onFieldChange("minQty", e.target.value)}
               />
             </div>
 
             <div className="flex flex-col gap-sm border-t border-border pt-lg">
-              <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted">Also known as</span>
+              <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted">{t("productEdit.alsoKnownAsHeading")}</span>
               {edit.aliases.length > 0 && (
                 <div className="flex flex-wrap gap-[6px]">
                   {edit.aliases.map((a) => (
@@ -164,7 +161,7 @@ export function ProductEditView({
                       <button
                         type="button"
                         onClick={() => onRemoveAlias(a)}
-                        title="Remove"
+                        title={t("common.remove")}
                         className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full border-0 bg-surface-0 text-[11px] leading-none text-ink-muted"
                       >
                         ×
@@ -177,7 +174,7 @@ export function ProductEditView({
               <div className="flex items-end gap-sm">
                 <div className="flex-1">
                   <Input
-                    placeholder="Add an alias for search"
+                    placeholder={t("productEdit.addAliasPlaceholder")}
                     value={edit.newAlias}
                     onChange={(e) => onNewAliasChange(e.target.value)}
                     onKeyDown={(e) => {
@@ -186,19 +183,21 @@ export function ProductEditView({
                   />
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={onAddAlias}>
-                  Add
+                  {t("productEdit.addAliasButton")}
                 </Button>
               </div>
             </div>
 
             <div className="flex flex-col gap-sm border-t border-border pt-lg">
               <div className="flex min-h-[32px] items-center justify-between gap-sm">
-                <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted">Barcodes</span>
+                <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted">{t("productEdit.barcodesHeading")}</span>
                 {edit.selectedBarcodeIds.length > 0 && (
                   <div className="flex items-center gap-sm">
-                    <span className="text-[11px] text-ink-muted">{edit.selectedBarcodeIds.length} selected</span>
+                    <span className="text-[11px] text-ink-muted">
+                      {i18n.tPlural("common.selectedCount", edit.selectedBarcodeIds.length)}
+                    </span>
                     <Button type="button" variant="danger" size="sm" onClick={onRemoveSelectedBarcodes}>
-                      Remove
+                      {t("common.remove")}
                     </Button>
                   </div>
                 )}
@@ -207,18 +206,16 @@ export function ProductEditView({
                 <div className="grid grid-cols-[28px_1fr_110px] items-center gap-sm bg-surface-2 px-md py-[9px] font-mono text-[10px] uppercase tracking-[0.1em] text-ink-muted">
                   <input
                     type="checkbox"
-                    title="Select all"
+                    title={t("common.selectAll")}
                     checked={allBarcodesSelected}
                     onChange={onToggleSelectAllBarcodes}
                     className="h-[15px] w-[15px] accent-brand-600"
                   />
-                  <span>Description</span>
-                  <span>Code</span>
+                  <span>{t("productEdit.barcodeDescriptionLabel")}</span>
+                  <span>{t("productEdit.barcodeCodeLabel")}</span>
                 </div>
                 {edit.barcodes.length === 0 ? (
-                  <p className="border-t border-border px-md py-[14px] text-xs text-ink-muted">
-                    No barcodes linked. Scanning one during Add product links it here.
-                  </p>
+                  <p className="border-t border-border px-md py-[14px] text-xs text-ink-muted">{t("productEdit.noBarcodesLinked")}</p>
                 ) : (
                   edit.barcodes.map((b) => (
                     <div
@@ -245,10 +242,10 @@ export function ProductEditView({
                         <button
                           type="button"
                           onClick={() => onStartEditBarcodeDesc(b.id)}
-                          title="Edit description"
+                          title={t("productEdit.editDescriptionTitle")}
                           className="truncate border-0 border-b border-dashed border-transparent bg-transparent p-0 text-left text-[13px] text-ink-primary hover:border-border-strong"
                         >
-                          {b.description || <span className="text-ink-muted">Untitled</span>}
+                          {b.description || <span className="text-ink-muted">{t("productEdit.untitled")}</span>}
                         </button>
                       )}
                       <span className="truncate font-mono text-[11px] text-ink-muted">{b.code}</span>
@@ -259,29 +256,29 @@ export function ProductEditView({
               {edit.addBarcodeOpen ? (
                 <div className="flex flex-col gap-sm rounded-lg border border-dashed border-border-strong p-md">
                   <Input
-                    label="Description"
-                    placeholder="e.g. Queijo Ralado 100g"
+                    label={t("productEdit.barcodeDescriptionLabel")}
+                    placeholder={t("productEdit.barcodeDescPlaceholder")}
                     value={edit.newBarcodeDesc}
                     onChange={(e) => onNewBarcodeDescChange(e.target.value)}
                   />
                   <Input
-                    label="Code"
-                    placeholder="13 digits"
+                    label={t("productEdit.barcodeCodeLabel")}
+                    placeholder={t("productEdit.barcodeCodePlaceholder")}
                     value={edit.newBarcodeCode}
                     onChange={(e) => onNewBarcodeCodeChange(e.target.value)}
                   />
                   <div className="flex justify-end gap-sm">
                     <Button type="button" variant="ghost" size="sm" onClick={onToggleAddBarcode}>
-                      Cancel
+                      {t("common.cancel")}
                     </Button>
                     <Button type="button" size="sm" disabled={!newBarcodeValid(edit)} onClick={onAddBarcode}>
-                      Add code
+                      {t("productEdit.addCodeButton")}
                     </Button>
                   </div>
                 </div>
               ) : (
                 <Button type="button" variant="outline" size="sm" className="self-start" onClick={onToggleAddBarcode}>
-                  + Add barcode
+                  {t("productEdit.addBarcodeToggle")}
                 </Button>
               )}
             </div>
@@ -289,14 +286,14 @@ export function ProductEditView({
 
           <div className="flex flex-shrink-0 flex-col gap-sm border-t border-border bg-surface-0 px-md py-md">
             {saveError && (
-              <Alert variant="danger" title="Couldn't save">
+              <Alert variant="danger" title={t("common.saveErrorTitle")}>
                 {saveError}
               </Alert>
             )}
-            {edit.saveArmed && !saving && <p className="text-xs text-ink-muted">{saveSummary(edit)}</p>}
+            {edit.saveArmed && !saving && <p className="text-xs text-ink-muted">{saveSummary(edit, i18n)}</p>}
             <div className="flex justify-end gap-sm">
               <Button type="button" variant="outline" size="sm" onClick={onClose}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 type="button"
@@ -305,7 +302,7 @@ export function ProductEditView({
                 disabled={!saveEnabled}
                 onClick={onSave}
               >
-                {saving ? "Saving…" : edit.saveArmed ? "Confirm?" : "Save changes"}
+                {saving ? t("common.saving") : edit.saveArmed ? t("common.confirmQuestion") : t("productEdit.saveChangesButton")}
               </Button>
             </div>
           </div>
@@ -315,26 +312,26 @@ export function ProductEditView({
       <Modal
         open={edit.confirm?.type === "barcode" || edit.confirm?.type === "alias"}
         onClose={onCancelConfirm}
-        aria-label="Move this?"
+        aria-label={edit.confirm?.type === "alias" ? t("productEdit.moveAliasTitle") : t("common.moveBarcodeQuestion")}
         className="max-w-sm"
       >
         <ModalHeader>
-          <ModalTitle>{edit.confirm?.type === "alias" ? "Move this alias?" : "Move this barcode?"}</ModalTitle>
+          <ModalTitle>{edit.confirm?.type === "alias" ? t("productEdit.moveAliasTitle") : t("common.moveBarcodeQuestion")}</ModalTitle>
         </ModalHeader>
         <ModalBody>
           <p className="text-sm leading-relaxed text-ink-secondary">
             {edit.confirm?.type === "barcode" &&
-              `This barcode is currently linked to "${edit.confirm.ownerName}." Continuing will unlink it from that product and link it to this one instead.`}
+              t("productEdit.moveBarcodeBody", { ownerName: edit.confirm.ownerName })}
             {edit.confirm?.type === "alias" &&
-              `"${edit.confirm.alias}" is already an alias of "${edit.confirm.ownerName}." Continuing will remove it from that product and add it to this one instead.`}
+              t("productEdit.moveAliasBody", { alias: edit.confirm.alias, ownerName: edit.confirm.ownerName })}
           </p>
         </ModalBody>
         <ModalFooter>
           <Button variant="outline" size="sm" onClick={onCancelConfirm}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button variant="danger" size="sm" onClick={onConfirmMove}>
-            Unlink and continue
+            {t("common.unlinkAndContinue")}
           </Button>
         </ModalFooter>
       </Modal>

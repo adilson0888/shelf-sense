@@ -1,3 +1,4 @@
+import type { TFunctions } from "shelf-sense-i18n/react";
 import type { Batch } from "../types";
 
 /**
@@ -171,14 +172,15 @@ export function armSave(state: StockEditState): StockEditState {
   return { ...state, armed: true };
 }
 
-/** "2 batches added, 1 batch updated, 1 batch removed." — only non-zero categories, singular/plural per count. */
-export function saveSummary(state: StockEditState): string {
+/** "2 batches added, 1 batch updated, 1 batch removed." — only non-zero categories, singular/plural per count via tPlural, joined via formatList (locale-correct separator/conjunction — see packages/i18n/src/format.ts). */
+export function saveSummary(state: StockEditState, i18n: Pick<TFunctions, "tPlural" | "formatList">): string {
+  const { tPlural, formatList } = i18n;
   const added = state.batches.filter((b) => isNewRow(state, b.id)).length;
   const updated = state.batches.filter((b) => isEditedRow(state, b.id)).length;
   const removed = state.removed.length;
   const bits: string[] = [];
-  if (added) bits.push(`${added} ${added === 1 ? "batch" : "batches"} added`);
-  if (updated) bits.push(`${updated} ${updated === 1 ? "batch" : "batches"} updated`);
-  if (removed) bits.push(`${removed} ${removed === 1 ? "batch" : "batches"} removed`);
-  return `${bits.join(", ")}.`;
+  if (added) bits.push(tPlural("stockEdit.saveSummary.added", added));
+  if (updated) bits.push(tPlural("stockEdit.saveSummary.updated", updated));
+  if (removed) bits.push(tPlural("stockEdit.saveSummary.removed", removed));
+  return `${formatList(bits)}.`;
 }

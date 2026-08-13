@@ -1,4 +1,6 @@
 import { Button, cn, FreshnessBadge, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "shelf-sense-ds";
+import { useT } from "shelf-sense-i18n/react";
+import { freshnessBadgeLabel } from "../lib/freshness";
 import type { EnrichedProduct } from "../lib/productList";
 import type { QuickEditState } from "../lib/quickBatchEdit";
 
@@ -40,6 +42,7 @@ export function QuickBatchEditModal({
   onStock,
   onEditProduct,
 }: QuickBatchEditModalProps) {
+  const { t, tPlural } = useT();
   const open = !!quick && !!product;
   const delta = quick ? quick.target - quick.base : 0;
   const doesExpire = product?.does_expire ?? true;
@@ -58,18 +61,18 @@ export function QuickBatchEditModal({
   const decHint = !quick
     ? ""
     : delta < 0
-      ? `${Math.abs(delta)} coming off the oldest batches first.`
+      ? t("quickBatchEdit.decHintNegative", { count: Math.abs(delta) })
       : delta > 0
-        ? `${delta} will be added as one new batch.`
+        ? t("quickBatchEdit.decHintPositive", { count: delta })
         : quick.target <= 0
-          ? "Nothing in stock — add to restock."
-          : "Adjust in steps, or tap the number to type an exact count.";
+          ? t("quickBatchEdit.decHintEmpty")
+          : t("quickBatchEdit.decHintDefault");
 
   const noNewBatchHint =
-    quick && delta < 0 ? "Removing stock only — no new batch, no date needed." : "Increase the count to add a new batch.";
+    quick && delta < 0 ? t("quickBatchEdit.noNewBatchHintRemoving") : t("quickBatchEdit.noNewBatchHintDefault");
 
   return (
-    <Modal open={open} onClose={onClose} aria-label="Quick batch edit" className="max-w-sm">
+    <Modal open={open} onClose={onClose} aria-label={t("common.quickBatchEditLabel")} className="max-w-sm">
       <ModalHeader>
         <ModalTitle>{product?.short_description ?? ""}</ModalTitle>
       </ModalHeader>
@@ -78,7 +81,7 @@ export function QuickBatchEditModal({
           <>
             <div className="flex items-center gap-md rounded-lg border border-border bg-surface-1 p-md">
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted">In stock</span>
+                <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted">{t("quickBatchEdit.inStockLabel")}</span>
                 {quick.editing ? (
                   <Input
                     type="number"
@@ -97,7 +100,7 @@ export function QuickBatchEditModal({
                     <button
                       type="button"
                       onClick={onStartEdit}
-                      title="Type an exact quantity"
+                      title={t("quickBatchEdit.typeExactQuantityTitle")}
                       className="border-0 border-b border-dashed border-border-strong bg-transparent p-0 font-mono text-[34px] font-semibold leading-[1.05] text-ink-primary"
                     >
                       {quick.target}
@@ -107,16 +110,14 @@ export function QuickBatchEditModal({
                         className={cn("font-mono text-[13px] font-semibold", delta > 0 ? "text-success" : "text-danger")}
                       >
                         {delta > 0 ? "+" : "−"}
-                        {Math.abs(delta)} pending
+                        {t("quickBatchEdit.pendingCount", { count: Math.abs(delta) })}
                       </span>
                     )}
                   </div>
                 )}
-                <span className="text-xs text-ink-muted">
-                  {product.batches.length === 1 ? "1 batch" : `${product.batches.length} batches`}
-                </span>
+                <span className="text-xs text-ink-muted">{tPlural("quickBatchEdit.batchesCount", product.batches.length)}</span>
               </div>
-              <FreshnessBadge status={product.status} />
+              <FreshnessBadge status={product.status} label={freshnessBadgeLabel(product.status, t)} />
             </div>
 
             <div className="flex flex-col gap-sm pt-sm">
@@ -140,25 +141,23 @@ export function QuickBatchEditModal({
             <div className="flex flex-col gap-sm border-t border-border pt-sm">
               {showExpiry && (
                 <Input
-                  label="Expires on"
+                  label={t("common.expiresOnLabel")}
                   type="date"
-                  hint="Applies to the batch you're adding."
+                  hint={t("quickBatchEdit.expiresOnHint")}
                   value={quick.addExpiresOn}
                   onChange={(e) => onAddExpiresOnChange(e.target.value)}
                 />
               )}
-              {noExpiryLine && (
-                <p className="text-xs text-ink-muted">This product doesn't expire, so the new batch has no date.</p>
-              )}
+              {noExpiryLine && <p className="text-xs text-ink-muted">{t("quickBatchEdit.noExpiryNewBatch")}</p>}
               {noNewBatchLine && <p className="text-xs text-ink-muted">{noNewBatchHint}</p>}
             </div>
 
             <div className="flex gap-sm border-t border-border pt-sm">
               <Button type="button" variant="outline" size="sm" onClick={onStock}>
-                Stock
+                {t("quickBatchEdit.stockButton")}
               </Button>
               <Button type="button" variant="outline" size="sm" onClick={onEditProduct}>
-                Edit product
+                {t("quickBatchEdit.editProductButton")}
               </Button>
             </div>
           </>
@@ -166,13 +165,13 @@ export function QuickBatchEditModal({
       </ModalBody>
       <ModalFooter>
         <Button variant="ghost" size="sm" disabled={resetDisabled} onClick={onReset}>
-          Reset
+          {t("quickBatchEdit.resetButton")}
         </Button>
         <Button variant="outline" size="sm" onClick={onClose}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button size="sm" disabled={saveDisabled} onClick={onSave}>
-          Save
+          {t("common.save")}
         </Button>
       </ModalFooter>
     </Modal>

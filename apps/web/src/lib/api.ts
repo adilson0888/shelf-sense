@@ -85,6 +85,8 @@ export interface PreferencesResponse {
   default_freshness_threshold_days: number;
   default_does_expire: boolean;
   language: "en-US" | "pt-BR";
+  /** False only when no preferences row has ever been saved — see specs/i18n.md's first-launch detection. */
+  has_saved_preferences: boolean;
 }
 
 /** Built by apps/web/src/pages/Settings.tsx's Save handler. */

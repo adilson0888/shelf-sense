@@ -1,11 +1,15 @@
 import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Switch } from "shelf-sense-ds";
+import { useT } from "shelf-sense-i18n/react";
 import type { AddFlowStep, AddProductFormState, PrefillSource } from "../lib/addProduct";
 import { MOCK_BARCODE_MATCH } from "../lib/addProduct";
+import type { ProductListDefaults } from "../lib/productList";
 
 export interface AddProductModalsProps {
   step: AddFlowStep;
   form: AddProductFormState;
   prefillSource: PrefillSource;
+  /** Current global defaults (specs/Settings.md) — previewed as placeholder text on the Minimum quantity/Freshness threshold fields, and what gets saved if either is left blank. */
+  defaults: ProductListDefaults;
   onCloseAll: () => void;
   onScan: () => void;
   onPhoto: () => void;
@@ -38,6 +42,7 @@ export function AddProductModals({
   step,
   form,
   prefillSource,
+  defaults,
   onCloseAll,
   onScan,
   onPhoto,
@@ -53,11 +58,12 @@ export function AddProductModals({
   saving,
   saveError,
 }: AddProductModalsProps) {
+  const { t } = useT();
   const qtyNum = Number.parseInt(form.qty, 10) || 0;
   const showExpiresOn = form.doesExpire && qtyNum > 0;
   const expiresHiddenReason = form.doesExpire
-    ? "Add a quantity above to set an expiry date for this batch."
-    : "This product doesn't expire, so no expiry date is needed.";
+    ? t("addProduct.expiresOnHiddenWithExpiry")
+    : t("addProduct.expiresOnHiddenNoExpiry");
 
   // Product Add.md's Non-functional section: does_expire=true + quantity>0
   // + no expires_on is a hard validation error, not a soft warning. (The
@@ -70,22 +76,22 @@ export function AddProductModals({
 
   let prefillNote = "";
   if (prefillSource === "match") {
-    prefillNote = `Prefilled from "${MOCK_BARCODE_MATCH.short}". The barcode will move to this new product; give it its own short description.`;
+    prefillNote = t("addProduct.prefillNoteMatch", { name: MOCK_BARCODE_MATCH.short });
   } else if (prefillSource === "photo") {
-    prefillNote = "Prefilled from your photo. This isn't right? Clear it and enter the details manually.";
+    prefillNote = t("addProduct.prefillNotePhoto");
   }
 
   return (
     <>
       {/* Step 1 — method choice */}
-      <Modal open={step === "method"} onClose={onCloseAll} aria-label="Add a product" className="max-w-sm">
+      <Modal open={step === "method"} onClose={onCloseAll} aria-label={t("addProduct.methodModalTitle")} className="max-w-sm">
         <ModalHeader>
-          <ModalTitle>Add a product</ModalTitle>
+          <ModalTitle>{t("addProduct.methodModalTitle")}</ModalTitle>
         </ModalHeader>
         <ModalBody className="flex flex-col gap-sm">
-          <MethodOption icon="▥" title="Scan barcode" subtitle="Fastest for packaged goods" onClick={onScan} />
-          <MethodOption icon="◉" title="Take a photo" subtitle="Snap the label, we read it" onClick={onPhoto} />
-          <MethodOption icon="✎" title="Enter manually" subtitle="Type the details yourself" onClick={onManual} />
+          <MethodOption icon="▥" title={t("addProduct.scanOption.title")} subtitle={t("addProduct.scanOption.subtitle")} onClick={onScan} />
+          <MethodOption icon="◉" title={t("addProduct.photoOption.title")} subtitle={t("addProduct.photoOption.subtitle")} onClick={onPhoto} />
+          <MethodOption icon="✎" title={t("addProduct.manualOption.title")} subtitle={t("addProduct.manualOption.subtitle")} onClick={onManual} />
         </ModalBody>
       </Modal>
 
@@ -93,11 +99,11 @@ export function AddProductModals({
       <Modal
         open={step === "scan" || step === "photo"}
         onClose={onCloseAll}
-        aria-label="Capture"
+        aria-label={t("addProduct.captureAriaLabel")}
         className="max-w-sm"
       >
         <ModalHeader>
-          <ModalTitle>{step === "photo" ? "Take a photo" : "Scan barcode"}</ModalTitle>
+          <ModalTitle>{step === "photo" ? t("addProduct.photoOption.title") : t("addProduct.scanOption.title")}</ModalTitle>
         </ModalHeader>
         <ModalBody>
           <div className="relative flex h-[190px] items-center justify-center overflow-hidden rounded-lg bg-[#0d0f12]">
@@ -105,26 +111,24 @@ export function AddProductModals({
             <div className="ss-scan-line absolute left-[calc(50%-100px)] top-[34px] h-0.5 w-[200px] bg-brand-400 shadow-[0_0_12px_var(--ss-brand-400)]" />
           </div>
           <p className="mt-sm text-center text-sm text-ink-secondary">
-            {step === "photo" ? "Frame the product label." : "Line the barcode up inside the frame."}
+            {step === "photo" ? t("addProduct.frameLabel") : t("addProduct.lineUpBarcodeLabel")}
           </p>
-          <p className="mt-xs text-center text-xs text-ink-muted">
-            Placeholder — the live camera view is native and designed separately.
-          </p>
+          <p className="mt-xs text-center text-xs text-ink-muted">{t("addProduct.cameraPlaceholder")}</p>
         </ModalBody>
         <ModalFooter>
           <Button variant="ghost" size="sm" onClick={onManual}>
-            Edit manually
+            {t("addProduct.editManually")}
           </Button>
           <Button size="sm" onClick={onCaptureDone}>
-            Capture
+            {t("addProduct.captureButton")}
           </Button>
         </ModalFooter>
       </Modal>
 
       {/* Step 3 — match review */}
-      <Modal open={step === "match"} onClose={onCloseAll} aria-label="We found a match" className="max-w-sm">
+      <Modal open={step === "match"} onClose={onCloseAll} aria-label={t("addProduct.matchFoundTitle")} className="max-w-sm">
         <ModalHeader>
-          <ModalTitle>We found a match</ModalTitle>
+          <ModalTitle>{t("addProduct.matchFoundTitle")}</ModalTitle>
         </ModalHeader>
         <ModalBody>
           <p className="mb-sm font-mono text-xs text-ink-muted">{MOCK_BARCODE_MATCH.barcode}</p>
@@ -137,44 +141,43 @@ export function AddProductModals({
             onClick={onManual}
             className="mt-sm bg-transparent p-0 text-sm text-brand-600 underline"
           >
-            This isn't right — edit manually
+            {t("addProduct.notRightEditManually")}
           </button>
         </ModalBody>
         <ModalFooter>
           <Button variant="outline" size="sm" onClick={onAddAsNew}>
-            Add as new
+            {t("addProduct.addAsNew")}
           </Button>
           <Button size="sm" onClick={onUseThis}>
-            Use this
+            {t("addProduct.useThis")}
           </Button>
         </ModalFooter>
       </Modal>
 
       {/* Step 4 — unlink warning */}
-      <Modal open={step === "unlink"} onClose={onBackToMatch} aria-label="Move this barcode?" className="max-w-sm">
+      <Modal open={step === "unlink"} onClose={onBackToMatch} aria-label={t("common.moveBarcodeQuestion")} className="max-w-sm">
         <ModalHeader>
-          <ModalTitle>Move this barcode?</ModalTitle>
+          <ModalTitle>{t("common.moveBarcodeQuestion")}</ModalTitle>
         </ModalHeader>
         <ModalBody>
           <p className="text-sm leading-relaxed text-ink-secondary">
-            This barcode is currently linked to "{MOCK_BARCODE_MATCH.short}." Continuing will unlink it from that
-            product and link it to the new one instead.
+            {t("addProduct.unlinkWarningBody", { name: MOCK_BARCODE_MATCH.short })}
           </p>
         </ModalBody>
         <ModalFooter>
           <Button variant="outline" size="sm" onClick={onBackToMatch}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button variant="danger" size="sm" onClick={onConfirmUnlink}>
-            Unlink and continue
+            {t("common.unlinkAndContinue")}
           </Button>
         </ModalFooter>
       </Modal>
 
       {/* Step 5 — form */}
-      <Modal open={step === "form"} onClose={onCloseAll} aria-label="Product details" className="max-w-sm">
+      <Modal open={step === "form"} onClose={onCloseAll} aria-label={t("addProduct.productDetailsTitle")} className="max-w-sm">
         <ModalHeader>
-          <ModalTitle>Product details</ModalTitle>
+          <ModalTitle>{t("addProduct.productDetailsTitle")}</ModalTitle>
         </ModalHeader>
         <ModalBody className="flex max-h-[62vh] flex-col gap-md overflow-y-auto">
           {prefillNote && (
@@ -185,58 +188,60 @@ export function AddProductModals({
                 onClick={onClearPrefill}
                 className="self-start bg-transparent p-0 text-xs font-semibold text-brand-600 underline"
               >
-                Clear and start blank
+                {t("addProduct.clearAndStartBlank")}
               </button>
             </div>
           )}
           <Input
-            label="Short description"
-            placeholder="e.g. Grated cheese"
+            label={t("common.shortDescriptionLabel")}
+            placeholder={t("common.shortDescriptionPlaceholder")}
             value={form.short}
             onChange={(e) => onFieldChange("short", e.target.value)}
           />
           <Input
-            label="Long description"
-            placeholder="Brand, size, details"
+            label={t("common.longDescriptionLabel")}
+            placeholder={t("common.longDescriptionPlaceholder")}
             value={form.long}
             onChange={(e) => onFieldChange("long", e.target.value)}
           />
           <Switch
-            label="Does it expire?"
+            label={t("common.doesItExpire")}
+            onLabel={t("common.yes")}
+            offLabel={t("common.no")}
             checked={form.doesExpire}
             onCheckedChange={(checked) => onFieldChange("doesExpire", checked)}
           />
           <Input
-            label="Quantity"
+            label={t("common.quantityLabel")}
             type="number"
             min={0}
-            placeholder="Optional"
+            placeholder={t("common.optionalPlaceholder")}
             value={form.qty}
             onChange={(e) => onFieldChange("qty", e.target.value)}
           />
           <Input
-            label="Minimum quantity"
+            label={t("common.minimumQuantityLabel")}
             type="number"
             min={0}
-            placeholder="Optional"
-            hint="Warn me when stock falls to this."
+            placeholder={String(defaults.minimalQuantity)}
+            hint={t("addProduct.minQtyHint", { default: defaults.minimalQuantity })}
             value={form.minQty}
             onChange={(e) => onFieldChange("minQty", e.target.value)}
           />
           {form.doesExpire && (
             <Input
-              label="Freshness threshold"
+              label={t("common.freshnessThresholdLabel")}
               type="number"
               min={0}
-              placeholder="Optional"
-              hint="Days before expiry to flag as expiring soon."
+              placeholder={String(defaults.freshnessThresholdDays)}
+              hint={t("addProduct.freshnessHint", { default: defaults.freshnessThresholdDays })}
               value={form.fresh}
               onChange={(e) => onFieldChange("fresh", e.target.value)}
             />
           )}
           {showExpiresOn ? (
             <Input
-              label="Expires on"
+              label={t("common.expiresOnLabel")}
               type="date"
               value={form.expiresOn}
               onChange={(e) => onFieldChange("expiresOn", e.target.value)}
@@ -245,17 +250,17 @@ export function AddProductModals({
             <p className="text-xs text-ink-muted">{expiresHiddenReason}</p>
           )}
           {saveError && (
-            <Alert variant="danger" title="Couldn't save">
+            <Alert variant="danger" title={t("common.saveErrorTitle")}>
               {saveError}
             </Alert>
           )}
         </ModalBody>
         <ModalFooter>
           <Button variant="outline" size="sm" onClick={onCloseAll}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button size="sm" disabled={saveDisabled} onClick={onSave}>
-            {saving ? "Saving…" : "Save product"}
+            {saving ? t("common.saving") : t("addProduct.saveProductButton")}
           </Button>
         </ModalFooter>
       </Modal>

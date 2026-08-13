@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { IconButton, NavDrawer, type NavDrawerItem } from "shelf-sense-ds";
-import { MENU_ITEMS } from "../lib/menu";
+import { useT } from "shelf-sense-i18n/react";
+import { getMenuItems } from "../lib/menu";
 import { useTheme } from "../lib/theme";
 
 export interface AppShellProps {
@@ -18,10 +19,12 @@ export function AppShell({ children }: AppShellProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useT();
 
-  const activeItem = MENU_ITEMS.find((item) => item.route === location.pathname) ?? MENU_ITEMS[0];
+  const menuItems = getMenuItems(t);
+  const activeItem = menuItems.find((item) => item.route === location.pathname) ?? menuItems[0];
 
-  const items: NavDrawerItem[] = MENU_ITEMS.map((item) => ({
+  const items: NavDrawerItem[] = menuItems.map((item) => ({
     key: item.key,
     label: item.label,
     icon: item.icon,
@@ -35,7 +38,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="mx-auto flex min-h-screen max-w-[420px] flex-col bg-surface-1 font-sans text-ink-primary">
       <div className="sticky top-0 z-[2] flex h-[60px] flex-shrink-0 items-center gap-1 border-b border-border bg-surface-0 px-sm">
-        <IconButton icon="☰" aria-label="Open navigation" size="lg" onClick={() => setDrawerOpen(true)} />
+        <IconButton icon="☰" aria-label={t("appShell.openNavigation")} size="lg" onClick={() => setDrawerOpen(true)} />
         <h1 className="m-0 flex-1 truncate pl-1 text-[19px] font-bold tracking-[-0.01em]">{activeItem.label}</h1>
       </div>
 
@@ -76,7 +79,7 @@ export function AppShell({ children }: AppShellProps) {
                 <span className="font-medium text-brand-600">sense</span>
               </span>
               <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-muted">
-                Personal inventory
+                {t("appShell.tagline")}
               </span>
             </div>
           </div>
@@ -84,10 +87,10 @@ export function AppShell({ children }: AppShellProps) {
         items={items}
         footer={
           <div className="flex items-center justify-between gap-sm">
-            <span className="text-[13px] font-semibold text-ink-secondary">Theme</span>
+            <span className="text-[13px] font-semibold text-ink-secondary">{t("appShell.theme")}</span>
             <IconButton
               icon={theme === "dark" ? "☾" : "☀"}
-              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              aria-label={theme === "dark" ? t("appShell.switchToLightTheme") : t("appShell.switchToDarkTheme")}
               onClick={toggleTheme}
             />
           </div>

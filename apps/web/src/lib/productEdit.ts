@@ -1,3 +1,4 @@
+import type { TFunctions } from "shelf-sense-i18n/react";
 import type { UpdateProductPayload } from "./api";
 import type { Barcode, Product } from "../types";
 
@@ -132,7 +133,7 @@ export function setNewAlias(state: ProductEditState, value: string): ProductEdit
  * same move-and-confirm flow as a barcode conflict if it collides with
  * another product's alias.
  */
-export function addAlias(state: ProductEditState, allProducts: Product[]): ProductEditState {
+export function addAlias(state: ProductEditState, allProducts: Product[], t: TFunctions["t"]): ProductEditState {
   const value = state.newAlias.trim();
   if (!value) return state;
   const lower = value.toLowerCase();
@@ -143,7 +144,10 @@ export function addAlias(state: ProductEditState, allProducts: Product[]): Produ
     (p) => p.id !== state.productId && p.short_description.trim().toLowerCase() === lower,
   );
   if (shortOwner) {
-    return { ...state, aliasError: `"${value}" is already "${shortOwner.short_description}"'s own name — pick a different alias.` };
+    return {
+      ...state,
+      aliasError: t("productEdit.aliasCollisionWithOwnName", { alias: value, ownerName: shortOwner.short_description }),
+    };
   }
   const aliasOwner = allProducts.find(
     (p) => p.id !== state.productId && p.aliases.some((a) => a.toLowerCase() === lower),
@@ -265,14 +269,14 @@ export function canSave(state: ProductEditState): boolean {
  * Non-functional section), then flips Save into its "Confirm?" state. A
  * conflict sets shortError instead of arming, same as any other blocked save.
  */
-export function armSave(state: ProductEditState, allProducts: Product[]): ProductEditState {
+export function armSave(state: ProductEditState, allProducts: Product[], t: TFunctions["t"]): ProductEditState {
   const trimmed = state.short.trim();
   if (!trimmed) return state;
   const conflict = allProducts.find(
     (p) => p.id !== state.productId && p.short_description.trim().toLowerCase() === trimmed.toLowerCase(),
   );
   if (conflict) {
-    return { ...state, shortError: `"${trimmed}" is already used by another product.` };
+    return { ...state, shortError: t("productEdit.shortDescriptionConflict", { name: trimmed }) };
   }
   if (!hasChanges(state)) return state;
   return { ...state, saveArmed: true, shortError: null };
@@ -282,21 +286,39 @@ export function disarmSave(state: ProductEditState): ProductEditState {
   return { ...state, saveArmed: false };
 }
 
-export function saveSummary(state: ProductEditState): string {
+// Full independent clauses joined with "; ", not Intl.ListFormat (built for
+// parallel nouns/units, not semicolon-separated sentences — see
+// stockEdit.ts's saveSummary() for where formatList() IS the right tool).
+// tPlural is threaded into the freshness-days fragment even though English
+// never actually shows "1 day" here (a blank fresh value always renders
+// "none" instead) — Portuguese grammatical agreement still needs the split.
+export function saveSummary(state: ProductEditState, i18n: Pick<TFunctions, "t" | "tPlural">): string {
+  const { t, tPlural } = i18n;
   const orig: Snapshot = JSON.parse(state.orig);
   const bits: string[] = [];
-  if (orig.short !== state.short.trim()) bits.push(`renamed to "${state.short.trim()}"`);
-  if (orig.long !== state.long) bits.push("long description updated");
+  if (orig.short !== state.short.trim()) bits.push(t("productEdit.saveSummary.renamedTo", { name: state.short.trim() }));
+  if (orig.long !== state.long) bits.push(t("productEdit.saveSummary.longDescriptionUpdated"));
   if (orig.doesExpire !== state.doesExpire) {
-    bits.push(state.doesExpire ? "expiry tracking turned on" : "expiry tracking turned off");
+    bits.push(state.doesExpire ? t("productEdit.saveSummary.expiryOn") : t("productEdit.saveSummary.expiryOff"));
   }
-  if (orig.minQty !== state.minQty) bits.push(`minimum quantity → ${state.minQty === "" ? "none" : state.minQty}`);
-  if (orig.fresh !== state.fresh) bits.push(`freshness threshold → ${state.fresh === "" ? "none" : `${state.fresh} days`}`);
-  if (JSON.stringify(orig.aliases) !== JSON.stringify(state.aliases)) bits.push("aliases updated");
+  if (orig.minQty !== state.minQty) {
+    const value = state.minQty === "" ? t("productEdit.saveSummary.none") : state.minQty;
+    bits.push(t("productEdit.saveSummary.minQtyChanged", { value }));
+  }
+  if (orig.fresh !== state.fresh) {
+    const value =
+      state.fresh === ""
+        ? t("productEdit.saveSummary.none")
+        : tPlural("productEdit.saveSummary.freshDaysValue", Number.parseInt(state.fresh, 10) || 0);
+    bits.push(t("productEdit.saveSummary.freshChanged", { value }));
+  }
+  if (JSON.stringify(orig.aliases) !== JSON.stringify(state.aliases)) bits.push(t("productEdit.saveSummary.aliasesUpdated"));
   if (JSON.stringify(orig.barcodes) !== JSON.stringify(snapshot(state).barcodes)) {
-    bits.push(`barcodes updated (${state.barcodes.length} linked)`);
+    bits.push(tPlural("productEdit.saveSummary.barcodesUpdated", state.barcodes.length));
   }
-  return bits.length ? `You're about to save: ${bits.join("; ")}.` : "Save this product?";
+  return bits.length
+    ? t("productEdit.saveSummary.prefix", { list: bits.join("; ") })
+    : t("productEdit.saveSummary.noChanges");
 }
 
 export interface ProductEditResult {

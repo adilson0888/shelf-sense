@@ -1,3 +1,4 @@
+import type { TFunctions } from "shelf-sense-i18n/react";
 import type { Batch, FreshnessStatus, Product } from "../types";
 import { formatExpiryLabel, freshnessStatus } from "./freshness";
 
@@ -37,13 +38,19 @@ export function sortBatchesByExpiry<T extends Batch>(batches: T[]): T[] {
   });
 }
 
-export function enrichProduct(product: Product, batches: Batch[], today: Date, defaults: ProductListDefaults): EnrichedProduct {
+export function enrichProduct(
+  product: Product,
+  batches: Batch[],
+  today: Date,
+  defaults: ProductListDefaults,
+  i18n: Pick<TFunctions, "t" | "tPlural" | "formatDate">,
+): EnrichedProduct {
   const sortedBatches: EnrichedBatch[] = sortBatchesByExpiry(batches)
     .map((b) => ({
       ...b,
       status: freshnessStatus(b.expires_on, product.freshness_threshold_days, defaults.freshnessThresholdDays, today),
       qtyLabel: `×${b.quantity}`,
-      expiryLabel: formatExpiryLabel(b.expires_on, product.freshness_threshold_days, defaults.freshnessThresholdDays, today),
+      expiryLabel: formatExpiryLabel(b.expires_on, product.freshness_threshold_days, defaults.freshnessThresholdDays, today, i18n),
     }));
 
   const totalQty = sortedBatches.reduce((sum, b) => sum + b.quantity, 0);
@@ -87,29 +94,35 @@ export interface ProductGroup {
 // Labeled generically ("Expiring soon", not "Use within N days") because the
 // threshold is per-product (Product.freshness_threshold_days) — a single
 // group can contain products with different actual thresholds, so no one
-// day-count is accurate to promise in the header.
-const GROUP_DEFS: { key: FreshnessStatus; label: string }[] = [
-  { key: "expired", label: "Expired" },
-  { key: "expiring-soon", label: "Expiring soon" },
-  { key: "fresh", label: "Fresh" },
-  { key: "no-expiration", label: "No expiry" },
-];
-
-export function groupByStatus(products: EnrichedProduct[]): ProductGroup[] {
-  return GROUP_DEFS.map(({ key, label }) => {
-    const list = products
-      .filter((p) => p.status === key)
-      .sort((a, b) => {
-        const at = a.soonestExpiresOn ? new Date(a.soonestExpiresOn).getTime() : Infinity;
-        const bt = b.soonestExpiresOn ? new Date(b.soonestExpiresOn).getTime() : Infinity;
-        return at - bt || a.short_description.localeCompare(b.short_description);
-      });
-    return { key, label, status: key, count: list.length, products: list };
-  }).filter((g) => g.count > 0);
+// day-count is accurate to promise in the header. Built from `t` inline
+// (not a module-level constant) so labels react to locale changes at
+// runtime, same reasoning as lib/menu.ts's getMenuItems().
+function groupDefs(t: TFunctions["t"]): { key: FreshnessStatus; label: string }[] {
+  return [
+    { key: "expired", label: t("freshnessStatus.expired") },
+    { key: "expiring-soon", label: t("freshnessStatus.expiringSoon") },
+    { key: "fresh", label: t("freshnessStatus.fresh") },
+    { key: "no-expiration", label: t("freshnessStatus.noExpiration") },
+  ];
 }
 
-export function groupAlphabetically(products: EnrichedProduct[]): ProductGroup[] {
+export function groupByStatus(products: EnrichedProduct[], t: TFunctions["t"]): ProductGroup[] {
+  return groupDefs(t)
+    .map(({ key, label }) => {
+      const list = products
+        .filter((p) => p.status === key)
+        .sort((a, b) => {
+          const at = a.soonestExpiresOn ? new Date(a.soonestExpiresOn).getTime() : Infinity;
+          const bt = b.soonestExpiresOn ? new Date(b.soonestExpiresOn).getTime() : Infinity;
+          return at - bt || a.short_description.localeCompare(b.short_description);
+        });
+      return { key, label, status: key, count: list.length, products: list };
+    })
+    .filter((g) => g.count > 0);
+}
+
+export function groupAlphabetically(products: EnrichedProduct[], t: TFunctions["t"]): ProductGroup[] {
   const list = products.slice().sort((a, b) => a.short_description.localeCompare(b.short_description));
   if (list.length === 0) return [];
-  return [{ key: "alpha", label: "All products, A–Z", status: "alpha", count: list.length, products: list }];
+  return [{ key: "alpha", label: t("productListGroups.alphabetical"), status: "alpha", count: list.length, products: list }];
 }

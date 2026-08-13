@@ -7,7 +7,13 @@ export interface MenuItem {
   icon: string;
 }
 
-export const MENU_ITEMS: MenuItem[] = [
-  { key: "products", label: "Products", route: "/", icon: "▤" },
-  { key: "settings", label: "Settings", route: "/settings", icon: "⚙" },
-];
+// A function, not a static constant — labels must react to locale changes
+// at runtime (specs/i18n.md), so this can't be frozen at module-import
+// time the way a plain exported array would be. AppShell.tsx (its only
+// consumer) calls this inline in its render body via useT().
+export function getMenuItems(t: (key: string) => string): MenuItem[] {
+  return [
+    { key: "products", label: t("menu.products"), route: "/", icon: "▤" },
+    { key: "settings", label: t("menu.settings"), route: "/settings", icon: "⚙" },
+  ];
+}

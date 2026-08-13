@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
-import { formatExpiryLabel, freshnessStatus } from "../lib/freshness";
+import { useT } from "shelf-sense-i18n/react";
+import { formatExpiryLabel, freshnessBadgeLabel, freshnessStatus } from "../lib/freshness";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
 import {
@@ -44,6 +45,8 @@ export function StockEditPage() {
   const navigate = useNavigate();
   const { products, batches, setBatches } = useProductsStore();
   const { preferences } = usePreferencesStore();
+  const i18n = useT();
+  const { t } = i18n;
   const product = products.find((p) => p.id === id);
 
   const [edit, setEdit] = useState<StockEditState | null>(null);
@@ -88,8 +91,8 @@ export function StockEditPage() {
     isEdited: isEditedRow(edit, b.id),
     status: freshnessStatus(b.expires_on, product.freshness_threshold_days, preferences.default_freshness_threshold_days, today),
     expLabel: product.does_expire
-      ? formatExpiryLabel(b.expires_on, product.freshness_threshold_days, preferences.default_freshness_threshold_days, today)
-      : "Does not expire",
+      ? formatExpiryLabel(b.expires_on, product.freshness_threshold_days, preferences.default_freshness_threshold_days, today, i18n)
+      : t("freshness.doesNotExpire"),
   }));
   const allChecked = edit.batches.length > 0 && edit.sel.length === edit.batches.length;
 
@@ -100,13 +103,13 @@ export function StockEditPage() {
           <button
             type="button"
             onClick={goBack}
-            title="Back to product list"
+            title={t("stockEdit.backToProductList")}
             className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-border bg-surface-1 text-base text-ink-primary"
           >
             ‹
           </button>
           <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
-            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">Stock edit</span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">{t("stockEdit.eyebrow")}</span>
             <span className="truncate text-[19px] font-bold tracking-[-0.02em]">{product.short_description}</span>
           </div>
         </div>
@@ -114,13 +117,13 @@ export function StockEditPage() {
         <div className="flex flex-1 flex-col gap-md overflow-y-auto p-md">
           <div className="flex min-h-[32px] items-center justify-between gap-sm">
             <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted">
-              {rows.length === 0 ? "No batches" : rows.length === 1 ? "1 batch" : `${rows.length} batches`}
+              {rows.length === 0 ? t("stockEdit.noBatches") : i18n.tPlural("stockEdit.batchesCount", rows.length)}
             </span>
             {edit.sel.length > 0 && (
               <div className="flex items-center gap-sm">
-                <span className="text-[11px] text-ink-muted">{edit.sel.length} selected</span>
+                <span className="text-[11px] text-ink-muted">{i18n.tPlural("common.selectedCount", edit.sel.length)}</span>
                 <Button variant="danger" size="sm" onClick={() => setEdit((s) => (s ? removeSelected(s) : s))}>
-                  Remove
+                  {t("common.remove")}
                 </Button>
               </div>
             )}
@@ -131,14 +134,14 @@ export function StockEditPage() {
               <div className="grid grid-cols-[26px_64px_1fr_auto] items-center gap-sm bg-surface-2 px-[10px] py-[9px] font-mono text-[10px] uppercase tracking-[0.1em] text-ink-muted">
                 <input
                   type="checkbox"
-                  title="Select all"
+                  title={t("common.selectAll")}
                   checked={allChecked}
                   onChange={() => setEdit((s) => (s ? toggleSelectAll(s) : s))}
                   className="h-[15px] w-[15px] cursor-pointer accent-brand-600"
                 />
-                <span>Qty</span>
-                <span>Expires</span>
-                <span>Status</span>
+                <span>{t("stockEdit.tableHeaderQty")}</span>
+                <span>{t("stockEdit.tableHeaderExpires")}</span>
+                <span>{t("stockEdit.tableHeaderStatus")}</span>
               </div>
               {rows.map(({ batch, isNew, isEdited, status, expLabel }) => (
                 <div
@@ -173,7 +176,7 @@ export function StockEditPage() {
                     <button
                       type="button"
                       onClick={() => setEdit((s) => (s ? startEditQty(s, batch.id, batch.quantity) : s))}
-                      title="Edit quantity"
+                      title={t("stockEdit.editQuantity")}
                       className="border-0 border-b border-dashed border-transparent bg-transparent p-0 text-left font-mono text-[13px] font-semibold text-ink-primary hover:border-border-strong"
                     >
                       ×{batch.quantity}
@@ -196,7 +199,7 @@ export function StockEditPage() {
                     <button
                       type="button"
                       onClick={() => setEdit((s) => (s ? startEditExp(s, batch.id, batch.expires_on) : s))}
-                      title="Edit expiration"
+                      title={t("stockEdit.editExpiration")}
                       className="truncate border-0 border-b border-dashed border-transparent bg-transparent p-0 text-left text-[13px] text-ink-primary hover:border-border-strong"
                     >
                       {expLabel}
@@ -207,15 +210,15 @@ export function StockEditPage() {
                   <div className="flex items-center justify-end gap-xs">
                     {isNew && (
                       <span className="rounded-full bg-success px-[6px] py-[2px] font-mono text-[9px] uppercase tracking-[0.06em] text-surface-0">
-                        New
+                        {t("stockEdit.newBadge")}
                       </span>
                     )}
                     {isEdited && (
                       <span className="rounded-full bg-info px-[6px] py-[2px] font-mono text-[9px] uppercase tracking-[0.06em] text-surface-0">
-                        Edited
+                        {t("stockEdit.editedBadge")}
                       </span>
                     )}
-                    <FreshnessBadge status={status} />
+                    <FreshnessBadge status={status} label={freshnessBadgeLabel(status, t)} />
                   </div>
                 </div>
               ))}
@@ -225,65 +228,61 @@ export function StockEditPage() {
               <div className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-border-strong font-mono text-xs text-ink-muted">
                 0
               </div>
-              <div className="text-[15px] font-semibold">All batches consumed</div>
-              <div className="max-w-[240px] text-[13px] text-ink-secondary">
-                No stock left for this product. Add a batch below, or save to leave it at zero.
-              </div>
+              <div className="text-[15px] font-semibold">{t("stockEdit.allBatchesConsumed")}</div>
+              <div className="max-w-[240px] text-[13px] text-ink-secondary">{t("stockEdit.noStockHint")}</div>
             </div>
           )}
 
           {edit.addOpen ? (
             <div className="flex flex-col gap-sm rounded-lg border border-dashed border-border-strong p-md">
               <Input
-                label="Quantity"
+                label={t("common.quantityLabel")}
                 type="number"
                 min={1}
-                placeholder="e.g. 4"
+                placeholder={t("stockEdit.quantityPlaceholder")}
                 value={edit.newQty}
                 onChange={(e) => setEdit((s) => (s ? newQtyChange(s, e.target.value) : s))}
               />
               {product.does_expire ? (
                 <Input
-                  label="Expiration date"
+                  label={t("stockEdit.expirationDateLabel")}
                   type="date"
                   value={edit.newExp}
                   onChange={(e) => setEdit((s) => (s ? newExpChange(s, e.target.value) : s))}
                 />
               ) : (
-                <p className="text-xs text-ink-muted">
-                  This product doesn't track expiration — the batch will be added as "Does not expire."
-                </p>
+                <p className="text-xs text-ink-muted">{t("stockEdit.noExpiryTrackingHint")}</p>
               )}
               <div className="flex justify-end gap-sm">
                 <Button variant="ghost" size="sm" onClick={() => setEdit((s) => (s ? toggleAddOpen(s) : s))}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   size="sm"
                   disabled={!canAddBatch(edit, product.does_expire)}
                   onClick={() => setEdit((s) => (s ? addBatch(s, product.does_expire) : s))}
                 >
-                  Add batch
+                  {t("stockEdit.addBatchButton")}
                 </Button>
               </div>
             </div>
           ) : (
             <div>
               <Button variant="outline" size="sm" onClick={() => setEdit((s) => (s ? toggleAddOpen(s) : s))}>
-                <span className="whitespace-nowrap">+ Add batch</span>
+                <span className="whitespace-nowrap">{t("stockEdit.addBatchToggle")}</span>
               </Button>
             </div>
           )}
         </div>
 
         <div className="flex flex-shrink-0 flex-col gap-sm border-t border-border bg-surface-0 px-md py-[12px]">
-          {edit.armed && pending && <p className="text-xs text-ink-secondary">{saveSummary(edit)}</p>}
+          {edit.armed && pending && <p className="text-xs text-ink-secondary">{saveSummary(edit, i18n)}</p>}
           <div className="flex justify-end gap-sm">
             <Button variant="outline" size="sm" onClick={goBack}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button variant={edit.armed ? "confirm" : "primary"} size="sm" disabled={!pending} onClick={handleSave}>
-              {edit.armed ? "Confirm?" : "Save"}
+              {edit.armed ? t("common.confirmQuestion") : t("common.save")}
             </Button>
           </div>
         </div>
