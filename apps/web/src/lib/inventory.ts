@@ -69,7 +69,15 @@ export function enrichProduct(
   };
 }
 
-export function matchesSearch(product: EnrichedProduct, query: string): boolean {
+/**
+ * Narrowed to just the two fields this actually reads (rather than
+ * `EnrichedProduct`) so callers that don't need batch/freshness rollups —
+ * e.g. Product List, which shows every product regardless of stock — can
+ * call this directly on a raw `Product` without enriching first.
+ * `EnrichedProduct` still satisfies this shape, so existing callers are
+ * unaffected.
+ */
+export function matchesSearch(product: Pick<Product, "short_description" | "aliases">, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
   return [product.short_description, ...product.aliases].join(" ").toLowerCase().includes(q);

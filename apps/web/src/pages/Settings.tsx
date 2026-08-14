@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Button, Input, Select, Switch, cn } from "shelf-sense-ds";
+import { Alert, Button, Input, Select, Switch } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
+import { SectionHeader } from "../components/SectionHeader";
 import { ApiError, type PreferencesResponse, type UpdatePreferencesPayload } from "../lib/api";
 import { usePreferencesStore } from "../lib/preferencesStore";
 
 const SAVED_MESSAGE_DELAY_MS = 2600;
-
-const EYEBROW_CLASS = "text-xs font-semibold uppercase tracking-wide text-ink-muted";
 
 interface SettingsFormState {
   aiApiBaseUrl: string;
@@ -40,21 +39,6 @@ function toFormState(p: PreferencesResponse, activeLocale: "en-US" | "pt-BR"): S
 function parseNonNegativeInt(value: string): number | null {
   if (!/^\d+$/.test(value.trim())) return null;
   return Number.parseInt(value, 10);
-}
-
-/** A collapsible section header — chevron rotates, matches the approved Claude Design prototype (templates/settings/Settings.dc.html). */
-function SectionHeader({ label, open, onToggle }: { label: string; open: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={open}
-      className="flex items-center justify-between gap-sm bg-transparent p-0 text-left"
-    >
-      <span className={EYEBROW_CLASS}>{label}</span>
-      <span className={cn("text-xs text-ink-muted transition-transform", open ? "rotate-0" : "-rotate-90")}>▾</span>
-    </button>
-  );
 }
 
 /**

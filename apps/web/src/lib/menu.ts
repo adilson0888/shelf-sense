@@ -14,6 +14,7 @@ export interface MenuItem {
 export function getMenuItems(t: (key: string) => string): MenuItem[] {
   return [
     { key: "inventory", label: t("menu.inventory"), route: "/", icon: "▤" },
+    { key: "products", label: t("menu.products"), route: "/products", icon: "🗂" },
     { key: "settings", label: t("menu.settings"), route: "/settings", icon: "⚙" },
   ];
 }

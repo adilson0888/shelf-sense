@@ -10,6 +10,7 @@ export * from "./components/StatusBadge";
 export * from "./components/FreshnessBadge";
 export * from "./components/Card";
 export * from "./components/Modal";
+export * from "./components/Popover";
 export * from "./components/Input";
 export * from "./components/Select";
 export * from "./components/Switch";

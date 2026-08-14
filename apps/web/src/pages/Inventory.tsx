@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { useNavigate } from "react-router-dom";
 import { Alert, Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
+import { ScopeTile } from "../components/ScopeTile";
 import { freshnessBadgeLabel } from "../lib/freshness";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
@@ -749,36 +750,6 @@ function SortButton({ active, onClick, label }: { active: boolean; onClick: () =
       )}
     >
       {label}
-    </button>
-  );
-}
-
-function ScopeTile({
-  active,
-  count,
-  label,
-  activeClassName,
-  hoverClassName,
-  onClick,
-}: {
-  active: boolean;
-  count: number;
-  label: string;
-  activeClassName: string;
-  hoverClassName?: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex flex-col items-start gap-[6px] rounded-lg border px-[12px] py-[10px] text-left",
-        active ? activeClassName : cn("border-border bg-surface-1 text-ink-secondary", hoverClassName),
-      )}
-    >
-      <span className="font-mono text-[22px] font-semibold leading-none">{count}</span>
-      <span className="text-[11px] uppercase tracking-[0.04em] opacity-75">{label}</span>
     </button>
   );
 }
