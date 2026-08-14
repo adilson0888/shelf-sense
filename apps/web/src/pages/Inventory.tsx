@@ -648,6 +648,14 @@ export function InventoryPage() {
         )}
       </div>
 
+      {/* Same footer-bar treatment as Product List's own — border-t +
+          bg-surface-0, h-16 to match Product Edit's actual rendered
+          height (py-md padding around h-8 buttons), just without any
+          buttons here either. flex-shrink-0 keeps it a fixed-height bar;
+          the content area above is flex-1, so this sits at the bottom of
+          the page itself, not bunched right under the last row. */}
+      <div className="h-16 flex-shrink-0 border-t border-border bg-surface-0 px-md" />
+
       <AddProductModals
         step={addStep}
         form={addForm}
