@@ -62,7 +62,7 @@ export function QuickBatchEditModal({
   // Product Add.md's hard-validation rule, reused here: does_expire + a
   // positive delta (i.e. a new batch) + no expires_on is a hard error, not
   // a soft warning. The prototype this was translated from didn't enforce
-  // this — same gap found and fixed for real in AddProductModals.
+  // this — same gap found and fixed for real in AddProduct.tsx.
   const saveDisabled = !quick || delta === 0 || (showExpiry && quick.addExpiresOn.trim().length === 0);
 
   const decHint = isPercentage

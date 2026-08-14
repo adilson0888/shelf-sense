@@ -17,6 +17,7 @@ const DEFAULT_ROW: typeof preferences.$inferSelect = {
   aiApiBaseUrl: null,
   aiApiKey: null,
   aiModel: null,
+  tavilyApiKey: null,
   defaultMinimalQuantity: 3,
   defaultFreshnessThresholdDays: 7,
   defaultDoesExpire: true,
@@ -37,6 +38,11 @@ function toPreferencesJson(row: typeof preferences.$inferSelect, hasSavedPrefere
     ai_api_key_set: row.aiApiKey !== null,
     ai_api_key_hint: row.aiApiKey ? `•••• ${row.aiApiKey.slice(-4)}` : null,
     ai_model: row.aiModel,
+    // specs/Barcode Scanner & Product info scrape.md — same never-echoed-in-full
+    // masked-hint treatment as ai_api_key, used only for the Open-Food-Facts-miss
+    // lookup fallback.
+    tavily_api_key_set: row.tavilyApiKey !== null,
+    tavily_api_key_hint: row.tavilyApiKey ? `•••• ${row.tavilyApiKey.slice(-4)}` : null,
     default_minimal_quantity: row.defaultMinimalQuantity,
     default_freshness_threshold_days: row.defaultFreshnessThresholdDays,
     default_does_expire: row.defaultDoesExpire,
@@ -70,6 +76,7 @@ const updatePreferencesSchema = z.object({
   ai_api_base_url: z.string().nullable(),
   ai_api_key: z.string().min(1, "ai_api_key cannot be blank").nullable().optional(),
   ai_model: z.string().nullable(),
+  tavily_api_key: z.string().min(1, "tavily_api_key cannot be blank").nullable().optional(),
   default_minimal_quantity: z.number().int().nonnegative(),
   default_freshness_threshold_days: z.number().int().nonnegative(),
   default_does_expire: z.boolean(),
@@ -93,6 +100,7 @@ preferencesRouter.patch(
     // Distinguishes "key field omitted" (undefined either way once parsed)
     // from "key explicitly cleared" — Zod alone can't tell those apart.
     const keyProvided = "ai_api_key" in req.body;
+    const tavilyKeyProvided = "tavily_api_key" in req.body;
 
     const [row] = await db
       .insert(preferences)
@@ -101,6 +109,7 @@ preferencesRouter.patch(
         aiApiBaseUrl: input.ai_api_base_url,
         aiApiKey: keyProvided ? (input.ai_api_key ?? null) : null,
         aiModel: input.ai_model,
+        tavilyApiKey: tavilyKeyProvided ? (input.tavily_api_key ?? null) : null,
         defaultMinimalQuantity: input.default_minimal_quantity,
         defaultFreshnessThresholdDays: input.default_freshness_threshold_days,
         defaultDoesExpire: input.default_does_expire,
@@ -118,6 +127,7 @@ preferencesRouter.patch(
           language: input.language,
           defaultMinimalPercentage: input.default_minimal_percentage,
           ...(keyProvided ? { aiApiKey: input.ai_api_key ?? null } : {}),
+          ...(tavilyKeyProvided ? { tavilyApiKey: input.tavily_api_key ?? null } : {}),
         },
       })
       .returning();

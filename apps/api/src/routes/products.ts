@@ -3,8 +3,9 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../db/client.js";
-import { barcodes, batches, productAliases, products } from "../db/schema.js";
+import { barcodes, batches, preferences, productAliases, products } from "../db/schema.js";
 import { asyncHandler, HttpError } from "../lib/http-error.js";
+import { lookupBarcode } from "../lib/barcodeLookup.js";
 
 export const productsRouter = Router();
 
@@ -63,6 +64,36 @@ productsRouter.get(
   }),
 );
 
+const SINGLETON_PREFS_ID = "singleton";
+
+/**
+ * GET /lookup-barcode?code=<code> — specs/Barcode Scanner & Product info
+ * scrape.md's external-lookup pipeline (Open Food Facts, then Tavily+AI as
+ * the one fallback). Reads the singleton preferences row for the Tavily/AI
+ * credentials the fallback needs; missing credentials just means the
+ * fallback can't run, not an error (see lookupBarcode's own null-through
+ * behavior). This route is only ever reached after the caller's own
+ * client-side check against the already-loaded products' barcodes came up
+ * empty — a local match never reaches apps/api at all.
+ */
+productsRouter.get(
+  "/lookup-barcode",
+  asyncHandler(async (req, res) => {
+    const code = typeof req.query.code === "string" ? req.query.code.trim() : "";
+    if (!code) {
+      throw new HttpError(400, "code query parameter is required");
+    }
+    const [prefsRow] = await db.select().from(preferences).where(eq(preferences.id, SINGLETON_PREFS_ID)).limit(1);
+    const result = await lookupBarcode(code, {
+      tavilyApiKey: prefsRow?.tavilyApiKey ?? null,
+      aiApiBaseUrl: prefsRow?.aiApiBaseUrl ?? null,
+      aiApiKey: prefsRow?.aiApiKey ?? null,
+      aiModel: prefsRow?.aiModel ?? null,
+    });
+    res.json(result);
+  }),
+);
+
 // Mirrors apps/web/src/lib/addProduct.ts's buildNewProduct() — this is the
 // one save path every Add Product entry method (blank, photo-prefilled,
 // match-prefilled, unlink-prefilled) funnels through today. No `barcodes`/
@@ -83,6 +114,12 @@ const createProductSchema = z
     tracking_mode: z.enum(["units", "percentage"]).default("units"),
     stock_percent: z.number().int().min(0).max(100).nullable().default(null),
     minimal_percentage: z.number().int().min(0).max(100).nullable().default(null),
+    // specs/Barcode Scanner & Product info scrape.md — a barcode scanned
+    // during Add Product that didn't match an existing product gets linked
+    // to the new one at creation time. No digit-count validation here
+    // (unlike editBarcodeSchema's manually-typed codes below): this value
+    // came from BarcodeDetector, not user typing, so it's trusted as-is.
+    barcode: z.string().trim().min(1).nullable().default(null),
   })
   .superRefine((val, ctx) => {
     // Product Add.md's Non-functional section: a hard validation error, not
@@ -137,28 +174,45 @@ productsRouter.post(
     const batchId = !isPercentage && input.quantity > 0 ? randomUUID() : null;
     const stockPercent = isPercentage ? (input.stock_percent ?? 100) : null;
     const minimalPercentage = isPercentage ? input.minimal_percentage : null;
+    const barcodeId = input.barcode ? randomUUID() : null;
 
-    await db.transaction(async (tx) => {
-      await tx.insert(products).values({
-        id: productId,
-        shortDescription: input.short_description,
-        longDescription: input.long_description,
-        doesExpire: input.does_expire,
-        freshnessThresholdDays: input.freshness_threshold_days,
-        minimalQuantity: input.minimal_quantity,
-        trackingMode: input.tracking_mode,
-        stockPercent,
-        minimalPercentage,
-      });
-      if (batchId) {
-        await tx.insert(batches).values({
-          id: batchId,
-          productId,
-          quantity: input.quantity,
-          expiresOn: input.does_expire ? input.expires_on : null,
+    try {
+      await db.transaction(async (tx) => {
+        await tx.insert(products).values({
+          id: productId,
+          shortDescription: input.short_description,
+          longDescription: input.long_description,
+          doesExpire: input.does_expire,
+          freshnessThresholdDays: input.freshness_threshold_days,
+          minimalQuantity: input.minimal_quantity,
+          trackingMode: input.tracking_mode,
+          stockPercent,
+          minimalPercentage,
         });
+        if (batchId) {
+          await tx.insert(batches).values({
+            id: batchId,
+            productId,
+            quantity: input.quantity,
+            expiresOn: input.does_expire ? input.expires_on : null,
+          });
+        }
+        if (barcodeId && input.barcode) {
+          await tx.insert(barcodes).values({ id: barcodeId, productId, code: input.barcode, description: "" });
+        }
+      });
+    } catch (err) {
+      // short_description's own uniqueness is pre-checked above and never
+      // reaches here — a caught violation at this point is the barcode
+      // (the only other unique constraint this insert touches), but this
+      // still routes through the same constraint-name switch PATCH uses
+      // below, for one shared source of the user-facing message.
+      const constraint = pgUniqueViolationConstraint(err);
+      if (constraint !== undefined) {
+        throw friendlyConflictError(constraint);
       }
-    });
+      throw err;
+    }
 
     res.status(201).json({
       product: {
@@ -172,7 +226,9 @@ productsRouter.post(
         stock_percent: stockPercent,
         minimal_percentage: minimalPercentage,
         aliases: [] as string[],
-        barcodes: [] as { id: string; code: string; description: string; product_id: string }[],
+        barcodes: (barcodeId && input.barcode
+          ? [{ id: barcodeId, code: input.barcode, description: "", product_id: productId }]
+          : []) as { id: string; code: string; description: string; product_id: string }[],
       },
       batch: batchId
         ? {
@@ -228,6 +284,21 @@ const editProductSchema = z.object({
   barcodes: z.array(editBarcodeSchema).default([]),
   other_product_updates: z.array(otherProductUpdateSchema).default([]),
 });
+
+// drizzle-orm wraps the real `pg` error in its own error class, with the
+// `code`/`constraint` fields Postgres actually sets living on `.cause`, not
+// on the thrown error itself — checking `err.code` directly (as both catch
+// blocks below originally did) silently misses every real conflict and
+// falls through to a bare 500. Checks both shapes so this works regardless
+// of which layer the error surfaces at.
+function pgUniqueViolationConstraint(err: unknown): string | undefined {
+  for (const candidate of [err, (err as { cause?: unknown } | null)?.cause]) {
+    if (candidate && typeof candidate === "object" && "code" in candidate && (candidate as { code?: string }).code === "23505") {
+      return (candidate as { constraint?: string }).constraint;
+    }
+  }
+  return undefined;
+}
 
 // Maps a Postgres unique-violation onto the same 409 shape the pre-checks
 // below use — a defense-in-depth backstop for a stale client, not the
@@ -376,8 +447,9 @@ productsRouter.patch(
       });
     } catch (err) {
       if (err instanceof HttpError) throw err;
-      if (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "23505") {
-        throw friendlyConflictError((err as { constraint?: string }).constraint);
+      const constraint = pgUniqueViolationConstraint(err);
+      if (constraint !== undefined) {
+        throw friendlyConflictError(constraint);
       }
       throw err;
     }

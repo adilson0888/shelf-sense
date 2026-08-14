@@ -1,10 +1,6 @@
-import type { CreateProductPayload } from "./api";
+import type { BarcodeLookupResult, CreateProductPayload, UpdateProductPayload } from "./api";
 import type { InventoryDefaults } from "./inventory";
-
-export type AddFlowStep = "idle" | "method" | "scan" | "photo" | "match" | "unlink" | "form";
-
-/** Where the form's current values came from — drives the prefill-note banner. */
-export type PrefillSource = "match" | "match-use" | "photo" | null;
+import type { Product } from "../types";
 
 export interface AddProductFormState {
   short: string;
@@ -18,6 +14,15 @@ export interface AddProductFormState {
   trackingMode: "units" | "percentage";
   stockPercent: string; // draft text for the "current %" field, relevant only when trackingMode === "percentage"
   minPercent: string; // draft text for the low-% threshold, relevant only when trackingMode === "percentage"
+  // specs/Barcode Scanner & Product info scrape.md — a barcode scanned on
+  // the way to this form that didn't match an existing product. null on
+  // every other entry path (unsupported browser, cancelled scan). Drives
+  // whether "Link to existing product" is offered (see AddProduct.tsx).
+  barcode: string | null;
+  // Which lookup provider (if any) filled short/long below — drives the
+  // prefill-note banner. null whenever barcode is null, or a scan found
+  // nothing usable.
+  prefillSource: "open-food-facts" | "tavily" | null;
 }
 
 /**
@@ -39,28 +44,27 @@ export function buildBlankForm(defaultDoesExpire: boolean): AddProductFormState 
     trackingMode: "units",
     stockPercent: "100",
     minPercent: "",
+    barcode: null,
+    prefillSource: null,
   };
 }
 
 /**
- * Simulated barcode match — apps/api has no real barcode-lookup or local
- * match-search endpoint yet (see Product Add.md's Data section and
- * specs/Persistence.md's scope note), so every "scan" in this demo resolves
- * to this same canned product regardless of what's actually been saved for
- * real. "Use this"/"add as new" still just prefill the create form with
- * these fixed values — saving always creates a brand-new product either
- * way (see buildCreateProductPayload below), a simplification carried over
- * unchanged from the mocked flow.
+ * A blank form carrying a scanned-but-unmatched barcode, optionally
+ * prefilled with whatever GET /products/lookup-barcode found (partial
+ * results — either field alone — are applied as-is; the rest stays blank
+ * for the user to fill in, per the spec's "even partial info still fills
+ * the form" rule).
  */
-export const MOCK_BARCODE_MATCH = {
-  barcode: "7 891234 560123",
-  short: "Queijo Ralado",
-  long: "Queijo Parmesão ralado em saquinho",
-  minQty: "1",
-  fresh: "5",
-  qty: "1",
-  doesExpire: true,
-};
+export function buildScannedForm(defaultDoesExpire: boolean, barcode: string, lookup: BarcodeLookupResult): AddProductFormState {
+  return {
+    ...buildBlankForm(defaultDoesExpire),
+    short: lookup.short_description ?? "",
+    long: lookup.long_description ?? "",
+    barcode,
+    prefillSource: lookup.source,
+  };
+}
 
 /**
  * Builds the POST /products request body — the server owns id assignment
@@ -94,6 +98,7 @@ export function buildCreateProductPayload(form: AddProductFormState, defaults: I
       tracking_mode: "percentage",
       stock_percent: clampPercent(Number.parseInt(form.stockPercent, 10) || 0),
       minimal_percentage: form.minPercent ? clampPercent(Number.parseInt(form.minPercent, 10)) : defaults.minimalPercentage,
+      barcode: form.barcode,
     };
   }
   return {
@@ -111,9 +116,32 @@ export function buildCreateProductPayload(form: AddProductFormState, defaults: I
     tracking_mode: "units",
     stock_percent: null,
     minimal_percentage: null,
+    barcode: form.barcode,
   };
 }
 
 function clampPercent(n: number): number {
   return Math.min(100, Math.max(0, n));
+}
+
+/**
+ * Builds the PATCH /products/:id body for "Link to existing product"
+ * (specs/Barcode Scanner & Product info scrape.md) — every field of
+ * `target` unchanged except its barcode list, which gains `code`. No
+ * `other_product_updates`/unlink needed: this flow is only reachable after
+ * the local-match check already confirmed `code` belongs to no product
+ * yet, so there's nothing to move it away from.
+ */
+export function buildLinkBarcodePayload(target: Product, code: string): UpdateProductPayload {
+  return {
+    short_description: target.short_description,
+    long_description: target.long_description,
+    does_expire: target.does_expire,
+    minimal_quantity: target.minimal_quantity,
+    freshness_threshold_days: target.freshness_threshold_days,
+    minimal_percentage: target.minimal_percentage,
+    aliases: target.aliases,
+    barcodes: [...target.barcodes.map((b) => ({ code: b.code, description: b.description })), { code, description: "" }],
+    other_product_updates: [],
+  };
 }

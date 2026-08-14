@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Alert, Button, Footer, FreshnessBadge, Input, cn } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { ScopeTile } from "../components/ScopeTile";
 import { freshnessBadgeLabel } from "../lib/freshness";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
-import { ApiError, createProduct, updateProduct } from "../lib/api";
+import { ApiError, lookupBarcode, updateProduct } from "../lib/api";
+import { isBarcodeScanSupported } from "../lib/barcodeScanner";
+import type { AddProductLocationState } from "./AddProduct";
 import {
   type EnrichedProduct,
   type ListScope,
@@ -17,14 +19,6 @@ import {
   matchesScope,
   matchesSearch,
 } from "../lib/inventory";
-import {
-  buildBlankForm,
-  buildCreateProductPayload,
-  type AddFlowStep,
-  type AddProductFormState,
-  type PrefillSource,
-  MOCK_BARCODE_MATCH,
-} from "../lib/addProduct";
 import {
   applyQuickEdit,
   bumpQuickEdit,
@@ -58,7 +52,7 @@ import {
   toggleSelectAllBarcodes,
   type ProductEditState,
 } from "../lib/productEdit";
-import { AddProductModals } from "../components/AddProductModals";
+import { BarcodeCaptureModal } from "../components/BarcodeCaptureModal";
 import { QuickBatchEditModal } from "../components/QuickBatchEditModal";
 import { ProductEditView } from "../components/ProductEditView";
 
@@ -82,10 +76,13 @@ const SAVED_MESSAGE_DELAY_MS = 2600;
  * (what's missing) are planned to cover what this screen no longer shows.
  *
  * Inventory list/save now wired to real apps/api endpoints (GET/POST
- * /products — see productsStore.tsx and lib/api.ts). The Add flow's scan/
- * photo/match steps stay simulated (MOCK_BARCODE_MATCH) — no real
- * barcode-lookup or vision-identify endpoint exists yet (Product Add.md);
- * see specs/Persistence.md for the scope split.
+ * /products — see productsStore.tsx and lib/api.ts). The Add flow is now
+ * barcode-scan-first (specs/Barcode Scanner & Product info scrape.md):
+ * "+ Add" opens BarcodeCaptureModal directly when the browser supports it;
+ * a local match jumps straight into Quick Batch Edit, a miss looks the code
+ * up (Open Food Facts, then Tavily+AI) and hands off to the real
+ * /products/add route. The old method-choice/photo/match-review/unlink
+ * modals and MOCK_BARCODE_MATCH are retired, not just unused.
  */
 export function InventoryPage() {
   const [query, setQuery] = useState("");
@@ -98,13 +95,16 @@ export function InventoryPage() {
   const i18n = useT();
   const { t } = i18n;
   const navigate = useNavigate();
-  const [justSavedMessage, setJustSavedMessage] = useState<string | null>(null);
-
-  const [addStep, setAddStep] = useState<AddFlowStep>("idle");
-  const [addSource, setAddSource] = useState<PrefillSource>(null);
-  const [addForm, setAddForm] = useState<AddProductFormState>(() => buildBlankForm(preferences.default_does_expire));
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const location = useLocation();
+  const [justSavedMessage, setJustSavedMessage] = useState<string | null>(
+    () => (location.state as AddProductLocationState | null)?.justSavedMessage ?? null,
+  );
+  // --- Add Product flow: barcode-scan-first entry (specs/Barcode Scanner &
+  // Product info scrape.md) — "+ Add" opens this capture modal directly
+  // when the browser supports it; everything past a successful/cancelled
+  // scan is real navigation to /products/add, not local modal state.
+  const [scanOpen, setScanOpen] = useState(false);
+  const [lookupLoading, setLookupLoading] = useState(false);
 
   // --- Product Edit ------------------------------------------------------
   const [edit, setEdit] = useState<ProductEditState | null>(null);
@@ -124,6 +124,17 @@ export function InventoryPage() {
   const suppressClickRef = useRef(false);
 
   const savedMessageTimer = useRef<number | null>(null);
+  // Consumes the one-shot "just saved"/"just linked" message AddProduct.tsx
+  // hands back via navigate(backTo, { state }) — cleared from history state
+  // immediately so a later back/forward through this entry doesn't re-show
+  // it, and auto-dismissed the same way an in-page save's message already is.
+  useEffect(() => {
+    if ((location.state as AddProductLocationState | null)?.justSavedMessage) {
+      navigate(location.pathname, { replace: true, state: {} });
+      savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot on mount only
+  }, []);
   useEffect(
     () => () => {
       if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
@@ -422,95 +433,42 @@ export function InventoryPage() {
     }
   }
 
-  // --- Add Product flow -----------------------------------------------
+  // --- Add Product flow: barcode-scan-first (specs/Barcode Scanner &
+  // Product info scrape.md) ---------------------------------------------
 
-  function openAddMethod() {
-    setAddStep("method");
-    setAddSource(null);
-    setAddForm(buildBlankForm(preferences.default_does_expire));
-    setJustSavedMessage(null);
-    setSaveError(null);
-  }
-  function closeAddFlow() {
-    setAddStep("idle");
-    setAddSource(null);
-    setSaveError(null);
-  }
-  function openManual() {
-    setAddSource(null);
-    setAddForm(buildBlankForm(preferences.default_does_expire));
-    setAddStep("form");
-  }
-  function completeCapture() {
-    if (addStep === "photo") {
-      setAddSource("photo");
-      setAddForm({ ...buildBlankForm(preferences.default_does_expire), short: "Grated cheese", long: MOCK_BARCODE_MATCH.long, qty: "1" });
-      setAddStep("form");
+  function openAdd() {
+    if (isBarcodeScanSupported()) {
+      setScanOpen(true);
     } else {
-      setAddStep("match");
+      navigate("/products/add", { state: { from: "/" } satisfies AddProductLocationState });
     }
   }
-  function useMatchedProduct() {
-    setAddSource("match-use");
-    setAddForm({
-      ...buildBlankForm(preferences.default_does_expire),
-      short: MOCK_BARCODE_MATCH.short,
-      long: MOCK_BARCODE_MATCH.long,
-      qty: "1",
-      minQty: MOCK_BARCODE_MATCH.minQty,
-      fresh: MOCK_BARCODE_MATCH.fresh,
-      doesExpire: true,
-    });
-    setAddStep("form");
-  }
-  function confirmUnlink() {
-    setAddSource("match");
-    setAddForm({
-      ...buildBlankForm(preferences.default_does_expire),
-      short: "", // must diverge — short_description stays unique (Product Add.md)
-      long: MOCK_BARCODE_MATCH.long,
-      doesExpire: MOCK_BARCODE_MATCH.doesExpire,
-      qty: MOCK_BARCODE_MATCH.qty,
-      minQty: MOCK_BARCODE_MATCH.minQty,
-      fresh: MOCK_BARCODE_MATCH.fresh,
-      expiresOn: "",
-    });
-    setAddStep("form");
-  }
-  function clearPrefill() {
-    setAddSource(null);
-    setAddForm(buildBlankForm(preferences.default_does_expire));
-  }
-  function setFormField<K extends keyof AddProductFormState>(key: K, value: AddProductFormState[K]) {
-    setAddForm((f) => ({ ...f, [key]: value }));
-  }
-  // specs/Relative Tracking.md: switching to "percentage" also forces
-  // does_expire off — not just a plain field set, so it's its own handler.
-  function setTrackingMode(mode: "units" | "percentage") {
-    setAddForm((f) => ({ ...f, trackingMode: mode, doesExpire: mode === "percentage" ? false : f.doesExpire }));
-  }
 
-  async function saveProduct() {
-    setSaving(true);
-    setSaveError(null);
+  async function handleDetect(code: string) {
+    setScanOpen(false);
+    // Real, offline-capable local match — checks every already-loaded
+    // product's own barcodes, no network call. Retires MOCK_BARCODE_MATCH.
+    const match = products.find((p) => p.barcodes.some((b) => b.code === code));
+    if (match) {
+      const total =
+        match.tracking_mode === "percentage"
+          ? (match.stock_percent ?? 0)
+          : batches.filter((b) => b.product_id === match.id).reduce((sum, b) => sum + b.quantity, 0);
+      openQuick(match.id, total, match.tracking_mode);
+      return;
+    }
+    setLookupLoading(true);
     try {
-      const { product, batch } = await createProduct(buildCreateProductPayload(addForm, listDefaults));
-      setProducts((ps) => [product, ...ps]);
-      if (batch) setBatches((bs) => [batch, ...bs]);
-      setJustSavedMessage(t("inventory.productAdded"));
-      setAddStep("idle");
-      setAddSource(null);
-      setAddForm(buildBlankForm(preferences.default_does_expire));
-      setQuery("");
-      setScope("all");
-
-      if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
-      savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
-    } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : t("inventory.genericSaveError"));
+      const lookup = await lookupBarcode(code);
+      navigate("/products/add", { state: { barcode: code, lookup, from: "/" } satisfies AddProductLocationState });
     } finally {
-      setSaving(false);
+      setLookupLoading(false);
     }
+  }
+
+  function handleCancelScan() {
+    setScanOpen(false);
+    navigate("/products/add", { state: { from: "/" } satisfies AddProductLocationState });
   }
 
   function onEmptyAction() {
@@ -518,7 +476,7 @@ export function InventoryPage() {
       setQuery("");
       setScope("all");
     } else {
-      openAddMethod();
+      openAdd();
     }
   }
 
@@ -552,7 +510,7 @@ export function InventoryPage() {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <Button size="sm" className="h-11 flex-shrink-0" onClick={openAddMethod}>
+          <Button size="sm" className="h-11 flex-shrink-0" onClick={openAdd}>
             {t("inventory.addButton")}
           </Button>
         </div>
@@ -600,6 +558,11 @@ export function InventoryPage() {
       {justSavedMessage && (
         <div className="px-md pt-sm">
           <Alert variant="success" title={justSavedMessage} />
+        </div>
+      )}
+      {lookupLoading && (
+        <div className="px-md pt-sm">
+          <Alert variant="info" title={t("addProduct.lookingUpProduct")} />
         </div>
       )}
 
@@ -663,27 +626,7 @@ export function InventoryPage() {
 
       <Footer />
 
-      <AddProductModals
-        step={addStep}
-        form={addForm}
-        prefillSource={addSource}
-        defaults={listDefaults}
-        onCloseAll={closeAddFlow}
-        onScan={() => setAddStep("scan")}
-        onPhoto={() => setAddStep("photo")}
-        onManual={openManual}
-        onCaptureDone={completeCapture}
-        onUseThis={useMatchedProduct}
-        onAddAsNew={() => setAddStep("unlink")}
-        onBackToMatch={() => setAddStep("match")}
-        onConfirmUnlink={confirmUnlink}
-        onClearPrefill={clearPrefill}
-        onFieldChange={setFormField}
-        onTrackingModeChange={setTrackingMode}
-        onSave={saveProduct}
-        saving={saving}
-        saveError={saveError}
-      />
+      <BarcodeCaptureModal open={scanOpen} onDetect={handleDetect} onCancel={handleCancelScan} />
 
       <QuickBatchEditModal
         quick={quick}

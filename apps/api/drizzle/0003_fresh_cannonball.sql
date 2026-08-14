@@ -1,0 +1,1 @@
+ALTER TABLE "preferences" ADD COLUMN "tavily_api_key" text;

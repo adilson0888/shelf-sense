@@ -26,6 +26,8 @@ const DEFAULT_PREFERENCES: PreferencesResponse = {
   ai_api_key_set: false,
   ai_api_key_hint: null,
   ai_model: null,
+  tavily_api_key_set: false,
+  tavily_api_key_hint: null,
   default_minimal_quantity: 3,
   default_freshness_threshold_days: 7,
   default_does_expire: true,
