@@ -17,5 +17,6 @@ export * from "./components/Switch";
 export * from "./components/Alert";
 export * from "./components/StatCard";
 export * from "./components/DataTable";
+export * from "./components/Footer";
 
 export { cn } from "./lib/cn";
