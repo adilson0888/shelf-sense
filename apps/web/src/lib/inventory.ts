@@ -6,6 +6,8 @@ import { formatExpiryLabel, freshnessStatus } from "./freshness";
 export interface InventoryDefaults {
   freshnessThresholdDays: number;
   minimalQuantity: number;
+  /** specs/Relative Tracking.md's low-% fallback, mirrors minimalQuantity's own role for percentage-tracked products. */
+  minimalPercentage: number;
 }
 
 export interface EnrichedBatch extends Batch {
@@ -45,6 +47,13 @@ export function enrichProduct(
   defaults: InventoryDefaults,
   i18n: Pick<TFunctions, "t" | "tPlural" | "formatDate">,
 ): EnrichedProduct {
+  // specs/Relative Tracking.md: a percentage-tracked product carries no
+  // Batch rows at all — its stock is stock_percent directly, not a sum.
+  // Batches here will simply be empty for it (nothing was ever created),
+  // but computing totalQty from stock_percent rather than the (always-0)
+  // batch sum is what actually makes it show up/hide/low-stock correctly.
+  const isPercentage = product.tracking_mode === "percentage";
+
   const sortedBatches: EnrichedBatch[] = sortBatchesByExpiry(batches)
     .map((b) => ({
       ...b,
@@ -53,7 +62,7 @@ export function enrichProduct(
       expiryLabel: formatExpiryLabel(b.expires_on, product.freshness_threshold_days, defaults.freshnessThresholdDays, today, i18n),
     }));
 
-  const totalQty = sortedBatches.reduce((sum, b) => sum + b.quantity, 0);
+  const totalQty = isPercentage ? (product.stock_percent ?? 0) : sortedBatches.reduce((sum, b) => sum + b.quantity, 0);
   const soonest = sortedBatches.reduce<EnrichedBatch | null>(
     (best, b) => (!best || STATUS_RANK[b.status] < STATUS_RANK[best.status] ? b : best),
     null,
@@ -65,7 +74,9 @@ export function enrichProduct(
     totalQty,
     status: soonest?.status ?? "no-expiration",
     soonestExpiresOn: soonest?.expires_on ?? null,
-    isLow: totalQty < (product.minimal_quantity ?? defaults.minimalQuantity),
+    isLow: isPercentage
+      ? totalQty <= (product.minimal_percentage ?? defaults.minimalPercentage)
+      : totalQty < (product.minimal_quantity ?? defaults.minimalQuantity),
   };
 }
 

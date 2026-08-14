@@ -21,6 +21,7 @@ const DEFAULT_ROW: typeof preferences.$inferSelect = {
   defaultFreshnessThresholdDays: 7,
   defaultDoesExpire: true,
   language: "en-US",
+  defaultMinimalPercentage: 20,
 };
 
 // --- Shared row -> JSON reshaping (GET and PATCH both need this). Never
@@ -40,6 +41,11 @@ function toPreferencesJson(row: typeof preferences.$inferSelect, hasSavedPrefere
     default_freshness_threshold_days: row.defaultFreshnessThresholdDays,
     default_does_expire: row.defaultDoesExpire,
     language: row.language,
+    // specs/Relative Tracking.md. Read-only for now — no PATCH field/Settings
+    // UI exists yet to change it (see updatePreferencesSchema below), so
+    // this always reflects whatever's actually stored (the column default,
+    // 20, until a future Settings pass adds a way to edit it).
+    default_minimal_percentage: row.defaultMinimalPercentage,
     has_saved_preferences: hasSavedPreferences,
   };
 }
@@ -99,6 +105,11 @@ preferencesRouter.patch(
         defaultFreshnessThresholdDays: input.default_freshness_threshold_days,
         defaultDoesExpire: input.default_does_expire,
         language: input.language,
+        // Not part of this PATCH's input yet (see toPreferencesJson's note
+        // above) — only matters on the first-ever insert; onConflictDoUpdate
+        // below deliberately omits it so later saves never stomp it back to
+        // this literal.
+        defaultMinimalPercentage: DEFAULT_ROW.defaultMinimalPercentage,
       })
       .onConflictDoUpdate({
         target: preferences.id,

@@ -30,6 +30,7 @@ const DEFAULT_PREFERENCES: PreferencesResponse = {
   default_freshness_threshold_days: 7,
   default_does_expire: true,
   language: "en-US",
+  default_minimal_percentage: 20,
   // Must stay false: a still-loading or network-failed fetch must never be
   // mistaken for "the user really did choose en-US" — see AppLocaleProvider,
   // which gates locale reconciliation strictly on this flag (specs/i18n.md).

@@ -148,8 +148,9 @@ export function ProductListPage() {
     () => ({
       freshnessThresholdDays: preferences.default_freshness_threshold_days,
       minimalQuantity: preferences.default_minimal_quantity,
+      minimalPercentage: preferences.default_minimal_percentage,
     }),
-    [preferences.default_freshness_threshold_days, preferences.default_minimal_quantity],
+    [preferences.default_freshness_threshold_days, preferences.default_minimal_quantity, preferences.default_minimal_percentage],
   );
 
   const filtered = useMemo(
@@ -200,8 +201,15 @@ export function ProductListPage() {
   // --- Quick Batch Edit ---------------------------------------------------
 
   function openQuick(id: string) {
-    const total = batches.filter((b) => b.product_id === id).reduce((sum, b) => sum + b.quantity, 0);
-    setQuick(openQuickEditState(id, total));
+    const product = products.find((p) => p.id === id);
+    if (!product) return;
+    // specs/Relative Tracking.md: a percentage-tracked product's stock is
+    // stock_percent directly — never a sum of (nonexistent) batches.
+    const total =
+      product.tracking_mode === "percentage"
+        ? (product.stock_percent ?? 0)
+        : batches.filter((b) => b.product_id === id).reduce((sum, b) => sum + b.quantity, 0);
+    setQuick(openQuickEditState(id, total, product.tracking_mode));
   }
   // Long-press: pointer down starts a threshold timer; any real movement
   // (e.g. a scroll) cancels it before it fires. Same shape as Inventory
@@ -256,10 +264,14 @@ export function ProductListPage() {
     if (!quick) return;
     const product = products.find((p) => p.id === quick.productId);
     if (product) {
-      const delta = quick.target - quick.base;
-      const productBatches = batches.filter((b) => b.product_id === quick.productId);
-      const updated = applyQuickEdit(productBatches, quick.productId, product.does_expire, delta, quick.addExpiresOn);
-      setBatches((bs) => [...bs.filter((b) => b.product_id !== quick.productId), ...updated]);
+      if (product.tracking_mode === "percentage") {
+        setProducts((ps) => ps.map((p) => (p.id === product.id ? { ...p, stock_percent: quick.target } : p)));
+      } else {
+        const delta = quick.target - quick.base;
+        const productBatches = batches.filter((b) => b.product_id === quick.productId);
+        const updated = applyQuickEdit(productBatches, quick.productId, product.does_expire, delta, quick.addExpiresOn);
+        setBatches((bs) => [...bs.filter((b) => b.product_id !== quick.productId), ...updated]);
+      }
     }
     setQuick(null);
   }
@@ -304,7 +316,7 @@ export function ProductListPage() {
     setEdit(null);
     setEditSaveError(null);
   }
-  function editFieldChange(key: "short" | "long" | "minQty" | "fresh", value: string) {
+  function editFieldChange(key: "short" | "long" | "minQty" | "fresh" | "minPercent", value: string) {
     if (edit) setEdit(setField(edit, key, value));
   }
   function editDoesExpireChange(value: boolean) {
@@ -445,6 +457,7 @@ export function ProductListPage() {
   function confirmUnlink() {
     setAddSource("match");
     setAddForm({
+      ...buildBlankForm(preferences.default_does_expire),
       short: "",
       long: MOCK_BARCODE_MATCH.long,
       doesExpire: MOCK_BARCODE_MATCH.doesExpire,
@@ -461,6 +474,9 @@ export function ProductListPage() {
   }
   function setFormField<K extends keyof AddProductFormState>(key: K, value: AddProductFormState[K]) {
     setAddForm((f) => ({ ...f, [key]: value }));
+  }
+  function setTrackingMode(mode: "units" | "percentage") {
+    setAddForm((f) => ({ ...f, trackingMode: mode, doesExpire: mode === "percentage" ? false : f.doesExpire }));
   }
 
   async function saveProduct() {
@@ -498,6 +514,14 @@ export function ProductListPage() {
     return <span className={inherited ? "text-ink-muted" : "text-ink-primary"}>{tPlural("productList.daysValue", days)}</span>;
   }
   function minStockCell(row: Product) {
+    // specs/Relative Tracking.md: a percentage-tracked product's low-stock
+    // threshold is minimal_percentage, not minimal_quantity — showing the
+    // latter here would imply a unit count that was never actually stored.
+    if (row.tracking_mode === "percentage") {
+      const value = row.minimal_percentage ?? listDefaults.minimalPercentage;
+      const inherited = row.minimal_percentage == null;
+      return <span className={inherited ? "text-ink-muted" : "text-ink-primary"}>{value}%</span>;
+    }
     const value = effectiveMinimalQuantity(row, listDefaults);
     const inherited = row.minimal_quantity == null;
     return <span className={inherited ? "text-ink-muted" : "text-ink-primary"}>{value}</span>;
@@ -685,7 +709,15 @@ export function ProductListPage() {
 
       <Popover open={!!popover} onClose={() => setPopover(null)} position={popover ? { x: popover.x, y: popover.y } : { x: 0, y: 0 }}>
         <PopoverItem onClick={popoverEditProduct}>{t("productList.popoverEditProduct")}</PopoverItem>
-        <PopoverItem onClick={popoverEditStock}>{t("productList.popoverEditStock")}</PopoverItem>
+        {/* specs/Relative Tracking.md: no Stock Edit view exists for a
+            percentage-tracked product — there are no batches to show. */}
+        {popover && products.find((p) => p.id === popover.productId)?.tracking_mode === "percentage" ? (
+          <PopoverItem disabled title={t("quickBatchEdit.stockDisabledPercentTitle")} className="cursor-not-allowed opacity-50">
+            {t("productList.popoverEditStock")}
+          </PopoverItem>
+        ) : (
+          <PopoverItem onClick={popoverEditStock}>{t("productList.popoverEditStock")}</PopoverItem>
+        )}
       </Popover>
 
       <AddProductModals
@@ -704,6 +736,7 @@ export function ProductListPage() {
         onConfirmUnlink={confirmUnlink}
         onClearPrefill={clearPrefill}
         onFieldChange={setFormField}
+        onTrackingModeChange={setTrackingMode}
         onSave={saveProduct}
         saving={saving}
         saveError={saveError}

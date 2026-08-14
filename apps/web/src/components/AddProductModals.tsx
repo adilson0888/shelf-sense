@@ -1,4 +1,4 @@
-import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Switch } from "shelf-sense-ds";
+import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Select, Switch } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import type { AddFlowStep, AddProductFormState, PrefillSource } from "../lib/addProduct";
 import { MOCK_BARCODE_MATCH } from "../lib/addProduct";
@@ -21,6 +21,8 @@ export interface AddProductModalsProps {
   onConfirmUnlink: () => void;
   onClearPrefill: () => void;
   onFieldChange: <K extends keyof AddProductFormState>(key: K, value: AddProductFormState[K]) => void;
+  /** Separate from onFieldChange because switching to "percentage" also forces does_expire off (specs/Relative Tracking.md). */
+  onTrackingModeChange: (mode: "units" | "percentage") => void;
   onSave: () => void;
   /** True while the POST /products request from a prior Save click is in flight. */
   saving: boolean;
@@ -54,13 +56,15 @@ export function AddProductModals({
   onConfirmUnlink,
   onClearPrefill,
   onFieldChange,
+  onTrackingModeChange,
   onSave,
   saving,
   saveError,
 }: AddProductModalsProps) {
   const { t } = useT();
+  const isPercentage = form.trackingMode === "percentage";
   const qtyNum = Number.parseInt(form.qty, 10) || 0;
-  const showExpiresOn = form.doesExpire && qtyNum > 0;
+  const showExpiresOn = !isPercentage && form.doesExpire && qtyNum > 0;
   const expiresHiddenReason = form.doesExpire
     ? t("addProduct.expiresOnHiddenWithExpiry")
     : t("addProduct.expiresOnHiddenNoExpiry");
@@ -204,50 +208,87 @@ export function AddProductModals({
             value={form.long}
             onChange={(e) => onFieldChange("long", e.target.value)}
           />
-          <Switch
-            label={t("common.doesItExpire")}
-            onLabel={t("common.yes")}
-            offLabel={t("common.no")}
-            checked={form.doesExpire}
-            onCheckedChange={(checked) => onFieldChange("doesExpire", checked)}
+          <Select
+            label={t("addProduct.trackingModeLabel")}
+            options={[
+              { value: "units", label: t("addProduct.trackingModeUnits") },
+              { value: "percentage", label: t("addProduct.trackingModePercentage") },
+            ]}
+            value={form.trackingMode}
+            onChange={(e) => onTrackingModeChange(e.target.value as "units" | "percentage")}
           />
-          <Input
-            label={t("common.quantityLabel")}
-            type="number"
-            min={0}
-            placeholder={t("common.optionalPlaceholder")}
-            value={form.qty}
-            onChange={(e) => onFieldChange("qty", e.target.value)}
-          />
-          <Input
-            label={t("common.minimumQuantityLabel")}
-            type="number"
-            min={0}
-            placeholder={String(defaults.minimalQuantity)}
-            hint={t("addProduct.minQtyHint", { default: defaults.minimalQuantity })}
-            value={form.minQty}
-            onChange={(e) => onFieldChange("minQty", e.target.value)}
-          />
-          {form.doesExpire && (
-            <Input
-              label={t("common.freshnessThresholdLabel")}
-              type="number"
-              min={0}
-              placeholder={String(defaults.freshnessThresholdDays)}
-              hint={t("addProduct.freshnessHint", { default: defaults.freshnessThresholdDays })}
-              value={form.fresh}
-              onChange={(e) => onFieldChange("fresh", e.target.value)}
-            />
-          )}
-          {showExpiresOn ? (
-            <Input
-              label={t("common.expiresOnLabel")}
-              type="date"
-              value={form.expiresOn}
-              onChange={(e) => onFieldChange("expiresOn", e.target.value)}
-            />
+          {isPercentage ? (
+            <>
+              {/* specs/Relative Tracking.md: percentage-tracked products never expire — does_expire stays
+                  forced off (see onTrackingModeChange), no toggle shown here at all. */}
+              <p className="text-xs text-ink-muted">{t("addProduct.percentageNoExpiryNote")}</p>
+              <Input
+                label={t("addProduct.currentPercentLabel")}
+                type="number"
+                min={0}
+                max={100}
+                value={form.stockPercent}
+                onChange={(e) => onFieldChange("stockPercent", e.target.value)}
+              />
+              <Input
+                label={t("addProduct.minimumPercentLabel")}
+                type="number"
+                min={0}
+                max={100}
+                placeholder={String(defaults.minimalPercentage)}
+                hint={t("addProduct.minPercentHint", { default: defaults.minimalPercentage })}
+                value={form.minPercent}
+                onChange={(e) => onFieldChange("minPercent", e.target.value)}
+              />
+            </>
           ) : (
-            <p className="text-xs text-ink-muted">{expiresHiddenReason}</p>
+            <>
+              <Switch
+                label={t("common.doesItExpire")}
+                onLabel={t("common.yes")}
+                offLabel={t("common.no")}
+                checked={form.doesExpire}
+                onCheckedChange={(checked) => onFieldChange("doesExpire", checked)}
+              />
+              <Input
+                label={t("common.quantityLabel")}
+                type="number"
+                min={0}
+                placeholder={t("common.optionalPlaceholder")}
+                value={form.qty}
+                onChange={(e) => onFieldChange("qty", e.target.value)}
+              />
+              <Input
+                label={t("common.minimumQuantityLabel")}
+                type="number"
+                min={0}
+                placeholder={String(defaults.minimalQuantity)}
+                hint={t("addProduct.minQtyHint", { default: defaults.minimalQuantity })}
+                value={form.minQty}
+                onChange={(e) => onFieldChange("minQty", e.target.value)}
+              />
+              {form.doesExpire && (
+                <Input
+                  label={t("common.freshnessThresholdLabel")}
+                  type="number"
+                  min={0}
+                  placeholder={String(defaults.freshnessThresholdDays)}
+                  hint={t("addProduct.freshnessHint", { default: defaults.freshnessThresholdDays })}
+                  value={form.fresh}
+                  onChange={(e) => onFieldChange("fresh", e.target.value)}
+                />
+              )}
+              {showExpiresOn ? (
+                <Input
+                  label={t("common.expiresOnLabel")}
+                  type="date"
+                  value={form.expiresOn}
+                  onChange={(e) => onFieldChange("expiresOn", e.target.value)}
+                />
+              ) : (
+                <p className="text-xs text-ink-muted">{expiresHiddenReason}</p>
+              )}
+            </>
           )}
           {saveError && (
             <Alert variant="danger" title={t("common.saveErrorTitle")}>

@@ -22,6 +22,9 @@ function toProductJson(
     does_expire: p.doesExpire,
     freshness_threshold_days: p.freshnessThresholdDays,
     minimal_quantity: p.minimalQuantity,
+    tracking_mode: p.trackingMode,
+    stock_percent: p.stockPercent,
+    minimal_percentage: p.minimalPercentage,
     aliases: aliasRows.map((a) => a.alias),
     barcodes: barcodeRows.map((b) => ({ id: b.id, code: b.code, description: b.description, product_id: b.productId })),
   };
@@ -75,6 +78,11 @@ const createProductSchema = z
     quantity: z.number().int().nonnegative().default(0),
     // date-only ISO 8601 ("YYYY-MM-DD"); required only per the refinement below
     expires_on: z.string().nullable().default(null),
+    // specs/Relative Tracking.md — fixed at creation, never edited afterward
+    // (PATCH /:id below doesn't accept it).
+    tracking_mode: z.enum(["units", "percentage"]).default("units"),
+    stock_percent: z.number().int().min(0).max(100).nullable().default(null),
+    minimal_percentage: z.number().int().min(0).max(100).nullable().default(null),
   })
   .superRefine((val, ctx) => {
     // Product Add.md's Non-functional section: a hard validation error, not
@@ -84,6 +92,15 @@ const createProductSchema = z
         code: "custom",
         path: ["expires_on"],
         message: "expires_on is required when does_expire is true and quantity is greater than 0",
+      });
+    }
+    // Relative Tracking.md: a percentage-tracked product never expires — the
+    // client already forces this, re-checked here as defense in depth.
+    if (val.tracking_mode === "percentage" && val.does_expire) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["does_expire"],
+        message: "does_expire must be false when tracking_mode is percentage",
       });
     }
   });
@@ -114,7 +131,12 @@ productsRouter.post(
     }
 
     const productId = randomUUID();
-    const batchId = input.quantity > 0 ? randomUUID() : null;
+    // A percentage-tracked product never gets a Batch — its stock lives
+    // directly on stockPercent (specs/Relative Tracking.md's Data section).
+    const isPercentage = input.tracking_mode === "percentage";
+    const batchId = !isPercentage && input.quantity > 0 ? randomUUID() : null;
+    const stockPercent = isPercentage ? (input.stock_percent ?? 100) : null;
+    const minimalPercentage = isPercentage ? input.minimal_percentage : null;
 
     await db.transaction(async (tx) => {
       await tx.insert(products).values({
@@ -124,6 +146,9 @@ productsRouter.post(
         doesExpire: input.does_expire,
         freshnessThresholdDays: input.freshness_threshold_days,
         minimalQuantity: input.minimal_quantity,
+        trackingMode: input.tracking_mode,
+        stockPercent,
+        minimalPercentage,
       });
       if (batchId) {
         await tx.insert(batches).values({
@@ -143,6 +168,9 @@ productsRouter.post(
         does_expire: input.does_expire,
         freshness_threshold_days: input.freshness_threshold_days,
         minimal_quantity: input.minimal_quantity,
+        tracking_mode: input.tracking_mode,
+        stock_percent: stockPercent,
+        minimal_percentage: minimalPercentage,
         aliases: [] as string[],
         barcodes: [] as { id: string; code: string; description: string; product_id: string }[],
       },
@@ -191,6 +219,11 @@ const editProductSchema = z.object({
   does_expire: z.boolean(),
   minimal_quantity: z.number().int().nonnegative().nullable().default(null),
   freshness_threshold_days: z.number().int().nonnegative().nullable().default(null),
+  // specs/Relative Tracking.md: tracking_mode/stock_percent are fixed at
+  // creation and NOT accepted here — Product Edit never touches them.
+  // minimal_percentage is the one Relative Tracking field this view does
+  // edit, meaningful only on a percentage-tracked product.
+  minimal_percentage: z.number().int().min(0).max(100).nullable().default(null),
   aliases: z.array(z.string().trim().min(1)).default([]),
   barcodes: z.array(editBarcodeSchema).default([]),
   other_product_updates: z.array(otherProductUpdateSchema).default([]),
@@ -317,6 +350,7 @@ productsRouter.patch(
             doesExpire: input.does_expire,
             freshnessThresholdDays: input.freshness_threshold_days,
             minimalQuantity: input.minimal_quantity,
+            minimalPercentage: input.minimal_percentage,
           })
           .where(eq(products.id, id));
 

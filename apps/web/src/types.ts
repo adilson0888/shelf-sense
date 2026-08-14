@@ -18,6 +18,14 @@ export interface Product {
   minimal_quantity: number | null; // per-product low-stock threshold; null = follow the global preference
   does_expire: boolean;
   barcodes: Barcode[]; // was string[] — see Product Edit.md, which owns this shape
+
+  // specs/Relative Tracking.md. "units" (the default) means quantity is the
+  // sum of this product's Batch.quantity, same as always. "percentage"
+  // means this product carries no Batch rows at all — stock_percent is the
+  // whole signal. Fixed at creation, never edited afterward.
+  tracking_mode: "units" | "percentage";
+  stock_percent: number | null; // 0-100; meaningful only when tracking_mode === "percentage"
+  minimal_percentage: number | null; // per-product low-% threshold; null = follow the global default. Meaningful only when tracking_mode === "percentage"
 }
 
 export interface Batch {

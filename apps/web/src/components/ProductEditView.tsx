@@ -7,7 +7,7 @@ export interface ProductEditViewProps {
   /** Batches for this product that currently carry a real expires_on — drives the "turning expiry off clears N dates" warning. */
   datedBatchCount: number;
   onClose: () => void;
-  onFieldChange: (key: "short" | "long" | "minQty" | "fresh", value: string) => void;
+  onFieldChange: (key: "short" | "long" | "minQty" | "fresh" | "minPercent", value: string) => void;
   onDoesExpireChange: (value: boolean) => void;
   onNewAliasChange: (value: string) => void;
   onAddAlias: () => void;
@@ -116,36 +116,62 @@ export function ProductEditView({
 
             <div className="flex flex-col gap-md border-t border-border pt-lg">
               <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted">{t("productEdit.trackingHeading")}</span>
-              <Switch
-                label={t("common.doesItExpire")}
-                onLabel={t("common.yes")}
-                offLabel={t("common.no")}
-                checked={edit.doesExpire}
-                onCheckedChange={onDoesExpireChange}
-              />
-              {!edit.doesExpire && datedBatchCount > 0 && (
-                <Alert variant="warning" title={i18n.tPlural("productEdit.expiryWarning", datedBatchCount)} />
+              <div className="flex items-center justify-between gap-sm">
+                <span className="text-sm text-ink-secondary">{t("productEdit.trackingModeLabel")}</span>
+                <span className="text-sm font-medium text-ink-primary">
+                  {edit.trackingMode === "percentage" ? t("addProduct.trackingModePercentage") : t("addProduct.trackingModeUnits")}
+                </span>
+              </div>
+              {edit.trackingMode === "percentage" ? (
+                <>
+                  {/* specs/Relative Tracking.md: tracking_mode is fixed at creation — does_expire is always
+                      false here and isn't shown as an editable toggle. */}
+                  <p className="text-xs text-ink-muted">{t("addProduct.percentageNoExpiryNote")}</p>
+                  <Input
+                    label={t("addProduct.minimumPercentLabel")}
+                    type="number"
+                    min={0}
+                    max={100}
+                    placeholder={t("common.optionalPlaceholder")}
+                    hint={t("productEdit.minPercentHint")}
+                    value={edit.minPercent}
+                    onChange={(e) => onFieldChange("minPercent", e.target.value)}
+                  />
+                </>
+              ) : (
+                <>
+                  <Switch
+                    label={t("common.doesItExpire")}
+                    onLabel={t("common.yes")}
+                    offLabel={t("common.no")}
+                    checked={edit.doesExpire}
+                    onCheckedChange={onDoesExpireChange}
+                  />
+                  {!edit.doesExpire && datedBatchCount > 0 && (
+                    <Alert variant="warning" title={i18n.tPlural("productEdit.expiryWarning", datedBatchCount)} />
+                  )}
+                  {edit.doesExpire && (
+                    <Input
+                      label={t("common.freshnessThresholdLabel")}
+                      type="number"
+                      min={0}
+                      placeholder={t("common.optionalPlaceholder")}
+                      hint={t("productEdit.freshnessHint")}
+                      value={edit.fresh}
+                      onChange={(e) => onFieldChange("fresh", e.target.value)}
+                    />
+                  )}
+                  <Input
+                    label={t("common.minimumQuantityLabel")}
+                    type="number"
+                    min={0}
+                    placeholder={t("common.optionalPlaceholder")}
+                    hint={t("productEdit.minQtyHint")}
+                    value={edit.minQty}
+                    onChange={(e) => onFieldChange("minQty", e.target.value)}
+                  />
+                </>
               )}
-              {edit.doesExpire && (
-                <Input
-                  label={t("common.freshnessThresholdLabel")}
-                  type="number"
-                  min={0}
-                  placeholder={t("common.optionalPlaceholder")}
-                  hint={t("productEdit.freshnessHint")}
-                  value={edit.fresh}
-                  onChange={(e) => onFieldChange("fresh", e.target.value)}
-                />
-              )}
-              <Input
-                label={t("common.minimumQuantityLabel")}
-                type="number"
-                min={0}
-                placeholder={t("common.optionalPlaceholder")}
-                hint={t("productEdit.minQtyHint")}
-                value={edit.minQty}
-                onChange={(e) => onFieldChange("minQty", e.target.value)}
-              />
             </div>
 
             <div className="flex flex-col gap-sm border-t border-border pt-lg">

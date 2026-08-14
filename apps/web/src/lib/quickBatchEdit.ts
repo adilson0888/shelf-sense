@@ -8,24 +8,30 @@ import { sortBatchesByExpiry } from "./inventory";
  */
 export interface QuickEditState {
   productId: string;
-  base: number; // stored total when the modal opened
-  target: number; // pending target quantity
+  /** specs/Relative Tracking.md: clamps target's upper bound at 100 for "percentage", uncapped for "units". */
+  mode: "units" | "percentage";
+  base: number; // stored total (or stock_percent) when the modal opened
+  target: number; // pending target quantity (or percentage)
   editing: boolean; // true while the total is a typable input instead of the click-to-edit label
   draft: string; // the input's raw text while editing
-  addExpiresOn: string; // expires_on for the new batch, relevant only when target > base
+  addExpiresOn: string; // expires_on for the new batch, relevant only when mode is "units" and target > base
 }
 
-export function openQuickEditState(productId: string, total: number): QuickEditState {
-  return { productId, base: total, target: total, editing: false, draft: String(total), addExpiresOn: "" };
+export function openQuickEditState(productId: string, total: number, mode: "units" | "percentage" = "units"): QuickEditState {
+  return { productId, mode, base: total, target: total, editing: false, draft: String(total), addExpiresOn: "" };
+}
+
+function clampTarget(mode: "units" | "percentage", n: number): number {
+  return mode === "percentage" ? Math.min(100, Math.max(0, n)) : Math.max(0, n);
 }
 
 export function bumpQuickEdit(state: QuickEditState, delta: number): QuickEditState {
-  const target = Math.max(0, state.target + delta);
+  const target = clampTarget(state.mode, state.target + delta);
   return { ...state, target, draft: String(target) };
 }
 
 export function commitQuickEditDraft(state: QuickEditState): QuickEditState {
-  const n = Math.max(0, Number.parseInt(state.draft, 10) || 0);
+  const n = clampTarget(state.mode, Number.parseInt(state.draft, 10) || 0);
   return { ...state, target: n, draft: String(n), editing: false };
 }
 

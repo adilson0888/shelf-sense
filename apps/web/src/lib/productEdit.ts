@@ -18,6 +18,10 @@ export interface ProductEditState {
   doesExpire: boolean;
   minQty: string;
   fresh: string;
+  /** specs/Relative Tracking.md — fixed at creation, read-only here; never sent in the PATCH payload. */
+  trackingMode: "units" | "percentage";
+  /** Editable only when trackingMode === "percentage" — the one Relative Tracking field Product Edit does touch. */
+  minPercent: string;
 
   aliases: string[];
   newAlias: string;
@@ -54,17 +58,21 @@ interface Snapshot {
   doesExpire: boolean;
   minQty: string;
   fresh: string;
+  minPercent: string;
   aliases: string[];
   barcodes: { code: string; description: string }[];
 }
 
-function snapshot(s: Pick<ProductEditState, "short" | "long" | "doesExpire" | "minQty" | "fresh" | "aliases" | "barcodes">): Snapshot {
+function snapshot(
+  s: Pick<ProductEditState, "short" | "long" | "doesExpire" | "minQty" | "fresh" | "minPercent" | "aliases" | "barcodes">,
+): Snapshot {
   return {
     short: s.short,
     long: s.long,
     doesExpire: s.doesExpire,
     minQty: s.minQty,
     fresh: s.fresh,
+    minPercent: s.minPercent,
     aliases: s.aliases,
     barcodes: s.barcodes.map((b) => ({ code: b.code, description: b.description })),
   };
@@ -77,6 +85,8 @@ export function openProductEditState(product: Product): ProductEditState {
     doesExpire: product.does_expire,
     minQty: product.minimal_quantity == null ? "" : String(product.minimal_quantity),
     fresh: product.freshness_threshold_days == null ? "" : String(product.freshness_threshold_days),
+    trackingMode: product.tracking_mode,
+    minPercent: product.minimal_percentage == null ? "" : String(product.minimal_percentage),
     aliases: product.aliases.slice(),
     barcodes: product.barcodes.map((b) => ({ ...b })),
   };
@@ -112,7 +122,11 @@ export function isRenamed(state: ProductEditState): boolean {
 // --- Field edits — every one disarms a pending Save confirm; the user's
 // mind changing counts as "something else happened" per the spec. ---------
 
-export function setField(state: ProductEditState, key: "short" | "long" | "minQty" | "fresh", value: string): ProductEditState {
+export function setField(
+  state: ProductEditState,
+  key: "short" | "long" | "minQty" | "fresh" | "minPercent",
+  value: string,
+): ProductEditState {
   return { ...state, [key]: value, saveArmed: false, shortError: key === "short" ? null : state.shortError };
 }
 
@@ -312,6 +326,10 @@ export function saveSummary(state: ProductEditState, i18n: Pick<TFunctions, "t" 
         : tPlural("productEdit.saveSummary.freshDaysValue", Number.parseInt(state.fresh, 10) || 0);
     bits.push(t("productEdit.saveSummary.freshChanged", { value }));
   }
+  if (orig.minPercent !== state.minPercent) {
+    const value = state.minPercent === "" ? t("productEdit.saveSummary.none") : `${state.minPercent}%`;
+    bits.push(t("productEdit.saveSummary.minPercentChanged", { value }));
+  }
   if (JSON.stringify(orig.aliases) !== JSON.stringify(state.aliases)) bits.push(t("productEdit.saveSummary.aliasesUpdated"));
   if (JSON.stringify(orig.barcodes) !== JSON.stringify(snapshot(state).barcodes)) {
     bits.push(tPlural("productEdit.saveSummary.barcodesUpdated", state.barcodes.length));
@@ -336,6 +354,7 @@ export function buildSaveResult(state: ProductEditState, currentProduct: Product
     does_expire: state.doesExpire,
     minimal_quantity: state.minQty === "" ? null : Number.parseInt(state.minQty, 10) || 0,
     freshness_threshold_days: state.fresh === "" ? null : Number.parseInt(state.fresh, 10) || 0,
+    minimal_percentage: state.minPercent === "" ? null : Number.parseInt(state.minPercent, 10) || 0,
     aliases: state.aliases,
     barcodes: state.barcodes.map((b) => ({ ...b, product_id: currentProduct.id })),
   };
@@ -366,6 +385,7 @@ export function buildEditProductPayload(result: ProductEditResult): UpdateProduc
     does_expire: result.updatedProduct.does_expire,
     minimal_quantity: result.updatedProduct.minimal_quantity,
     freshness_threshold_days: result.updatedProduct.freshness_threshold_days,
+    minimal_percentage: result.updatedProduct.minimal_percentage,
     aliases: result.updatedProduct.aliases,
     barcodes: result.updatedProduct.barcodes.map((b) => ({ code: b.code, description: b.description })),
     other_product_updates: result.otherProductUpdates.map((u) => ({
