@@ -20,7 +20,9 @@ export interface QuickBatchEditModalProps {
   onEditProduct: () => void;
 }
 
-const STEPS = [-10, -5, -1, 1, 5, 10];
+const UNIT_STEPS = [-10, -5, -1, 1, 5, 10];
+// specs/Relative Tracking.md's quick-edit stepper row for percentage-tracked products.
+const PERCENT_STEPS = [-25, -10, -5, 5, 10, 25];
 
 /**
  * Translated from the merged Claude Design prototype's Quick Batch Edit
@@ -44,12 +46,17 @@ export function QuickBatchEditModal({
 }: QuickBatchEditModalProps) {
   const { t, tPlural } = useT();
   const open = !!quick && !!product;
+  const isPercentage = product?.tracking_mode === "percentage";
+  const STEPS = isPercentage ? PERCENT_STEPS : UNIT_STEPS;
   const delta = quick ? quick.target - quick.base : 0;
   const doesExpire = product?.does_expire ?? true;
-  const showExpiry = doesExpire && delta > 0;
-  const noExpiryLine = !doesExpire && delta > 0;
-  const noNewBatchLine = delta <= 0;
+  // specs/Relative Tracking.md: a percentage-tracked product never expires
+  // and never creates a Batch, so none of this section applies to it at all.
+  const showExpiry = !isPercentage && doesExpire && delta > 0;
+  const noExpiryLine = !isPercentage && !doesExpire && delta > 0;
+  const noNewBatchLine = !isPercentage && delta <= 0;
   const decDisabled = !quick || quick.target <= 0;
+  const incDisabled = isPercentage && (!quick || quick.target >= 100);
   const resetDisabled = !quick || delta === 0;
 
   // Product Add.md's hard-validation rule, reused here: does_expire + a
@@ -58,15 +65,17 @@ export function QuickBatchEditModal({
   // this — same gap found and fixed for real in AddProductModals.
   const saveDisabled = !quick || delta === 0 || (showExpiry && quick.addExpiresOn.trim().length === 0);
 
-  const decHint = !quick
-    ? ""
-    : delta < 0
-      ? t("quickBatchEdit.decHintNegative", { count: Math.abs(delta) })
-      : delta > 0
-        ? t("quickBatchEdit.decHintPositive", { count: delta })
-        : quick.target <= 0
-          ? t("quickBatchEdit.decHintEmpty")
-          : t("quickBatchEdit.decHintDefault");
+  const decHint = isPercentage
+    ? t("quickBatchEdit.percentHint")
+    : !quick
+      ? ""
+      : delta < 0
+        ? t("quickBatchEdit.decHintNegative", { count: Math.abs(delta) })
+        : delta > 0
+          ? t("quickBatchEdit.decHintPositive", { count: delta })
+          : quick.target <= 0
+            ? t("quickBatchEdit.decHintEmpty")
+            : t("quickBatchEdit.decHintDefault");
 
   const noNewBatchHint =
     quick && delta < 0 ? t("quickBatchEdit.noNewBatchHintRemoving") : t("quickBatchEdit.noNewBatchHintDefault");
@@ -86,6 +95,7 @@ export function QuickBatchEditModal({
                   <Input
                     type="number"
                     min={0}
+                    max={isPercentage ? 100 : undefined}
                     autoFocus
                     className="max-w-[120px]"
                     value={quick.draft}
@@ -104,18 +114,23 @@ export function QuickBatchEditModal({
                       className="border-0 border-b border-dashed border-border-strong bg-transparent p-0 font-mono text-[34px] font-semibold leading-[1.05] text-ink-primary"
                     >
                       {quick.target}
+                      {isPercentage && "%"}
                     </button>
                     {delta !== 0 && (
                       <span
                         className={cn("font-mono text-[13px] font-semibold", delta > 0 ? "text-success" : "text-danger")}
                       >
                         {delta > 0 ? "+" : "−"}
-                        {t("quickBatchEdit.pendingCount", { count: Math.abs(delta) })}
+                        {isPercentage
+                          ? t("quickBatchEdit.pendingPercent", { count: Math.abs(delta) })
+                          : t("quickBatchEdit.pendingCount", { count: Math.abs(delta) })}
                       </span>
                     )}
                   </div>
                 )}
-                <span className="text-xs text-ink-muted">{tPlural("quickBatchEdit.batchesCount", product.batches.length)}</span>
+                {!isPercentage && (
+                  <span className="text-xs text-ink-muted">{tPlural("quickBatchEdit.batchesCount", product.batches.length)}</span>
+                )}
               </div>
               <FreshnessBadge status={product.status} label={freshnessBadgeLabel(product.status, t)} />
             </div>
@@ -128,32 +143,42 @@ export function QuickBatchEditModal({
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={n < 0 && decDisabled}
+                    disabled={(n < 0 && decDisabled) || (n > 0 && incDisabled)}
                     onClick={() => onBump(n)}
                   >
                     {n > 0 ? `+${n}` : n}
+                    {isPercentage && "%"}
                   </Button>
                 ))}
               </div>
               <span className="text-xs leading-relaxed text-ink-muted">{decHint}</span>
             </div>
 
-            <div className="flex flex-col gap-sm border-t border-border pt-sm">
-              {showExpiry && (
-                <Input
-                  label={t("common.expiresOnLabel")}
-                  type="date"
-                  hint={t("quickBatchEdit.expiresOnHint")}
-                  value={quick.addExpiresOn}
-                  onChange={(e) => onAddExpiresOnChange(e.target.value)}
-                />
-              )}
-              {noExpiryLine && <p className="text-xs text-ink-muted">{t("quickBatchEdit.noExpiryNewBatch")}</p>}
-              {noNewBatchLine && <p className="text-xs text-ink-muted">{noNewBatchHint}</p>}
-            </div>
+            {!isPercentage && (
+              <div className="flex flex-col gap-sm border-t border-border pt-sm">
+                {showExpiry && (
+                  <Input
+                    label={t("common.expiresOnLabel")}
+                    type="date"
+                    hint={t("quickBatchEdit.expiresOnHint")}
+                    value={quick.addExpiresOn}
+                    onChange={(e) => onAddExpiresOnChange(e.target.value)}
+                  />
+                )}
+                {noExpiryLine && <p className="text-xs text-ink-muted">{t("quickBatchEdit.noExpiryNewBatch")}</p>}
+                {noNewBatchLine && <p className="text-xs text-ink-muted">{noNewBatchHint}</p>}
+              </div>
+            )}
 
             <div className="flex gap-sm border-t border-border pt-sm">
-              <Button type="button" variant="outline" size="sm" onClick={onStock}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isPercentage}
+                title={isPercentage ? t("quickBatchEdit.stockDisabledPercentTitle") : undefined}
+                onClick={onStock}
+              >
                 {t("quickBatchEdit.stockButton")}
               </Button>
               <Button type="button" variant="outline" size="sm" onClick={onEditProduct}>

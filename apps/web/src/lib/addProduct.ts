@@ -14,12 +14,18 @@ export interface AddProductFormState {
   minQty: string;
   fresh: string;
   expiresOn: string;
+  // specs/Relative Tracking.md — fixed at creation, never edited afterward.
+  trackingMode: "units" | "percentage";
+  stockPercent: string; // draft text for the "current %" field, relevant only when trackingMode === "percentage"
+  minPercent: string; // draft text for the low-% threshold, relevant only when trackingMode === "percentage"
 }
 
 /**
  * Per Product Add.md: `does_expire` defaults to the user's global "products
  * expire by default" preference (specs/Settings.md) — the user still opts
- * in/out explicitly per product from there.
+ * in/out explicitly per product from there. `trackingMode` always starts
+ * "units" — the user opts into percentage tracking explicitly, same shape
+ * as does_expire's own default-then-opt-out pattern.
  */
 export function buildBlankForm(defaultDoesExpire: boolean): AddProductFormState {
   return {
@@ -30,6 +36,9 @@ export function buildBlankForm(defaultDoesExpire: boolean): AddProductFormState 
     minQty: "",
     fresh: "",
     expiresOn: "",
+    trackingMode: "units",
+    stockPercent: "100",
+    minPercent: "",
   };
 }
 
@@ -69,6 +78,24 @@ export const MOCK_BARCODE_MATCH = {
  * there, same as before.
  */
 export function buildCreateProductPayload(form: AddProductFormState, defaults: InventoryDefaults): CreateProductPayload {
+  // specs/Relative Tracking.md: a percentage-tracked product never expires,
+  // has no quantity/expires_on batch fields, and stores its stock directly
+  // as stock_percent — a completely different shape from the units branch
+  // below, not just a couple of overridden fields.
+  if (form.trackingMode === "percentage") {
+    return {
+      short_description: form.short.trim(),
+      long_description: form.long.trim(),
+      does_expire: false,
+      freshness_threshold_days: null,
+      minimal_quantity: null,
+      quantity: 0,
+      expires_on: null,
+      tracking_mode: "percentage",
+      stock_percent: clampPercent(Number.parseInt(form.stockPercent, 10) || 0),
+      minimal_percentage: form.minPercent ? clampPercent(Number.parseInt(form.minPercent, 10)) : defaults.minimalPercentage,
+    };
+  }
   return {
     short_description: form.short.trim(),
     long_description: form.long.trim(),
@@ -81,5 +108,12 @@ export function buildCreateProductPayload(form: AddProductFormState, defaults: I
     minimal_quantity: form.minQty ? Number.parseInt(form.minQty, 10) : defaults.minimalQuantity,
     quantity: Number.parseInt(form.qty, 10) || 0,
     expires_on: form.doesExpire && form.expiresOn ? form.expiresOn : null,
+    tracking_mode: "units",
+    stock_percent: null,
+    minimal_percentage: null,
   };
+}
+
+function clampPercent(n: number): number {
+  return Math.min(100, Math.max(0, n));
 }

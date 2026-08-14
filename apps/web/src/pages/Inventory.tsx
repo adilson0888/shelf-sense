@@ -138,8 +138,9 @@ export function InventoryPage() {
     () => ({
       freshnessThresholdDays: preferences.default_freshness_threshold_days,
       minimalQuantity: preferences.default_minimal_quantity,
+      minimalPercentage: preferences.default_minimal_percentage,
     }),
-    [preferences.default_freshness_threshold_days, preferences.default_minimal_quantity],
+    [preferences.default_freshness_threshold_days, preferences.default_minimal_quantity, preferences.default_minimal_percentage],
   );
 
   const all = useMemo(
@@ -193,17 +194,17 @@ export function InventoryPage() {
 
   // --- Quick Batch Edit: gestures ---------------------------------------
 
-  function openQuick(id: string, total: number) {
-    setQuick(openQuickEditState(id, total));
+  function openQuick(id: string, total: number, mode: "units" | "percentage") {
+    setQuick(openQuickEditState(id, total, mode));
   }
-  function openQuickFromSwipe(id: string, total: number) {
+  function openQuickFromSwipe(id: string, total: number, mode: "units" | "percentage") {
     setSwipedId(null);
-    openQuick(id, total);
+    openQuick(id, total, mode);
   }
 
   // Long-press: pointer down starts a threshold timer; any real movement
   // (scroll or swipe) cancels it before it fires.
-  function handlePressStart(id: string, total: number, e: ReactPointerEvent) {
+  function handlePressStart(id: string, total: number, mode: "units" | "percentage", e: ReactPointerEvent) {
     if (e.button && e.button !== 0) return;
     if (holdTimerRef.current) window.clearTimeout(holdTimerRef.current);
     pressRef.current = { id, x: e.clientX, y: e.clientY, moved: false, fired: false };
@@ -213,7 +214,7 @@ export function InventoryPage() {
       press.fired = true;
       setSwipedId(null);
       setDrag(null);
-      openQuick(id, total);
+      openQuick(id, total, mode);
     }, 480);
   }
 
@@ -290,10 +291,16 @@ export function InventoryPage() {
     if (!quick) return;
     const product = products.find((p) => p.id === quick.productId);
     if (product) {
-      const delta = quick.target - quick.base;
-      const productBatches = batches.filter((b) => b.product_id === quick.productId);
-      const updated = applyQuickEdit(productBatches, quick.productId, product.does_expire, delta, quick.addExpiresOn);
-      setBatches((bs) => [...bs.filter((b) => b.product_id !== quick.productId), ...updated]);
+      if (product.tracking_mode === "percentage") {
+        // specs/Relative Tracking.md: overwrites stock_percent directly —
+        // no Batch is ever created or cascaded through for this mode.
+        setProducts((ps) => ps.map((p) => (p.id === product.id ? { ...p, stock_percent: quick.target } : p)));
+      } else {
+        const delta = quick.target - quick.base;
+        const productBatches = batches.filter((b) => b.product_id === quick.productId);
+        const updated = applyQuickEdit(productBatches, quick.productId, product.does_expire, delta, quick.addExpiresOn);
+        setBatches((bs) => [...bs.filter((b) => b.product_id !== quick.productId), ...updated]);
+      }
     }
     setQuick(null);
   }
@@ -318,7 +325,7 @@ export function InventoryPage() {
     setEdit(null);
     setEditSaveError(null);
   }
-  function editFieldChange(key: "short" | "long" | "minQty" | "fresh", value: string) {
+  function editFieldChange(key: "short" | "long" | "minQty" | "fresh" | "minPercent", value: string) {
     if (edit) setEdit(setField(edit, key, value));
   }
   function editDoesExpireChange(value: boolean) {
@@ -459,6 +466,7 @@ export function InventoryPage() {
   function confirmUnlink() {
     setAddSource("match");
     setAddForm({
+      ...buildBlankForm(preferences.default_does_expire),
       short: "", // must diverge — short_description stays unique (Product Add.md)
       long: MOCK_BARCODE_MATCH.long,
       doesExpire: MOCK_BARCODE_MATCH.doesExpire,
@@ -475,6 +483,11 @@ export function InventoryPage() {
   }
   function setFormField<K extends keyof AddProductFormState>(key: K, value: AddProductFormState[K]) {
     setAddForm((f) => ({ ...f, [key]: value }));
+  }
+  // specs/Relative Tracking.md: switching to "percentage" also forces
+  // does_expire off — not just a plain field set, so it's its own handler.
+  function setTrackingMode(mode: "units" | "percentage") {
+    setAddForm((f) => ({ ...f, trackingMode: mode, doesExpire: mode === "percentage" ? false : f.doesExpire }));
   }
 
   async function saveProduct() {
@@ -623,11 +636,11 @@ export function InventoryPage() {
                   onToggle={() => toggleExpanded(p.id)}
                   slideX={drag && drag.id === p.id ? drag.dx : swipedId === p.id ? -76 : 0}
                   dragging={!!(drag && drag.id === p.id)}
-                  onPressStart={(e) => handlePressStart(p.id, p.totalQty, e)}
+                  onPressStart={(e) => handlePressStart(p.id, p.totalQty, p.tracking_mode, e)}
                   onPressMove={handlePressMove}
                   onPressEnd={(e) => handlePressEnd(p.id, e)}
                   onPressAbort={handlePressAbort}
-                  onOpenQuick={() => openQuickFromSwipe(p.id, p.totalQty)}
+                  onOpenQuick={() => openQuickFromSwipe(p.id, p.totalQty, p.tracking_mode)}
                 />
               ))}
             </div>
@@ -666,6 +679,7 @@ export function InventoryPage() {
         onConfirmUnlink={confirmUnlink}
         onClearPrefill={clearPrefill}
         onFieldChange={setFormField}
+        onTrackingModeChange={setTrackingMode}
         onSave={saveProduct}
         saving={saving}
         saveError={saveError}
@@ -782,9 +796,11 @@ function ProductRow({
   onOpenQuick: () => void;
 }) {
   const { t } = useT();
-  const metaLabel =
-    (p.batches.length > 1 ? t("inventory.batchesCountPrefix", { count: p.batches.length }) : "") +
-    (p.batches[0]?.expiryLabel ?? t("freshness.doesNotExpire"));
+  const isPercentage = p.tracking_mode === "percentage";
+  const metaLabel = isPercentage
+    ? t("inventory.percentTrackedMeta")
+    : (p.batches.length > 1 ? t("inventory.batchesCountPrefix", { count: p.batches.length }) : "") +
+      (p.batches[0]?.expiryLabel ?? t("freshness.doesNotExpire"));
 
   return (
     <div className="-mb-px flex border-b border-t border-border">
@@ -830,7 +846,10 @@ function ProductRow({
               </div>
               <span className="truncate text-[12px] text-ink-muted">{metaLabel}</span>
             </div>
-            <span className="flex-shrink-0 font-mono text-[17px] font-semibold text-ink-primary">{p.totalQty}</span>
+            <span className="flex-shrink-0 font-mono text-[17px] font-semibold text-ink-primary">
+              {p.totalQty}
+              {isPercentage && "%"}
+            </span>
             <FreshnessBadge status={p.status} label={freshnessBadgeLabel(p.status, t)} />
             <span
               className={cn(
@@ -843,15 +862,19 @@ function ProductRow({
           </button>
           {expanded && (
             <div className="flex flex-col gap-sm px-md pb-[14px]">
-              {p.batches.map((b) => (
-                <div key={b.id} className="flex items-center gap-[10px] rounded-md bg-surface-2 px-[11px] py-[9px]">
-                  <span className="min-w-[34px] font-mono text-[12px] font-semibold text-ink-primary">
-                    {b.qtyLabel}
-                  </span>
-                  <span className="flex-1 truncate text-[12px] text-ink-secondary">{b.expiryLabel}</span>
-                  <FreshnessBadge status={b.status} label={freshnessBadgeLabel(b.status, t)} />
-                </div>
-              ))}
+              {isPercentage ? (
+                <p className="text-xs text-ink-muted">{t("inventory.percentTrackedExpandNote")}</p>
+              ) : (
+                p.batches.map((b) => (
+                  <div key={b.id} className="flex items-center gap-[10px] rounded-md bg-surface-2 px-[11px] py-[9px]">
+                    <span className="min-w-[34px] font-mono text-[12px] font-semibold text-ink-primary">
+                      {b.qtyLabel}
+                    </span>
+                    <span className="flex-1 truncate text-[12px] text-ink-secondary">{b.expiryLabel}</span>
+                    <FreshnessBadge status={b.status} label={freshnessBadgeLabel(b.status, t)} />
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

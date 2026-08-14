@@ -11,6 +11,7 @@ interface SettingsFormState {
   aiApiBaseUrl: string;
   aiModel: string;
   defaultMinimalQuantity: string;
+  defaultMinimalPercentage: string;
   defaultFreshnessThresholdDays: string;
   defaultDoesExpire: boolean;
   language: "en-US" | "pt-BR";
@@ -29,6 +30,7 @@ function toFormState(p: PreferencesResponse, activeLocale: "en-US" | "pt-BR"): S
     aiApiBaseUrl: p.ai_api_base_url ?? "",
     aiModel: p.ai_model ?? "",
     defaultMinimalQuantity: String(p.default_minimal_quantity),
+    defaultMinimalPercentage: String(p.default_minimal_percentage),
     defaultFreshnessThresholdDays: String(p.default_freshness_threshold_days),
     defaultDoesExpire: p.default_does_expire,
     language: activeLocale,
@@ -39,6 +41,12 @@ function toFormState(p: PreferencesResponse, activeLocale: "en-US" | "pt-BR"): S
 function parseNonNegativeInt(value: string): number | null {
   if (!/^\d+$/.test(value.trim())) return null;
   return Number.parseInt(value, 10);
+}
+
+/** Same as parseNonNegativeInt, additionally capped at 100 — specs/Relative Tracking.md's default_minimal_percentage. */
+function parsePercent(value: string): number | null {
+  const n = parseNonNegativeInt(value);
+  return n === null || n > 100 ? null : n;
 }
 
 /**
@@ -102,17 +110,19 @@ export function SettingsPage() {
   }
 
   const minQty = parseNonNegativeInt(form.defaultMinimalQuantity);
+  const minPercent = parsePercent(form.defaultMinimalPercentage);
   const freshDays = parseNonNegativeInt(form.defaultFreshnessThresholdDays);
-  const canSave = minQty !== null && freshDays !== null && !saving;
+  const canSave = minQty !== null && minPercent !== null && freshDays !== null && !saving;
 
   async function handleSave() {
-    if (minQty === null || freshDays === null) return;
+    if (minQty === null || minPercent === null || freshDays === null) return;
     setSaving(true);
     setSaveError(null);
     const payload: UpdatePreferencesPayload = {
       ai_api_base_url: form.aiApiBaseUrl.trim() ? form.aiApiBaseUrl.trim() : null,
       ai_model: form.aiModel.trim() ? form.aiModel.trim() : null,
       default_minimal_quantity: minQty,
+      default_minimal_percentage: minPercent,
       default_freshness_threshold_days: freshDays,
       default_does_expire: form.defaultDoesExpire,
       language: form.language,
@@ -222,6 +232,16 @@ export function SettingsPage() {
                 value={form.defaultMinimalQuantity}
                 onChange={(e) => setField("defaultMinimalQuantity", e.target.value)}
                 error={minQty === null ? t("settings.defaultOptions.numberError") : undefined}
+              />
+              <Input
+                label={t("settings.defaultOptions.minPercentLabel")}
+                type="number"
+                min={0}
+                max={100}
+                hint={t("settings.defaultOptions.minPercentHint")}
+                value={form.defaultMinimalPercentage}
+                onChange={(e) => setField("defaultMinimalPercentage", e.target.value)}
+                error={minPercent === null ? t("settings.defaultOptions.percentError") : undefined}
               />
               <Switch
                 label={t("settings.defaultOptions.expireByDefaultLabel")}

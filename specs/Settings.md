@@ -14,7 +14,7 @@ As the app's user, I want a single place to configure AI provider access, my glo
 - [ ] Given an API key was previously saved, when the page loads, then the key field never displays the real value — only a masked hint (e.g. `•••• wXyz`, last 4 characters) plus a way to clear the saved key outright, distinct from typing a new one.
 - [ ] Given I type a new API key and save, when the save completes, then the new key replaces the old one and the field goes back to showing the new masked hint, never the raw value, on next load.
 - [ ] Given I click "clear saved key" and save, when the save completes, then no key is stored (`ai_api_key_set: false`) and the AI Settings fields show no hint.
-- [ ] Given the Default Options category, when I view it, then I can set a **default minimal quantity** (integer, ≥ 0), a **default freshness threshold in days** (integer, ≥ 0), and whether **products expire by default** (on/off) — all three always have a value (no blank/null state for these three, unlike their per-product counterparts).
+- [ ] Given the Default Options category, when I view it, then I can set a **default minimal quantity** (integer, ≥ 0), a **default minimum %** (integer, 0–100, `specs/Relative Tracking.md`'s low-% fallback for percentage-tracked products), a **default freshness threshold in days** (integer, ≥ 0), and whether **products expire by default** (on/off) — all four always have a value (no blank/null state for these, unlike their per-product counterparts).
 - [ ] Given I lower a product's own `minimal_quantity`/`freshness_threshold_days` to a specific number (per `Product Add.md`/`Product Edit.md`), when Inventory/Stock Edit render that product, then the per-product value still wins — these global defaults only apply when a product's own value is `null`, exactly the existing fallback behavior, just reading a real configured value instead of a hardcoded constant.
 - [ ] Given I change "products expire by default" and save, when I next open Add Product with a blank form (manual entry, or either scan path before a match/photo result arrives), then the "does it expire?" toggle's initial state reflects my saved preference — supersedes `Product Add.md`'s current hardcoded-`true` acceptance criterion (updated alongside this spec), everything else about that criterion (user can still switch it explicitly per product) is unchanged.
 - [ ] Given the User Preferences category, when I view it, then I can pick my language (English (US) / Português do Brasil) — the same picker `specs/i18n.md` specs, hosted on this page; this spec owns where the control lives and how the choice is saved, `i18n.md` owns what happens in the UI once it changes (translation, `<html lang>`, etc.).
@@ -39,6 +39,7 @@ export const preferences = pgTable("preferences", {
   defaultFreshnessThresholdDays: integer("default_freshness_threshold_days").notNull().default(7), // was apps/web's DEFAULT_FRESHNESS_THRESHOLD_DAYS constant
   defaultDoesExpire: boolean("default_does_expire").notNull().default(true), // was apps/web's BLANK_FORM.doesExpire literal
   language: text("language").notNull().default("en-US"), // "en-US" | "pt-BR" — see specs/i18n.md
+  defaultMinimalPercentage: integer("default_minimal_percentage").notNull().default(20), // specs/Relative Tracking.md's low-% fallback for percentage-tracked products
 });
 ```
 
@@ -58,10 +59,11 @@ interface PreferencesResponse {
   default_freshness_threshold_days: number;
   default_does_expire: boolean;
   language: "en-US" | "pt-BR";
+  default_minimal_percentage: number; // 0-100, specs/Relative Tracking.md's low-% fallback
 }
 
 // PATCH /preferences
-// Full-replace semantics for the six always-present fields (same "final
+// Full-replace semantics for the seven always-present fields (same "final
 // desired state, not a diff" convention apps/api's PATCH /products/:id
 // already uses) — the client always sends its whole form. ai_api_key is
 // the one exception: omitted = leave the stored key unchanged, `null` =
@@ -74,6 +76,7 @@ interface UpdatePreferencesPayload {
   default_freshness_threshold_days: number; // >= 0
   default_does_expire: boolean;
   language: "en-US" | "pt-BR";
+  default_minimal_percentage: number; // 0-100
 }
 // Response: same shape as GET /preferences, reflecting the row after upsert.
 ```
@@ -98,7 +101,7 @@ export interface PreferencesStore {
   save: (payload: UpdatePreferencesPayload) => Promise<void>; // calls PATCH, updates local state from the response
 }
 ```
-Initial state (before the `GET /preferences` fetch resolves) is the same literal defaults as the DB schema's column defaults — `{ ai_api_base_url: null, ai_api_key_set: false, ai_api_key_hint: null, ai_model: null, default_minimal_quantity: 3, default_freshness_threshold_days: 7, default_does_expire: true, language: "en-US" }` — so `Inventory.tsx`'s initial `useState<AddProductFormState>(buildBlankForm(...))` and `enrichProduct` calls never need a null-check while the fetch is in flight. `PreferencesProvider` wraps `App.tsx`'s tree alongside the existing `ProductsProvider` (`apps/web/src/App.tsx`).
+Initial state (before the `GET /preferences` fetch resolves) is the same literal defaults as the DB schema's column defaults — `{ ai_api_base_url: null, ai_api_key_set: false, ai_api_key_hint: null, ai_model: null, default_minimal_quantity: 3, default_freshness_threshold_days: 7, default_does_expire: true, language: "en-US", default_minimal_percentage: 20 }` — so `Inventory.tsx`'s initial `useState<AddProductFormState>(buildBlankForm(...))` and `enrichProduct` calls never need a null-check while the fetch is in flight. `PreferencesProvider` wraps `App.tsx`'s tree alongside the existing `ProductsProvider` (`apps/web/src/App.tsx`).
 
 **`apps/web/src/lib/api.ts` additions** (same `request<T>()` helper the file already uses for `fetchProducts`/`createProduct`/`updateProduct`):
 ```ts
@@ -115,7 +118,7 @@ export function updatePreferences(payload: UpdatePreferencesPayload): Promise<Pr
 - **Entry point**: unchanged — `specs/Menu.md`'s existing `/settings` route (`apps/web/src/pages/Settings.tsx`), which today renders only a "doesn't have real content yet" placeholder (delete that placeholder body entirely, this spec is what replaces it).
 - **Layout**: single scrollable page inside `AppShell` (same chrome as Inventory — top app bar + hamburger, per `specs/Menu.md`; Settings does **not** get the chromeless full-screen treatment `Stock Edit.md`/`Product Edit.md` use). Three stacked sections in fixed order: AI Settings, Default Options, User Preferences. Each section: an uppercase-eyebrow-style subtitle (`text-xs font-semibold uppercase tracking-wide text-ink-muted`, matching this system's existing eyebrow-label type convention per `specs/Brand.md`'s type section) followed by its fields, followed by a `border-t border-border` divider before the next section (last section has no trailing divider).
 - **AI Settings fields**: `Input` (text, label "API base URL", placeholder `https://api.openai.com/v1`) bound to `ai_api_base_url`; `Input` (`type="password"`, label "API key") bound to a local always-blank "new key" draft string — when `ai_api_key_set` is true, render a `hint` below it reading `A key is saved (${ai_api_key_hint}).` plus a text-button "Clear saved key" that arms a pending-clear flag (mutually exclusive with typing a new value — typing anything clears the pending-clear flag); `Input` (text, label "Model") bound to `ai_model`.
-- **Default Options fields**: `Input` (`type="number"`, `min={0}`, label "Default minimal quantity") bound to `default_minimal_quantity`; `Input` (`type="number"`, `min={0}`, label "Default freshness threshold (days)") bound to `default_freshness_threshold_days`; `Switch` (label "Products expire by default", per `Switch`'s own doc comment example use-case) bound to `default_does_expire`.
+- **Default Options fields**: `Input` (`type="number"`, `min={0}`, label "Default minimal quantity") bound to `default_minimal_quantity`; `Input` (`type="number"`, `min={0}`, `max={100}`, label "Default minimum %") bound to `default_minimal_percentage` — `specs/Relative Tracking.md`'s low-% fallback, same field shape and validation bar as the other two number fields here; `Input` (`type="number"`, `min={0}`, label "Default freshness threshold (days)") bound to `default_freshness_threshold_days`; `Switch` (label "Products expire by default", per `Switch`'s own doc comment example use-case) bound to `default_does_expire`.
 - **User Preferences fields**: `Select` (label "Language", options `[{ value: "en-US", label: "English (US)" }, { value: "pt-BR", label: "Português do Brasil" }]`) bound to `language`. No other control in this section — no theme toggle (see Acceptance criteria).
 - **Save**: one `Button` ("Save") at the bottom of the page, sends the full current form state as one `UpdatePreferencesPayload` (omitting `ai_api_key` unless the user typed a new one or armed "clear saved key", per the Data section's PATCH semantics). On success: `Alert variant="success" title="Saved"` shown briefly, same transient pattern `Inventory.tsx`'s `justSavedMessage` already uses. On failure: `Alert variant="danger"` with the `ApiError` message, form stays editable (not reset).
 - **Loading state**: while `preferencesStore.loading` is true on first mount, render a simple loading placeholder (no skeleton component exists yet in `shelf-sense-ds` — plain centered text is fine, matching the level of polish `Settings.tsx`'s current placeholder already uses).
@@ -130,7 +133,7 @@ export function updatePreferences(payload: UpdatePreferencesPayload): Promise<Pr
 - **Secret handling**: the API key is stored plaintext in Postgres (explicit decision — single-user self-hosted app, the whole database is already trusted, matches this app's existing security posture). It is never included in `GET /preferences`'s response body in full, never logged (including in `apps/api` request/error logging), and the `PATCH` request body containing it is only ever sent over the same origin the rest of the app already talks to (no new transport surface).
 - **No consumer wired up yet**: nothing in this pass actually calls the stored AI config — `Product Add.md`'s `identify-from-photo` is still `MOCK_BARCODE_MATCH`-simulated (per that spec's own current status). This spec only makes the config real and persisted; wiring a real AI call to use it is that consuming feature's own follow-up, not blocked by anything here.
 - **Scope: `apps/web` only.** `apps/mobile` has no navigation/Settings surface yet — `specs/Menu.md`'s drawer, which Settings hangs off, is `apps/web`-only so far (confirmed: no `Settings`/`NavDrawer` equivalent exists under `apps/mobile/src`). Not building a parallel mobile Settings screen in this pass.
-- **Validation enforced at both layers**: `apps/api`'s Zod schema for `PATCH /preferences` rejects negative/non-integer `default_minimal_quantity`/`default_freshness_threshold_days` and any `language` outside `"en-US" | "pt-BR"` with a 400, mirroring the form's own client-side checks — same defense-in-depth convention `specs/Persistence.md` documents for `Product`'s fields.
+- **Validation enforced at both layers**: `apps/api`'s Zod schema for `PATCH /preferences` rejects negative/non-integer `default_minimal_quantity`/`default_freshness_threshold_days`, `default_minimal_percentage` outside `[0, 100]`, and any `language` outside `"en-US" | "pt-BR"` with a 400, mirroring the form's own client-side checks — same defense-in-depth convention `specs/Persistence.md` documents for `Product`'s fields.
 - **Accessibility**: every field uses `Input`/`Select`/`Switch`'s own existing label-association behavior (no new pattern needed); no modal/dialog involved so no new focus-trap concerns.
 
 ## Out of scope

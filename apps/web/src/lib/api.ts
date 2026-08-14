@@ -48,6 +48,10 @@ export interface CreateProductPayload {
   freshness_threshold_days: number | null;
   quantity: number;
   expires_on: string | null;
+  // specs/Relative Tracking.md — fixed at creation, never edited afterward.
+  tracking_mode: "units" | "percentage";
+  stock_percent: number | null;
+  minimal_percentage: number | null;
 }
 
 export function createProduct(payload: CreateProductPayload): Promise<{ product: Product; batch: Batch | null }> {
@@ -61,6 +65,10 @@ export interface UpdateProductPayload {
   does_expire: boolean;
   minimal_quantity: number | null;
   freshness_threshold_days: number | null;
+  // specs/Relative Tracking.md — the one field of that spec Product Edit
+  // does touch; tracking_mode/stock_percent are fixed at creation and never
+  // sent here.
+  minimal_percentage: number | null;
   aliases: string[];
   barcodes: { code: string; description: string }[];
   // Cross-product unlinks the confirm-move flow already resolved before
@@ -85,6 +93,8 @@ export interface PreferencesResponse {
   default_freshness_threshold_days: number;
   default_does_expire: boolean;
   language: "en-US" | "pt-BR";
+  /** specs/Relative Tracking.md's low-% fallback for percentage-tracked products. */
+  default_minimal_percentage: number;
   /** False only when no preferences row has ever been saved — see specs/i18n.md's first-launch detection. */
   has_saved_preferences: boolean;
 }
@@ -98,6 +108,7 @@ export interface UpdatePreferencesPayload {
   default_freshness_threshold_days: number;
   default_does_expire: boolean;
   language: "en-US" | "pt-BR";
+  default_minimal_percentage: number;
 }
 
 export function fetchPreferences(): Promise<PreferencesResponse> {

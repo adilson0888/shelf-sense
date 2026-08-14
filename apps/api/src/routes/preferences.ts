@@ -21,6 +21,7 @@ const DEFAULT_ROW: typeof preferences.$inferSelect = {
   defaultFreshnessThresholdDays: 7,
   defaultDoesExpire: true,
   language: "en-US",
+  defaultMinimalPercentage: 20,
 };
 
 // --- Shared row -> JSON reshaping (GET and PATCH both need this). Never
@@ -40,6 +41,10 @@ function toPreferencesJson(row: typeof preferences.$inferSelect, hasSavedPrefere
     default_freshness_threshold_days: row.defaultFreshnessThresholdDays,
     default_does_expire: row.defaultDoesExpire,
     language: row.language,
+    // specs/Relative Tracking.md's low-% fallback for percentage-tracked
+    // products — editable via Settings' Default Options, same as
+    // default_minimal_quantity/default_freshness_threshold_days.
+    default_minimal_percentage: row.defaultMinimalPercentage,
     has_saved_preferences: hasSavedPreferences,
   };
 }
@@ -56,7 +61,7 @@ preferencesRouter.get(
   }),
 );
 
-// Full-replace semantics for the six always-present fields (same "final
+// Full-replace semantics for the seven always-present fields (same "final
 // desired state, not a diff" convention apps/api's PATCH /products/:id
 // already uses). ai_api_key is the one exception, handled outside this
 // schema (see keyProvided below) — omitted = leave unchanged, null = clear,
@@ -69,6 +74,7 @@ const updatePreferencesSchema = z.object({
   default_freshness_threshold_days: z.number().int().nonnegative(),
   default_does_expire: z.boolean(),
   language: z.enum(["en-US", "pt-BR"]),
+  default_minimal_percentage: z.number().int().min(0).max(100),
 });
 
 /**
@@ -99,6 +105,7 @@ preferencesRouter.patch(
         defaultFreshnessThresholdDays: input.default_freshness_threshold_days,
         defaultDoesExpire: input.default_does_expire,
         language: input.language,
+        defaultMinimalPercentage: input.default_minimal_percentage,
       })
       .onConflictDoUpdate({
         target: preferences.id,
@@ -109,6 +116,7 @@ preferencesRouter.patch(
           defaultFreshnessThresholdDays: input.default_freshness_threshold_days,
           defaultDoesExpire: input.default_does_expire,
           language: input.language,
+          defaultMinimalPercentage: input.default_minimal_percentage,
           ...(keyProvided ? { aiApiKey: input.ai_api_key ?? null } : {}),
         },
       })

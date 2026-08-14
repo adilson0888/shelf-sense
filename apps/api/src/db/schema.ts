@@ -20,6 +20,17 @@ export const products = pgTable(
     // null = follow the global preference (see Inventory.md's Non-functional section)
     freshnessThresholdDays: integer("freshness_threshold_days"),
     minimalQuantity: integer("minimal_quantity"),
+    // specs/Relative Tracking.md: fixed at creation, never edited afterward.
+    // "units" (the default, every pre-existing product) sums Batch.quantity
+    // as always; "percentage" products carry no Batch rows at all — their
+    // stock lives directly in stockPercent below.
+    trackingMode: text("tracking_mode").notNull().default("units"), // "units" | "percentage"
+    // 0-100, meaningful only when trackingMode === "percentage"; null otherwise.
+    stockPercent: integer("stock_percent"),
+    // per-product low-stock threshold in %, meaningful only for percentage
+    // tracking; null = follow default_minimal_percentage — same fallback
+    // pattern minimalQuantity already uses.
+    minimalPercentage: integer("minimal_percentage"),
   },
   (table) => [
     // short_description is the business key for matching/dedup — Product Add.md
@@ -84,4 +95,9 @@ export const preferences = pgTable("preferences", {
   defaultFreshnessThresholdDays: integer("default_freshness_threshold_days").notNull().default(7), // was apps/web's DEFAULT_FRESHNESS_THRESHOLD_DAYS constant
   defaultDoesExpire: boolean("default_does_expire").notNull().default(true), // was apps/web's BLANK_FORM.doesExpire literal
   language: text("language").notNull().default("en-US"), // "en-US" | "pt-BR" — see specs/i18n.md
+  // specs/Relative Tracking.md's low-% threshold fallback. Not yet wired
+  // into the PATCH endpoint/Settings UI (no editing surface exists yet) —
+  // read-only via GET until that follow-up lands, same as this table's own
+  // upsert-only-what's-editable convention.
+  defaultMinimalPercentage: integer("default_minimal_percentage").notNull().default(20),
 });
