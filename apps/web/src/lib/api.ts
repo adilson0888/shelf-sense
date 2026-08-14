@@ -52,10 +52,25 @@ export interface CreateProductPayload {
   tracking_mode: "units" | "percentage";
   stock_percent: number | null;
   minimal_percentage: number | null;
+  // specs/Barcode Scanner & Product info scrape.md — a barcode scanned
+  // during Add Product that didn't match an existing product; null on every
+  // other entry path (unsupported browser, cancelled scan).
+  barcode: string | null;
 }
 
 export function createProduct(payload: CreateProductPayload): Promise<{ product: Product; batch: Batch | null }> {
   return request("/products", { method: "POST", body: JSON.stringify(payload) });
+}
+
+/** specs/Barcode Scanner & Product info scrape.md's external-lookup pipeline. */
+export interface BarcodeLookupResult {
+  short_description?: string;
+  long_description?: string;
+  source: "open-food-facts" | "tavily" | null;
+}
+
+export function lookupBarcode(code: string): Promise<BarcodeLookupResult> {
+  return request(`/products/lookup-barcode?code=${encodeURIComponent(code)}`);
 }
 
 /** Built by apps/web/src/lib/productEdit.ts's buildEditProductPayload(). */
@@ -89,6 +104,9 @@ export interface PreferencesResponse {
   ai_api_key_set: boolean;
   ai_api_key_hint: string | null;
   ai_model: string | null;
+  /** specs/Barcode Scanner & Product info scrape.md's Open-Food-Facts-miss fallback credential. */
+  tavily_api_key_set: boolean;
+  tavily_api_key_hint: string | null;
   default_minimal_quantity: number;
   default_freshness_threshold_days: number;
   default_does_expire: boolean;
@@ -104,6 +122,7 @@ export interface UpdatePreferencesPayload {
   ai_api_base_url: string | null;
   ai_api_key?: string | null;
   ai_model: string | null;
+  tavily_api_key?: string | null;
   default_minimal_quantity: number;
   default_freshness_threshold_days: number;
   default_does_expire: boolean;

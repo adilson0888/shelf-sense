@@ -6,14 +6,16 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Alert, Button, DataTable, Footer, IconButton, Input, Popover, PopoverItem, type DataTableColumn } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { ScopeTile } from "../components/ScopeTile";
 import { SectionHeader } from "../components/SectionHeader";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
-import { ApiError, createProduct, updateProduct } from "../lib/api";
+import { ApiError, lookupBarcode, updateProduct } from "../lib/api";
+import { isBarcodeScanSupported } from "../lib/barcodeScanner";
+import type { AddProductLocationState } from "./AddProduct";
 import { enrichProduct, matchesSearch, type InventoryDefaults } from "../lib/inventory";
 import {
   compareByName,
@@ -25,14 +27,6 @@ import {
   type ExpiryFilter,
   type TypeFilter,
 } from "../lib/productList";
-import {
-  buildBlankForm,
-  buildCreateProductPayload,
-  type AddFlowStep,
-  type AddProductFormState,
-  type PrefillSource,
-  MOCK_BARCODE_MATCH,
-} from "../lib/addProduct";
 import {
   applyQuickEdit,
   bumpQuickEdit,
@@ -66,7 +60,7 @@ import {
   toggleSelectAllBarcodes,
   type ProductEditState,
 } from "../lib/productEdit";
-import { AddProductModals } from "../components/AddProductModals";
+import { BarcodeCaptureModal } from "../components/BarcodeCaptureModal";
 import { QuickBatchEditModal } from "../components/QuickBatchEditModal";
 import { ProductEditView } from "../components/ProductEditView";
 import type { Product } from "../types";
@@ -110,13 +104,15 @@ export function ProductListPage() {
   const i18n = useT();
   const { t, tPlural } = i18n;
   const navigate = useNavigate();
-  const [justSavedMessage, setJustSavedMessage] = useState<string | null>(null);
+  const location = useLocation();
+  const [justSavedMessage, setJustSavedMessage] = useState<string | null>(
+    () => (location.state as AddProductLocationState | null)?.justSavedMessage ?? null,
+  );
 
-  const [addStep, setAddStep] = useState<AddFlowStep>("idle");
-  const [addSource, setAddSource] = useState<PrefillSource>(null);
-  const [addForm, setAddForm] = useState<AddProductFormState>(() => buildBlankForm(preferences.default_does_expire));
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  // --- Add Product flow: barcode-scan-first entry (specs/Barcode Scanner &
+  // Product info scrape.md), identical wiring to Inventory.tsx's own -----
+  const [scanOpen, setScanOpen] = useState(false);
+  const [lookupLoading, setLookupLoading] = useState(false);
 
   // --- Product Edit (identical wiring to Inventory.tsx's own) ------------
   const [edit, setEdit] = useState<ProductEditState | null>(null);
@@ -134,6 +130,14 @@ export function ProductListPage() {
   const holdTimerRef = useRef<number | null>(null);
 
   const savedMessageTimer = useRef<number | null>(null);
+  // Same one-shot "just saved"/"just linked" consumption as Inventory.tsx's own.
+  useEffect(() => {
+    if ((location.state as AddProductLocationState | null)?.justSavedMessage) {
+      navigate(location.pathname, { replace: true, state: {} });
+      savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot on mount only
+  }, []);
   useEffect(
     () => () => {
       if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
@@ -413,96 +417,40 @@ export function ProductListPage() {
     }
   }
 
-  // --- Add Product flow (verbatim from Inventory.tsx) ---------------------
+  // --- Add Product flow: barcode-scan-first (verbatim from Inventory.tsx) ---
 
-  function openAddMethod() {
-    setAddStep("method");
-    setAddSource(null);
-    setAddForm(buildBlankForm(preferences.default_does_expire));
-    setJustSavedMessage(null);
-    setSaveError(null);
-  }
-  function closeAddFlow() {
-    setAddStep("idle");
-    setAddSource(null);
-    setSaveError(null);
-  }
-  function openManual() {
-    setAddSource(null);
-    setAddForm(buildBlankForm(preferences.default_does_expire));
-    setAddStep("form");
-  }
-  function completeCapture() {
-    if (addStep === "photo") {
-      setAddSource("photo");
-      setAddForm({ ...buildBlankForm(preferences.default_does_expire), short: "Grated cheese", long: MOCK_BARCODE_MATCH.long, qty: "1" });
-      setAddStep("form");
+  function openAdd() {
+    if (isBarcodeScanSupported()) {
+      setScanOpen(true);
     } else {
-      setAddStep("match");
+      navigate("/products/add", { state: { from: "/products" } satisfies AddProductLocationState });
     }
   }
-  function useMatchedProduct() {
-    setAddSource("match-use");
-    setAddForm({
-      ...buildBlankForm(preferences.default_does_expire),
-      short: MOCK_BARCODE_MATCH.short,
-      long: MOCK_BARCODE_MATCH.long,
-      qty: "1",
-      minQty: MOCK_BARCODE_MATCH.minQty,
-      fresh: MOCK_BARCODE_MATCH.fresh,
-      doesExpire: true,
-    });
-    setAddStep("form");
-  }
-  function confirmUnlink() {
-    setAddSource("match");
-    setAddForm({
-      ...buildBlankForm(preferences.default_does_expire),
-      short: "",
-      long: MOCK_BARCODE_MATCH.long,
-      doesExpire: MOCK_BARCODE_MATCH.doesExpire,
-      qty: MOCK_BARCODE_MATCH.qty,
-      minQty: MOCK_BARCODE_MATCH.minQty,
-      fresh: MOCK_BARCODE_MATCH.fresh,
-      expiresOn: "",
-    });
-    setAddStep("form");
-  }
-  function clearPrefill() {
-    setAddSource(null);
-    setAddForm(buildBlankForm(preferences.default_does_expire));
-  }
-  function setFormField<K extends keyof AddProductFormState>(key: K, value: AddProductFormState[K]) {
-    setAddForm((f) => ({ ...f, [key]: value }));
-  }
-  function setTrackingMode(mode: "units" | "percentage") {
-    setAddForm((f) => ({ ...f, trackingMode: mode, doesExpire: mode === "percentage" ? false : f.doesExpire }));
-  }
 
-  async function saveProduct() {
-    setSaving(true);
-    setSaveError(null);
+  async function handleDetect(code: string) {
+    setScanOpen(false);
+    const match = products.find((p) => p.barcodes.some((b) => b.code === code));
+    if (match) {
+      openQuick(match.id);
+      return;
+    }
+    setLookupLoading(true);
     try {
-      const { product, batch } = await createProduct(buildCreateProductPayload(addForm, listDefaults));
-      setProducts((ps) => [product, ...ps]);
-      if (batch) setBatches((bs) => [batch, ...bs]);
-      setJustSavedMessage(t("productList.productAdded"));
-      setAddStep("idle");
-      setAddSource(null);
-      setAddForm(buildBlankForm(preferences.default_does_expire));
-
-      if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
-      savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
-    } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : t("productList.genericSaveError"));
+      const lookup = await lookupBarcode(code);
+      navigate("/products/add", { state: { barcode: code, lookup, from: "/products" } satisfies AddProductLocationState });
     } finally {
-      setSaving(false);
+      setLookupLoading(false);
     }
+  }
+
+  function handleCancelScan() {
+    setScanOpen(false);
+    navigate("/products/add", { state: { from: "/products" } satisfies AddProductLocationState });
   }
 
   function onEmptyAction() {
     if (hasFilters) clearFilters();
-    else openAddMethod();
+    else openAdd();
   }
 
   // --- Table columns --------------------------------------------------------
@@ -555,7 +503,7 @@ export function ProductListPage() {
             open={filtersOpen}
             onToggle={() => setFiltersOpen((v) => !v)}
           />
-          <Button size="sm" className="flex-shrink-0" onClick={openAddMethod}>
+          <Button size="sm" className="flex-shrink-0" onClick={openAdd}>
             {t("productList.addButton")}
           </Button>
         </div>
@@ -665,6 +613,11 @@ export function ProductListPage() {
           <Alert variant="success" title={justSavedMessage} />
         </div>
       )}
+      {lookupLoading && (
+        <div className="px-md pt-sm">
+          <Alert variant="info" title={t("addProduct.lookingUpProduct")} />
+        </div>
+      )}
 
       <div className="flex flex-1 flex-col">
         {loading ? (
@@ -720,27 +673,7 @@ export function ProductListPage() {
         )}
       </Popover>
 
-      <AddProductModals
-        step={addStep}
-        form={addForm}
-        prefillSource={addSource}
-        defaults={listDefaults}
-        onCloseAll={closeAddFlow}
-        onScan={() => setAddStep("scan")}
-        onPhoto={() => setAddStep("photo")}
-        onManual={openManual}
-        onCaptureDone={completeCapture}
-        onUseThis={useMatchedProduct}
-        onAddAsNew={() => setAddStep("unlink")}
-        onBackToMatch={() => setAddStep("match")}
-        onConfirmUnlink={confirmUnlink}
-        onClearPrefill={clearPrefill}
-        onFieldChange={setFormField}
-        onTrackingModeChange={setTrackingMode}
-        onSave={saveProduct}
-        saving={saving}
-        saveError={saveError}
-      />
+      <BarcodeCaptureModal open={scanOpen} onDetect={handleDetect} onCancel={handleCancelScan} />
 
       <QuickBatchEditModal
         quick={quick}

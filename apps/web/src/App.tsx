@@ -3,6 +3,7 @@ import { AppShell } from "./components/AppShell";
 import { AppLocaleProvider } from "./lib/AppLocaleProvider";
 import { PreferencesProvider } from "./lib/preferencesStore";
 import { ProductsProvider } from "./lib/productsStore";
+import { AddProductPage } from "./pages/AddProduct";
 import { InventoryPage } from "./pages/Inventory";
 import { ProductListPage } from "./pages/ProductList";
 import { SettingsPage } from "./pages/Settings";
@@ -34,6 +35,13 @@ export function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/products/:id/stock" element={<StockEditPage />} />
+              {/* specs/Barcode Scanner & Product info scrape.md — the real
+                  route the old fifth Add Product modal step became. Same
+                  chrome-less-outside-AppShell treatment as Stock Edit, for
+                  the same reason: a focused entry screen with unsaved
+                  pending state shouldn't invite navigating away via the
+                  drawer. */}
+              <Route path="/products/add" element={<AddProductPage />} />
               <Route path="/*" element={<ShellRoutes />} />
             </Routes>
           </BrowserRouter>

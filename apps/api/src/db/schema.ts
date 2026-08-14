@@ -91,13 +91,15 @@ export const preferences = pgTable("preferences", {
   aiApiBaseUrl: text("ai_api_base_url"), // null = not configured
   aiApiKey: text("ai_api_key"), // plaintext; null = not configured. Never serialized back to a client in full — see routes/preferences.ts.
   aiModel: text("ai_model"), // e.g. "gpt-4o-mini"; null = not configured
+  // specs/Barcode Scanner & Product info scrape.md — Tavily search API key,
+  // used only as the Open-Food-Facts-miss fallback for barcode lookups.
+  // Same never-echoed-in-full convention as aiApiKey.
+  tavilyApiKey: text("tavily_api_key"),
   defaultMinimalQuantity: integer("default_minimal_quantity").notNull().default(3), // was apps/web's DEFAULT_MINIMAL_QUANTITY constant
   defaultFreshnessThresholdDays: integer("default_freshness_threshold_days").notNull().default(7), // was apps/web's DEFAULT_FRESHNESS_THRESHOLD_DAYS constant
   defaultDoesExpire: boolean("default_does_expire").notNull().default(true), // was apps/web's BLANK_FORM.doesExpire literal
   language: text("language").notNull().default("en-US"), // "en-US" | "pt-BR" — see specs/i18n.md
-  // specs/Relative Tracking.md's low-% threshold fallback. Not yet wired
-  // into the PATCH endpoint/Settings UI (no editing surface exists yet) —
-  // read-only via GET until that follow-up lands, same as this table's own
-  // upsert-only-what's-editable convention.
+  // specs/Relative Tracking.md's low-% threshold fallback for
+  // percentage-tracked products — editable via Settings' Default Options.
   defaultMinimalPercentage: integer("default_minimal_percentage").notNull().default(20),
 });

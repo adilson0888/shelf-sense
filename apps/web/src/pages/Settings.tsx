@@ -84,6 +84,9 @@ export function SettingsPage() {
   // key hint/clear row hides while a new value is being typed.
   const [newApiKey, setNewApiKey] = useState("");
   const [pendingClearKey, setPendingClearKey] = useState(false);
+  // specs/Barcode Scanner & Product info scrape.md — Tavily key, same shape as ai_api_key above.
+  const [newTavilyKey, setNewTavilyKey] = useState("");
+  const [pendingClearTavilyKey, setPendingClearTavilyKey] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -109,6 +112,15 @@ export function SettingsPage() {
     setPendingClearKey(true);
   }
 
+  function handleTavilyKeyChange(value: string) {
+    setNewTavilyKey(value);
+    if (value) setPendingClearTavilyKey(false);
+  }
+  function handleClearTavilyKey() {
+    setNewTavilyKey("");
+    setPendingClearTavilyKey(true);
+  }
+
   const minQty = parseNonNegativeInt(form.defaultMinimalQuantity);
   const minPercent = parsePercent(form.defaultMinimalPercentage);
   const freshDays = parseNonNegativeInt(form.defaultFreshnessThresholdDays);
@@ -127,11 +139,14 @@ export function SettingsPage() {
       default_does_expire: form.defaultDoesExpire,
       language: form.language,
       ...(newApiKey ? { ai_api_key: newApiKey } : pendingClearKey ? { ai_api_key: null } : {}),
+      ...(newTavilyKey ? { tavily_api_key: newTavilyKey } : pendingClearTavilyKey ? { tavily_api_key: null } : {}),
     };
     try {
       await save(payload);
       setNewApiKey("");
       setPendingClearKey(false);
+      setNewTavilyKey("");
+      setPendingClearTavilyKey(false);
       setJustSaved(true);
       if (savedTimer.current) clearTimeout(savedTimer.current);
       savedTimer.current = window.setTimeout(() => setJustSaved(false), SAVED_MESSAGE_DELAY_MS);
@@ -166,6 +181,7 @@ export function SettingsPage() {
   // Hides while a new value is being typed — typing and "clear" are mutually
   // exclusive, and there's nothing saved-key-related to show mid-edit.
   const showSavedKeyRow = preferences.ai_api_key_set && !pendingClearKey && !newApiKey;
+  const showSavedTavilyKeyRow = preferences.tavily_api_key_set && !pendingClearTavilyKey && !newTavilyKey;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -212,6 +228,30 @@ export function SettingsPage() {
                 value={form.aiModel}
                 onChange={(e) => setField("aiModel", e.target.value)}
               />
+              <div className="flex flex-col gap-xs">
+                <Input
+                  label={t("settings.aiSettings.tavilyApiKeyLabel")}
+                  hint={t("settings.aiSettings.tavilyApiKeyHint")}
+                  type="password"
+                  value={newTavilyKey}
+                  onChange={(e) => handleTavilyKeyChange(e.target.value)}
+                />
+                {showSavedTavilyKeyRow && (
+                  <div className="flex items-center gap-sm">
+                    <span className="text-xs text-ink-muted">
+                      {t("settings.aiSettings.keySavedHint", { hint: preferences.tavily_api_key_hint ?? "" })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleClearTavilyKey}
+                      className="bg-transparent p-0 text-xs font-semibold text-brand-600 underline"
+                    >
+                      {t("settings.aiSettings.clearSavedKey")}
+                    </button>
+                  </div>
+                )}
+                {pendingClearTavilyKey && <p className="text-xs text-ink-muted">{t("settings.aiSettings.keyWillBeCleared")}</p>}
+              </div>
               <div className="flex justify-end">
                 <Button size="sm" onClick={handleSave} disabled={!canSave}>
                   {saving ? t("common.saving") : t("common.save")}

@@ -14,7 +14,7 @@ html {
   background-color: var(--ss-surface-1);
 }
 
-/* AddProductModals' scan-capture placeholder — no Tailwind built-in for a
+/* BarcodeCaptureModal's scan-line overlay — no Tailwind built-in for a
    translating line, so a small scoped keyframe instead of pulling in a
    whole animation plugin for one decorative flourish. */
 @keyframes ss-scan-line {
