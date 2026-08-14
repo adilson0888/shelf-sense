@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Button, Input, Select, Switch } from "shelf-sense-ds";
+import { Alert, Button, Footer, Input, Select, Switch } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { SectionHeader } from "../components/SectionHeader";
 import { ApiError, type PreferencesResponse, type UpdatePreferencesPayload } from "../lib/api";
@@ -158,114 +158,118 @@ export function SettingsPage() {
   const showSavedKeyRow = preferences.ai_api_key_set && !pendingClearKey && !newApiKey;
 
   return (
-    <div className="flex flex-1 flex-col gap-lg overflow-y-auto p-md pb-[24px]">
-      {justSaved && <Alert variant="success" title={t("settings.saved")} />}
-      {saveError && (
-        <Alert variant="danger" title={t("settings.saveError")}>
-          {saveError}
-        </Alert>
-      )}
-
-      <section className="flex flex-col gap-md">
-        <SectionHeader label={t("settings.aiSettings.heading")} open={aiOpen} onToggle={() => setAiOpen((v) => !v)} />
-        {aiOpen && (
-          <>
-            <Input
-              label={t("settings.aiSettings.baseUrlLabel")}
-              placeholder={t("settings.aiSettings.baseUrlPlaceholder")}
-              value={form.aiApiBaseUrl}
-              onChange={(e) => setField("aiApiBaseUrl", e.target.value)}
-            />
-            <div className="flex flex-col gap-xs">
-              <Input
-                label={t("settings.aiSettings.apiKeyLabel")}
-                type="password"
-                value={newApiKey}
-                onChange={(e) => handleApiKeyChange(e.target.value)}
-              />
-              {showSavedKeyRow && (
-                <div className="flex items-center gap-sm">
-                  <span className="text-xs text-ink-muted">
-                    {t("settings.aiSettings.keySavedHint", { hint: preferences.ai_api_key_hint ?? "" })}
-                  </span>
-                  <button type="button" onClick={handleClearKey} className="bg-transparent p-0 text-xs font-semibold text-brand-600 underline">
-                    {t("settings.aiSettings.clearSavedKey")}
-                  </button>
-                </div>
-              )}
-              {pendingClearKey && <p className="text-xs text-ink-muted">{t("settings.aiSettings.keyWillBeCleared")}</p>}
-            </div>
-            <Input
-              label={t("settings.aiSettings.modelLabel")}
-              placeholder={t("settings.aiSettings.modelPlaceholder")}
-              value={form.aiModel}
-              onChange={(e) => setField("aiModel", e.target.value)}
-            />
-            <div className="flex justify-end">
-              <Button size="sm" onClick={handleSave} disabled={!canSave}>
-                {saving ? t("common.saving") : t("common.save")}
-              </Button>
-            </div>
-          </>
+    <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col gap-lg overflow-y-auto p-md pb-[24px]">
+        {justSaved && <Alert variant="success" title={t("settings.saved")} />}
+        {saveError && (
+          <Alert variant="danger" title={t("settings.saveError")}>
+            {saveError}
+          </Alert>
         )}
-      </section>
 
-      <div className="flex flex-col gap-md border-t border-border pt-lg">
-        <SectionHeader label={t("settings.defaultOptions.heading")} open={defaultsOpen} onToggle={() => setDefaultsOpen((v) => !v)} />
-        {defaultsOpen && (
-          <>
-            <Input
-              label={t("settings.defaultOptions.minQtyLabel")}
-              type="number"
-              min={0}
-              value={form.defaultMinimalQuantity}
-              onChange={(e) => setField("defaultMinimalQuantity", e.target.value)}
-              error={minQty === null ? t("settings.defaultOptions.numberError") : undefined}
-            />
-            <Switch
-              label={t("settings.defaultOptions.expireByDefaultLabel")}
-              onLabel={t("common.yes")}
-              offLabel={t("common.no")}
-              checked={form.defaultDoesExpire}
-              onCheckedChange={(checked) => setField("defaultDoesExpire", checked)}
-            />
-            {form.defaultDoesExpire && (
+        <section className="flex flex-col gap-md">
+          <SectionHeader label={t("settings.aiSettings.heading")} open={aiOpen} onToggle={() => setAiOpen((v) => !v)} />
+          {aiOpen && (
+            <>
               <Input
-                label={t("settings.defaultOptions.freshnessLabel")}
+                label={t("settings.aiSettings.baseUrlLabel")}
+                placeholder={t("settings.aiSettings.baseUrlPlaceholder")}
+                value={form.aiApiBaseUrl}
+                onChange={(e) => setField("aiApiBaseUrl", e.target.value)}
+              />
+              <div className="flex flex-col gap-xs">
+                <Input
+                  label={t("settings.aiSettings.apiKeyLabel")}
+                  type="password"
+                  value={newApiKey}
+                  onChange={(e) => handleApiKeyChange(e.target.value)}
+                />
+                {showSavedKeyRow && (
+                  <div className="flex items-center gap-sm">
+                    <span className="text-xs text-ink-muted">
+                      {t("settings.aiSettings.keySavedHint", { hint: preferences.ai_api_key_hint ?? "" })}
+                    </span>
+                    <button type="button" onClick={handleClearKey} className="bg-transparent p-0 text-xs font-semibold text-brand-600 underline">
+                      {t("settings.aiSettings.clearSavedKey")}
+                    </button>
+                  </div>
+                )}
+                {pendingClearKey && <p className="text-xs text-ink-muted">{t("settings.aiSettings.keyWillBeCleared")}</p>}
+              </div>
+              <Input
+                label={t("settings.aiSettings.modelLabel")}
+                placeholder={t("settings.aiSettings.modelPlaceholder")}
+                value={form.aiModel}
+                onChange={(e) => setField("aiModel", e.target.value)}
+              />
+              <div className="flex justify-end">
+                <Button size="sm" onClick={handleSave} disabled={!canSave}>
+                  {saving ? t("common.saving") : t("common.save")}
+                </Button>
+              </div>
+            </>
+          )}
+        </section>
+
+        <div className="flex flex-col gap-md border-t border-border pt-lg">
+          <SectionHeader label={t("settings.defaultOptions.heading")} open={defaultsOpen} onToggle={() => setDefaultsOpen((v) => !v)} />
+          {defaultsOpen && (
+            <>
+              <Input
+                label={t("settings.defaultOptions.minQtyLabel")}
                 type="number"
                 min={0}
-                value={form.defaultFreshnessThresholdDays}
-                onChange={(e) => setField("defaultFreshnessThresholdDays", e.target.value)}
-                error={freshDays === null ? t("settings.defaultOptions.numberError") : undefined}
+                value={form.defaultMinimalQuantity}
+                onChange={(e) => setField("defaultMinimalQuantity", e.target.value)}
+                error={minQty === null ? t("settings.defaultOptions.numberError") : undefined}
               />
-            )}
-            <div className="flex justify-end">
-              <Button size="sm" onClick={handleSave} disabled={!canSave}>
-                {saving ? t("common.saving") : t("common.save")}
-              </Button>
-            </div>
-          </>
-        )}
+              <Switch
+                label={t("settings.defaultOptions.expireByDefaultLabel")}
+                onLabel={t("common.yes")}
+                offLabel={t("common.no")}
+                checked={form.defaultDoesExpire}
+                onCheckedChange={(checked) => setField("defaultDoesExpire", checked)}
+              />
+              {form.defaultDoesExpire && (
+                <Input
+                  label={t("settings.defaultOptions.freshnessLabel")}
+                  type="number"
+                  min={0}
+                  value={form.defaultFreshnessThresholdDays}
+                  onChange={(e) => setField("defaultFreshnessThresholdDays", e.target.value)}
+                  error={freshDays === null ? t("settings.defaultOptions.numberError") : undefined}
+                />
+              )}
+              <div className="flex justify-end">
+                <Button size="sm" onClick={handleSave} disabled={!canSave}>
+                  {saving ? t("common.saving") : t("common.save")}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-md border-t border-border pt-lg">
+          <SectionHeader label={t("settings.userPreferences.heading")} open={prefsOpen} onToggle={() => setPrefsOpen((v) => !v)} />
+          {prefsOpen && (
+            <>
+              <Select
+                label={t("settings.userPreferences.languageLabel")}
+                options={languageOptions}
+                value={form.language}
+                onChange={(e) => setField("language", e.target.value as SettingsFormState["language"])}
+              />
+              <div className="flex justify-end">
+                <Button size="sm" onClick={handleSave} disabled={!canSave}>
+                  {saving ? t("common.saving") : t("common.save")}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="flex flex-col gap-md border-t border-border pt-lg">
-        <SectionHeader label={t("settings.userPreferences.heading")} open={prefsOpen} onToggle={() => setPrefsOpen((v) => !v)} />
-        {prefsOpen && (
-          <>
-            <Select
-              label={t("settings.userPreferences.languageLabel")}
-              options={languageOptions}
-              value={form.language}
-              onChange={(e) => setField("language", e.target.value as SettingsFormState["language"])}
-            />
-            <div className="flex justify-end">
-              <Button size="sm" onClick={handleSave} disabled={!canSave}>
-                {saving ? t("common.saving") : t("common.save")}
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
+      <Footer />
     </div>
   );
 }

@@ -7,7 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Button, DataTable, IconButton, Input, Popover, PopoverItem, type DataTableColumn } from "shelf-sense-ds";
+import { Alert, Button, DataTable, Footer, IconButton, Input, Popover, PopoverItem, type DataTableColumn } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { ScopeTile } from "../components/ScopeTile";
 import { SectionHeader } from "../components/SectionHeader";
@@ -681,16 +681,7 @@ export function ProductListPage() {
         )}
       </div>
 
-      {/* Same footer-bar treatment as Product Edit's own bottom bar —
-          border-t + bg-surface-0 — just without its Save/Cancel buttons,
-          since this page has nothing to commit. Product Edit's actual
-          rendered height is py-md (16px) padding around its h-8 (32px)
-          buttons = 64px total, not py-md alone (which, empty, is only
-          32px) — h-16 matches that exactly. flex-shrink-0 keeps it a
-          fixed-height bar; the content area above is flex-1, so this sits
-          at the bottom of the page itself once content is short enough to
-          leave room, not bunched right under the table. */}
-      <div className="h-16 flex-shrink-0 border-t border-border bg-surface-0 px-md" />
+      <Footer />
 
       <Popover open={!!popover} onClose={() => setPopover(null)} position={popover ? { x: popover.x, y: popover.y } : { x: 0, y: 0 }}>
         <PopoverItem onClick={popoverEditProduct}>{t("productList.popoverEditProduct")}</PopoverItem>

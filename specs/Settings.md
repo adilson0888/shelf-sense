@@ -121,7 +121,8 @@ export function updatePreferences(payload: UpdatePreferencesPayload): Promise<Pr
 - **Loading state**: while `preferencesStore.loading` is true on first mount, render a simple loading placeholder (no skeleton component exists yet in `shelf-sense-ds` — plain centered text is fine, matching the level of polish `Settings.tsx`'s current placeholder already uses).
 - **Load-error state**: if the initial `GET /preferences` fails, render `Alert variant="danger" title="Couldn't load your settings"` plus a "Try again" `Button variant="outline"` calling `refetch()` — identical pattern to `Inventory.tsx`'s own load-failure block.
 - **Client-side validation**: both number fields reject negative/non-integer input before Save is enabled (same "hard validation error, not a soft warning" bar `Product Add.md`'s Non-functional section sets for its own fields).
-- **No new `shelf-sense-ds` components needed** — `Input`, `Switch`, `Select`, `Button`, `Alert` all already exist and cover every field this page needs.
+- `Input`, `Switch`, `Select`, `Button`, `Alert` cover every field this page needs.
+- **Footer bar**: `shelf-sense-ds`'s `Footer` component (`specs/Product List.md`'s own note on it) — the "shelf·sense" wordmark, right-aligned, below the scrollable content area, same as `Inventory.md`/`Product List.md`. Nothing to commit from it here either; the page's own Save buttons live per-section, not in this bar.
 - Mobile-first (same as every other screen in this app per `specs/Menu.md`), but nothing here is camera/touch-specific — works identically on wider viewports.
 
 ## Non-functional
