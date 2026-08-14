@@ -1,4 +1,4 @@
-import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Select, Switch } from "shelf-sense-ds";
+import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Switch } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import type { AddFlowStep, AddProductFormState, PrefillSource } from "../lib/addProduct";
 import { MOCK_BARCODE_MATCH } from "../lib/addProduct";
@@ -208,14 +208,12 @@ export function AddProductModals({
             value={form.long}
             onChange={(e) => onFieldChange("long", e.target.value)}
           />
-          <Select
+          <Switch
             label={t("addProduct.trackingModeLabel")}
-            options={[
-              { value: "units", label: t("addProduct.trackingModeUnits") },
-              { value: "percentage", label: t("addProduct.trackingModePercentage") },
-            ]}
-            value={form.trackingMode}
-            onChange={(e) => onTrackingModeChange(e.target.value as "units" | "percentage")}
+            onLabel={t("addProduct.trackingModePercentage")}
+            offLabel={t("addProduct.trackingModeUnits")}
+            checked={isPercentage}
+            onCheckedChange={(checked) => onTrackingModeChange(checked ? "percentage" : "units")}
           />
           {isPercentage ? (
             <>
