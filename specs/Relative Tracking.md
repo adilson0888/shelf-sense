@@ -18,6 +18,7 @@ As someone tracking pantry stock, I want to track select products — large-volu
 - [ ] Given the user taps **Save** on a %-tracked product's Quick Batch Edit, when the save completes, then `Product.stock_percent` is overwritten with the pending value directly — no `Batch` is created, modified, or cascaded through (there's nothing to cascade across; unlike units, there's exactly one number).
 - [ ] Given a product's `stock_percent` is at or below its low-stock threshold (see Data), when Inventory/Product List render, then the same "LOW" indicator already used for unit-tracked products appears.
 - [ ] Given a %-tracked product, when Quick Batch Edit's "Stock" button renders, then it is disabled — there is no per-batch table to show for this tracking mode (see Out of scope).
+- [ ] Given the user opens Settings' Default Options, when it renders, then a "Default minimum %" field (integer, 0–100) is shown alongside the existing default minimal quantity/freshness fields, and saving it updates `preferences.default_minimal_percentage` — the same global-default-with-per-product-override pattern `Settings.md` already establishes for `default_minimal_quantity`/`default_freshness_threshold_days`.
 
 ## Data
 
@@ -35,7 +36,7 @@ interface Product {
 
 `does_expire` is forced `false` whenever `tracking_mode === "percentage"` — enforced in the UI (Product Add's toggle hidden/disabled) and should be enforced as a real constraint once a backend exists, not just a UI convention.
 
-`preferences` gains `default_minimal_percentage` (suggest **20**, matching this spec's own motivating example), the same role `default_minimal_quantity`/`default_freshness_threshold_days` already play.
+`preferences` gains `default_minimal_percentage` (integer, 0–100, defaults to **20**, matching this spec's own motivating example) — a real user-editable field via Settings' Default Options (`Settings.md`), the same role `default_minimal_quantity`/`default_freshness_threshold_days` already play there, not just a hardcoded fallback.
 
 **Deliberately deferred**: the original draft of this spec described "adding a new batch" to a %-tracked product as a way to track price over time. That depends on `specs/BACKLOG.md`'s "Batch cost tracking & consumed-batch history" item, which is itself undecided (doesn't yet know if cost lives on `Batch` or a separate entity). Until that's designed, %-tracked products have no `Batch` records at all — `stock_percent` is simply overwritten in place. This spec's Data section will need revisiting once cost tracking lands.
 
@@ -52,6 +53,7 @@ interface Product {
   - "Stock" button disabled (see Out of scope).
   - Save writes `stock_percent` directly; Reset reverts the pending value to what was stored, same as today.
 - **Inventory / Product List rows**: show `stock_percent` ("65%") in place of the unit-count total. No `FreshnessBadge` variation applies beyond what non-expiring products already get today — a %-tracked product always falls in the existing "No expiry" grouping, same as any other `does_expire: false` product.
+- **Settings' Default Options** (`Settings.md`): a "Default minimum %" number input (0–100) alongside the existing default minimal quantity/freshness threshold fields, bound to `preferences.default_minimal_percentage`.
 
 ## Non-functional
 

@@ -41,10 +41,9 @@ function toPreferencesJson(row: typeof preferences.$inferSelect, hasSavedPrefere
     default_freshness_threshold_days: row.defaultFreshnessThresholdDays,
     default_does_expire: row.defaultDoesExpire,
     language: row.language,
-    // specs/Relative Tracking.md. Read-only for now — no PATCH field/Settings
-    // UI exists yet to change it (see updatePreferencesSchema below), so
-    // this always reflects whatever's actually stored (the column default,
-    // 20, until a future Settings pass adds a way to edit it).
+    // specs/Relative Tracking.md's low-% fallback for percentage-tracked
+    // products — editable via Settings' Default Options, same as
+    // default_minimal_quantity/default_freshness_threshold_days.
     default_minimal_percentage: row.defaultMinimalPercentage,
     has_saved_preferences: hasSavedPreferences,
   };
@@ -62,7 +61,7 @@ preferencesRouter.get(
   }),
 );
 
-// Full-replace semantics for the six always-present fields (same "final
+// Full-replace semantics for the seven always-present fields (same "final
 // desired state, not a diff" convention apps/api's PATCH /products/:id
 // already uses). ai_api_key is the one exception, handled outside this
 // schema (see keyProvided below) — omitted = leave unchanged, null = clear,
@@ -75,6 +74,7 @@ const updatePreferencesSchema = z.object({
   default_freshness_threshold_days: z.number().int().nonnegative(),
   default_does_expire: z.boolean(),
   language: z.enum(["en-US", "pt-BR"]),
+  default_minimal_percentage: z.number().int().min(0).max(100),
 });
 
 /**
@@ -105,11 +105,7 @@ preferencesRouter.patch(
         defaultFreshnessThresholdDays: input.default_freshness_threshold_days,
         defaultDoesExpire: input.default_does_expire,
         language: input.language,
-        // Not part of this PATCH's input yet (see toPreferencesJson's note
-        // above) — only matters on the first-ever insert; onConflictDoUpdate
-        // below deliberately omits it so later saves never stomp it back to
-        // this literal.
-        defaultMinimalPercentage: DEFAULT_ROW.defaultMinimalPercentage,
+        defaultMinimalPercentage: input.default_minimal_percentage,
       })
       .onConflictDoUpdate({
         target: preferences.id,
@@ -120,6 +116,7 @@ preferencesRouter.patch(
           defaultFreshnessThresholdDays: input.default_freshness_threshold_days,
           defaultDoesExpire: input.default_does_expire,
           language: input.language,
+          defaultMinimalPercentage: input.default_minimal_percentage,
           ...(keyProvided ? { aiApiKey: input.ai_api_key ?? null } : {}),
         },
       })

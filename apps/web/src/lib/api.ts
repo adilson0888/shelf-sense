@@ -93,9 +93,7 @@ export interface PreferencesResponse {
   default_freshness_threshold_days: number;
   default_does_expire: boolean;
   language: "en-US" | "pt-BR";
-  // specs/Relative Tracking.md's low-% fallback. Read-only for now — no
-  // PATCH field/Settings UI exists yet to change it (see
-  // UpdatePreferencesPayload below, which deliberately omits it).
+  /** specs/Relative Tracking.md's low-% fallback for percentage-tracked products. */
   default_minimal_percentage: number;
   /** False only when no preferences row has ever been saved — see specs/i18n.md's first-launch detection. */
   has_saved_preferences: boolean;
@@ -110,6 +108,7 @@ export interface UpdatePreferencesPayload {
   default_freshness_threshold_days: number;
   default_does_expire: boolean;
   language: "en-US" | "pt-BR";
+  default_minimal_percentage: number;
 }
 
 export function fetchPreferences(): Promise<PreferencesResponse> {
