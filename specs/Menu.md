@@ -36,9 +36,12 @@ Items at launch, in order:
 |---|---|---|---|
 | `inventory` | Inventory | `/` | ▤ |
 | `products` | Products | `/products` | 🗂 |
+| `grocery` | Grocery List | `/grocery` | 🛒 |
 | `settings` | Settings | `/settings` | ⚙ |
 
 `products` added 2026-08-13 by `specs/Product List.md` — a flat, filterable catalog of every product identity, distinct from `inventory`'s grouped/stock-triage view (which excludes zero-quantity products; `products` is one of the two places `Inventory.md`'s "Open gap" note points to for where those surface instead). Per this spec's own "no structural change needed beyond appending to the flat list" acceptance criterion, adding it doesn't change `Menu.md`'s mechanics — but the already-approved `NavDrawer` prototype hasn't seen a third item yet, so a design-sync pass is still owed before this ships.
+
+`grocery` added 2026-08-15 by `specs/Grocery List.md` (draft) — the other half of `Inventory.md`'s "Open gap" note: a focused view of what's currently low or out of stock, derived entirely from data `Inventory.md`/`Relative Tracking.md` already track. Same "no structural change" mechanics as `products`'s addition above; same still-owed design-sync pass, now for a fourth item.
 
 The theme toggle is not a `MenuItem` — it's not a navigable section, just a control that lives in the drawer alongside the item list (see UI requirements). Its state is a simple client-side preference (`"light" | "dark"`), not something `apps/api` needs to know about for this pass.
 
