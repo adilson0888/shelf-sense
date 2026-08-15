@@ -1,3 +1,4 @@
+import type { TFunctions } from "shelf-sense-i18n/react";
 import type { Product } from "../types";
 import type { EnrichedProduct, InventoryDefaults } from "./inventory";
 
@@ -69,4 +70,38 @@ export function matchesGroceryScope(product: EnrichedProduct, scope: GroceryScop
 /** Default sort — alphabetical by short_description, locale-aware, same default Product List.md uses (specs/Grocery List.md flags this as an assumption, not a resolved design decision). */
 export function compareByName(a: Product, b: Product, locale: string): number {
   return a.short_description.localeCompare(b.short_description, locale);
+}
+
+export interface GroceryGroup {
+  key: "low" | "occasional";
+  label: string;
+  count: number;
+  products: EnrichedProduct[];
+}
+
+/**
+ * Groups an already scope/search-filtered list into Low stock / Occasional
+ * sticky sections — the same "grouped rows under a sticky header" visual as
+ * Inventory's own groupByStatus (lib/inventory.ts), just grouped by this
+ * screen's own organizing idea (stock level) instead of freshness. Empty
+ * groups are hidden, same convention groupByStatus already uses — so when
+ * a specific scope tile (not All) is active, the other group's predicate
+ * naturally matches nothing and only one header renders.
+ */
+export function groupByGroceryCategory(
+  products: EnrichedProduct[],
+  defaults: GroceryListDefaults,
+  locale: string,
+  t: TFunctions["t"],
+): GroceryGroup[] {
+  const defs: { key: GroceryGroup["key"]; label: string; predicate: (p: EnrichedProduct) => boolean }[] = [
+    { key: "low", label: t("groceryList.scopeLowStock"), predicate: (p) => isLowStock(p, defaults) },
+    { key: "occasional", label: t("groceryList.scopeOccasional"), predicate: (p) => isOutOfStockOccasional(p, defaults) },
+  ];
+  return defs
+    .map(({ key, label, predicate }) => {
+      const list = products.filter(predicate).sort((a, b) => compareByName(a, b, locale));
+      return { key, label, count: list.length, products: list };
+    })
+    .filter((g) => g.count > 0);
 }

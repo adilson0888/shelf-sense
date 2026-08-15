@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Button, Card, Footer, FreshnessBadge, Input, cn } from "shelf-sense-ds";
+import { Alert, Button, Footer, FreshnessBadge, Input, cn } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { ScopeTile } from "../components/ScopeTile";
 import { SectionHeader } from "../components/SectionHeader";
@@ -12,9 +12,9 @@ import { isBarcodeScanSupported } from "../lib/barcodeScanner";
 import type { AddProductLocationState } from "./AddProduct";
 import { enrichProduct, matchesSearch, type EnrichedProduct, type InventoryDefaults } from "../lib/inventory";
 import {
-  compareByName,
-  isOutOfStockOccasional,
+  groupByGroceryCategory,
   matchesGroceryScope,
+  type GroceryGroup,
   type GroceryScope,
 } from "../lib/groceryList";
 import {
@@ -162,11 +162,18 @@ export function GroceryListPage() {
   const countOccasional = countAll - countLow;
 
   const filtered = useMemo(
-    () =>
-      candidates
-        .filter((p) => matchesGroceryScope(p, scope, listDefaults) && matchesSearch(p, query))
-        .sort((a, b) => compareByName(a, b, i18n.locale)),
-    [candidates, scope, query, listDefaults, i18n.locale],
+    () => candidates.filter((p) => matchesGroceryScope(p, scope, listDefaults) && matchesSearch(p, query)),
+    [candidates, scope, query, listDefaults],
+  );
+
+  // Sticky-header groups, same "grouped rows" visual as Inventory's own
+  // groupByStatus, just grouped by this screen's organizing idea (stock
+  // level) instead of freshness. When a specific scope tile is active
+  // (not All), the other group's predicate naturally matches nothing and
+  // only one header renders — no special-casing needed.
+  const groups: GroceryGroup[] = useMemo(
+    () => groupByGroceryCategory(filtered, listDefaults, i18n.locale, t),
+    [filtered, listDefaults, i18n.locale, t],
   );
 
   const hasFilters = query.length > 0 || scope !== "all";
@@ -551,21 +558,29 @@ export function GroceryListPage() {
             </Button>
           </div>
         ) : filtered.length > 0 ? (
-          <div className="flex flex-col gap-sm px-md py-md">
-            {filtered.map((p) => (
-              <GroceryCard
-                key={p.id}
-                product={p}
-                outOfStock={isOutOfStockOccasional(p, listDefaults)}
-                expanded={!!expanded[p.id]}
-                onToggle={() => toggleExpanded(p.id)}
-                onPressStart={(e) => handlePressStart(p.id, p.totalQty, p.tracking_mode, e)}
-                onPressMove={handlePressMove}
-                onPressEnd={handlePressEnd}
-                onPressAbort={handlePressAbort}
-              />
-            ))}
-          </div>
+          groups.map((g) => (
+            <div key={g.key} className="flex flex-col">
+              <div className="sticky top-0 z-[1] flex items-center gap-[10px] bg-surface-1 px-md pb-[8px] pt-[14px]">
+                <span className={cn("h-[7px] w-[7px] flex-shrink-0 rounded-full", groupDotClass(g.key))} />
+                <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-secondary">{g.label}</span>
+                <span className="h-px flex-1 bg-border" />
+                <span className="font-mono text-[11px] text-ink-muted">{g.count}</span>
+              </div>
+              {g.products.map((p) => (
+                <GroceryRow
+                  key={p.id}
+                  product={p}
+                  outOfStock={g.key === "occasional"}
+                  expanded={!!expanded[p.id]}
+                  onToggle={() => toggleExpanded(p.id)}
+                  onPressStart={(e) => handlePressStart(p.id, p.totalQty, p.tracking_mode, e)}
+                  onPressMove={handlePressMove}
+                  onPressEnd={handlePressEnd}
+                  onPressAbort={handlePressAbort}
+                />
+              ))}
+            </div>
+          ))
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-md px-[28px] py-[64px] text-center">
             <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full border border-dashed border-border-strong font-mono text-[13px] text-ink-muted">
@@ -630,7 +645,33 @@ export function GroceryListPage() {
   );
 }
 
-function GroceryCard({
+/** Sticky group header dot color — info for Low stock, warning for Occasional, matching this screen's own scope-tile colors (and Inventory's groupByStatus dot-per-status convention). */
+function groupDotClass(key: GroceryGroup["key"]): string {
+  return key === "low" ? "bg-info" : "bg-warning";
+}
+
+/** Row's left accent bar — freshness-colored for a Low stock item (same as Inventory's own accentBarClass), a flat danger color for an out-of-stock Occasional item, which has no freshness status to color it by. */
+function accentBarClass(p: EnrichedProduct, outOfStock: boolean): string {
+  if (outOfStock) return "bg-danger";
+  switch (p.status) {
+    case "expired":
+      return "bg-freshness-expired";
+    case "expiring-soon":
+      return "bg-freshness-expiring-soon";
+    case "fresh":
+      return "bg-freshness-fresh";
+    default:
+      return "bg-border-strong";
+  }
+}
+
+/**
+ * A row, not a boxed card — same flush, accent-barred visual as Inventory's
+ * own ProductRow (apps/web/src/pages/Inventory.tsx), just without its
+ * swipe-to-reveal panel (see this page's own doc comment for why). Tap
+ * toggles expand, hold (~480ms, wired by the caller) opens Quick Batch Edit.
+ */
+function GroceryRow({
   product: p,
   outOfStock,
   expanded,
@@ -661,66 +702,69 @@ function GroceryCard({
       (p.batches[0]?.expiryLabel ?? t("freshness.doesNotExpire"));
 
   return (
-    <Card
-      onPointerDown={onPressStart}
-      onPointerMove={onPressMove}
-      onPointerUp={onPressEnd}
-      onPointerCancel={onPressAbort}
-      onContextMenu={(e) => e.preventDefault()}
-      className="overflow-hidden p-0"
-      style={{ touchAction: "pan-y" }}
-    >
-      <button
-        type="button"
-        onClick={canExpand ? onToggle : undefined}
-        className={cn("flex w-full items-center gap-md px-md py-[13px] text-left", !canExpand && "cursor-default")}
+    <div className="-mb-px flex border-b border-t border-border">
+      <div className={cn("w-[3px] flex-shrink-0", accentBarClass(p, outOfStock))} />
+      <div
+        onPointerDown={onPressStart}
+        onPointerMove={onPressMove}
+        onPointerUp={onPressEnd}
+        onPointerCancel={onPressAbort}
+        onContextMenu={(e) => e.preventDefault()}
+        className="relative min-w-0 flex-1 bg-surface-0"
+        style={{ touchAction: "pan-y" }}
       >
-        <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
-          <div className="flex items-center gap-sm">
-            <span className="truncate text-[15px] font-semibold">{p.short_description}</span>
-            {outOfStock ? (
-              <span className="flex-shrink-0 rounded-full bg-danger-bg px-sm py-[2px] font-mono text-[10px] tracking-[0.06em] text-danger">
-                {t("groceryList.outOfStockBadge")}
-              </span>
+        <button
+          type="button"
+          onClick={canExpand ? onToggle : undefined}
+          className={cn("flex w-full items-center gap-md px-md py-[13px] text-left", !canExpand && "cursor-default")}
+        >
+          <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+            <div className="flex items-center gap-sm">
+              <span className="truncate text-[15px] font-semibold">{p.short_description}</span>
+              {outOfStock ? (
+                <span className="flex-shrink-0 rounded-full bg-danger-bg px-sm py-[2px] font-mono text-[10px] tracking-[0.06em] text-danger">
+                  {t("groceryList.outOfStockBadge")}
+                </span>
+              ) : (
+                <span className="flex-shrink-0 rounded-full bg-info-bg px-sm py-[2px] font-mono text-[10px] tracking-[0.06em] text-info">
+                  {t("inventory.lowBadge")}
+                </span>
+              )}
+            </div>
+            {!outOfStock && <span className="truncate text-[12px] text-ink-muted">{metaLabel}</span>}
+          </div>
+          <span className="flex-shrink-0 font-mono text-[17px] font-semibold text-ink-primary">
+            {p.totalQty}
+            {isPercentage && "%"}
+          </span>
+          {!outOfStock && <FreshnessBadge status={p.status} label={freshnessBadgeLabel(p.status, t)} />}
+          {canExpand && (
+            <span
+              className={cn(
+                "flex-shrink-0 text-[11px] text-ink-muted transition-transform",
+                expanded ? "rotate-180" : "rotate-0",
+              )}
+            >
+              ▼
+            </span>
+          )}
+        </button>
+        {canExpand && expanded && (
+          <div className="flex flex-col gap-sm px-md pb-[14px]">
+            {isPercentage ? (
+              <p className="text-xs text-ink-muted">{t("inventory.percentTrackedExpandNote")}</p>
             ) : (
-              <span className="flex-shrink-0 rounded-full bg-info-bg px-sm py-[2px] font-mono text-[10px] tracking-[0.06em] text-info">
-                {t("inventory.lowBadge")}
-              </span>
+              p.batches.map((b) => (
+                <div key={b.id} className="flex items-center gap-[10px] rounded-md bg-surface-2 px-[11px] py-[9px]">
+                  <span className="min-w-[34px] font-mono text-[12px] font-semibold text-ink-primary">{b.qtyLabel}</span>
+                  <span className="flex-1 truncate text-[12px] text-ink-secondary">{b.expiryLabel}</span>
+                  <FreshnessBadge status={b.status} label={freshnessBadgeLabel(b.status, t)} />
+                </div>
+              ))
             )}
           </div>
-          {!outOfStock && <span className="truncate text-[12px] text-ink-muted">{metaLabel}</span>}
-        </div>
-        <span className="flex-shrink-0 font-mono text-[17px] font-semibold text-ink-primary">
-          {p.totalQty}
-          {isPercentage && "%"}
-        </span>
-        {!outOfStock && <FreshnessBadge status={p.status} label={freshnessBadgeLabel(p.status, t)} />}
-        {canExpand && (
-          <span
-            className={cn(
-              "flex-shrink-0 text-[11px] text-ink-muted transition-transform",
-              expanded ? "rotate-180" : "rotate-0",
-            )}
-          >
-            ▼
-          </span>
         )}
-      </button>
-      {canExpand && expanded && (
-        <div className="flex flex-col gap-sm px-md pb-[14px]">
-          {isPercentage ? (
-            <p className="text-xs text-ink-muted">{t("inventory.percentTrackedExpandNote")}</p>
-          ) : (
-            p.batches.map((b) => (
-              <div key={b.id} className="flex items-center gap-[10px] rounded-md bg-surface-2 px-[11px] py-[9px]">
-                <span className="min-w-[34px] font-mono text-[12px] font-semibold text-ink-primary">{b.qtyLabel}</span>
-                <span className="flex-1 truncate text-[12px] text-ink-secondary">{b.expiryLabel}</span>
-                <FreshnessBadge status={b.status} label={freshnessBadgeLabel(b.status, t)} />
-              </div>
-            ))
-          )}
-        </div>
-      )}
-    </Card>
+      </div>
+    </div>
   );
 }
