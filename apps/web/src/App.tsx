@@ -4,6 +4,7 @@ import { AppLocaleProvider } from "./lib/AppLocaleProvider";
 import { PreferencesProvider } from "./lib/preferencesStore";
 import { ProductsProvider } from "./lib/productsStore";
 import { AddProductPage } from "./pages/AddProduct";
+import { GroceryListPage } from "./pages/GroceryList";
 import { InventoryPage } from "./pages/Inventory";
 import { ProductListPage } from "./pages/ProductList";
 import { SettingsPage } from "./pages/Settings";
@@ -21,6 +22,7 @@ function ShellRoutes() {
       <Routes>
         <Route path="/" element={<InventoryPage />} />
         <Route path="/products" element={<ProductListPage />} />
+        <Route path="/grocery" element={<GroceryListPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>
     </AppShell>

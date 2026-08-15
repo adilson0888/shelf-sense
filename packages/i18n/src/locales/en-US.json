@@ -33,6 +33,7 @@
 
   "menu.inventory": "Inventory",
   "menu.products": "Products",
+  "menu.groceryList": "Grocery List",
   "menu.settings": "Settings",
 
   "freshness.doesNotExpire": "Does not expire",
@@ -137,6 +138,24 @@
   "productList.savedProductUpdated": "\"{name}\" updated.",
   "productList.productAdded": "Product added.",
   "productList.genericSaveError": "Couldn't save this product. Try again.",
+
+  "groceryList.searchFiltersHeading": "Search & filters",
+  "groceryList.searchPlaceholder": "Search items you need",
+  "groceryList.clearSearchLabel": "Clear search",
+  "groceryList.scanBarcodeLabel": "Scan barcode",
+  "groceryList.scopeAll": "All",
+  "groceryList.scopeLowStock": "Low stock",
+  "groceryList.scopeOccasional": "Occasional",
+  "groceryList.resultCount.one": "{count} item",
+  "groceryList.resultCount.other": "{count} items",
+  "groceryList.clearFilters": "Clear filters",
+  "groceryList.loading": "Loading your grocery list…",
+  "groceryList.loadError": "Couldn't load your grocery list",
+  "groceryList.emptyNothingTitle": "Nothing to buy right now",
+  "groceryList.emptyNothingHint": "Everything's stocked up. Check back once something runs low.",
+  "groceryList.emptyFilteredTitle": "No matches",
+  "groceryList.emptyFilteredHint": "Try a different search or switch back to All.",
+  "groceryList.outOfStockBadge": "OUT",
 
   "stockEdit.backToInventory": "Back to inventory",
   "stockEdit.eyebrow": "Stock edit",

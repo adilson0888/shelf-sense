@@ -33,6 +33,7 @@
 
   "menu.inventory": "Estoque",
   "menu.products": "Produtos",
+  "menu.groceryList": "Lista de compras",
   "menu.settings": "Configurações",
 
   "freshness.doesNotExpire": "Não vence",
@@ -137,6 +138,24 @@
   "productList.savedProductUpdated": "\"{name}\" atualizado.",
   "productList.productAdded": "Produto adicionado.",
   "productList.genericSaveError": "Não foi possível salvar este produto. Tente novamente.",
+
+  "groceryList.searchFiltersHeading": "Busca e filtros",
+  "groceryList.searchPlaceholder": "Buscar itens que você precisa",
+  "groceryList.clearSearchLabel": "Limpar busca",
+  "groceryList.scanBarcodeLabel": "Escanear código de barras",
+  "groceryList.scopeAll": "Todos",
+  "groceryList.scopeLowStock": "Estoque baixo",
+  "groceryList.scopeOccasional": "Ocasional",
+  "groceryList.resultCount.one": "{count} item",
+  "groceryList.resultCount.other": "{count} itens",
+  "groceryList.clearFilters": "Limpar filtros",
+  "groceryList.loading": "Carregando sua lista de compras…",
+  "groceryList.loadError": "Não foi possível carregar sua lista de compras",
+  "groceryList.emptyNothingTitle": "Nada para comprar agora",
+  "groceryList.emptyNothingHint": "Está tudo abastecido. Volte aqui quando algo estiver acabando.",
+  "groceryList.emptyFilteredTitle": "Nenhum resultado",
+  "groceryList.emptyFilteredHint": "Tente outra busca ou volte para Todos.",
+  "groceryList.outOfStockBadge": "ACABOU",
 
   "stockEdit.backToInventory": "Voltar para o estoque",
   "stockEdit.eyebrow": "Editar estoque",
