@@ -107,18 +107,31 @@ async function extractWithAI(
   ].join("\n\n");
 
   try {
-    const res = await withTimeout(AI_TIMEOUT_MS, (signal) =>
-      fetch(`${creds.aiApiBaseUrl}/chat/completions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${creds.aiApiKey}` },
-        body: JSON.stringify({
-          model: creds.aiModel || "gpt-4o-mini",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0,
+    const postChat = (extra: Record<string, unknown>) =>
+      withTimeout(AI_TIMEOUT_MS, (signal) =>
+        fetch(`${creds.aiApiBaseUrl}/chat/completions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${creds.aiApiKey}` },
+          body: JSON.stringify({
+            model: creds.aiModel || "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }],
+            ...extra,
+          }),
+          signal,
         }),
-        signal,
-      }),
-    );
+      );
+
+    // temperature: 0 asks for deterministic-ish output, but some
+    // OpenAI-compatible backends (e.g. certain Claude gateways) reject the
+    // param outright for particular models with a 400. Retry once without it
+    // rather than losing the whole extraction over a param they don't want.
+    let res = await postChat({ temperature: 0 });
+    if (!res.ok && res.status === 400) {
+      const errBody = await res.clone().text();
+      if (/temperature/i.test(errBody)) {
+        res = await postChat({});
+      }
+    }
     if (!res.ok) return null;
     const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const raw = body.choices?.[0]?.message?.content;
