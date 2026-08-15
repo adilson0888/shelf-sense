@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Button, Footer, FreshnessBadge, Input, cn } from "shelf-sense-ds";
+import { Alert, Button, Footer, FreshnessBadge, IconButton, Input, cn } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { ScopeTile } from "../components/ScopeTile";
 import { SectionHeader } from "../components/SectionHeader";
@@ -480,16 +480,31 @@ export function GroceryListPage() {
                   Scanner & Product info scrape.md) — a local match opens
                   Quick Batch Edit directly, a miss falls through to the
                   Open Food Facts/Tavily lookup + manual-add form. No new
-                  barcode logic lives on this page. */}
-              <button
-                type="button"
-                onClick={openScan}
+                  barcode logic lives on this page.
+
+                  IconButton, same pattern as AppShell's hamburger/close/
+                  theme controls (Menu.md) — a circular, transparent,
+                  currentColor-only control, not a colorful emoji. A plain
+                  📷 glyph read as too loud/out of place here, same reasoning
+                  the header's own search glyph above is an inline SVG
+                  instead of 🔍. */}
+              <IconButton
+                icon={
+                  <svg viewBox="0 0 24 24" width="19" height="19" fill="none" aria-hidden="true">
+                    <path
+                      d="M4 8.5h3.2l1.3-2h6.8l1.3 2H20a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1Z"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="12" cy="13" r="3.1" stroke="currentColor" strokeWidth="1.6" />
+                  </svg>
+                }
                 aria-label={t("groceryList.scanBarcodeLabel")}
                 title={t("groceryList.scanBarcodeLabel")}
-                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md border border-border bg-surface-1 text-[18px]"
-              >
-                📷
-              </button>
+                size="lg"
+                onClick={openScan}
+              />
             </div>
 
             <div className="grid grid-cols-3 gap-sm">
