@@ -37,6 +37,11 @@ const DEFAULT_PREFERENCES: PreferencesResponse = {
   // mistaken for "the user really did choose en-US" — see AppLocaleProvider,
   // which gates locale reconciliation strictly on this flag (specs/i18n.md).
   has_saved_preferences: false,
+  // Same reasoning as has_saved_preferences above — a still-loading fetch
+  // must never look like "the operator configured nothing", so this
+  // starts as "nothing" rather than guessing; the real GET /preferences
+  // response overwrites it once it resolves.
+  env_defaults: { ai_api_base_url: null, ai_api_key_set: false, ai_model: null, tavily_api_key_set: false },
 };
 
 const PreferencesContext = createContext<PreferencesStore | null>(null);

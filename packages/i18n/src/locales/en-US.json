@@ -68,6 +68,8 @@
   "settings.aiSettings.modelPlaceholder": "e.g. gpt-4o-mini",
   "settings.aiSettings.tavilyApiKeyLabel": "Tavily API key",
   "settings.aiSettings.tavilyApiKeyHint": "Used as a fallback when Open Food Facts doesn't recognize a scanned barcode.",
+  "settings.aiSettings.providedByAdmin": "Provided by your administrator.",
+  "settings.aiSettings.usingAdminDefault": "Using your administrator's default: {value}.",
   "settings.defaultOptions.heading": "Default Options",
   "settings.defaultOptions.minQtyLabel": "Default minimal quantity",
   "settings.defaultOptions.minPercentLabel": "Default minimum %",

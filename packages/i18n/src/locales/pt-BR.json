@@ -68,6 +68,8 @@
   "settings.aiSettings.modelPlaceholder": "ex.: gpt-4o-mini",
   "settings.aiSettings.tavilyApiKeyLabel": "Chave da API Tavily",
   "settings.aiSettings.tavilyApiKeyHint": "Usada como alternativa quando o Open Food Facts não reconhece um código de barras lido.",
+  "settings.aiSettings.providedByAdmin": "Fornecido pelo administrador.",
+  "settings.aiSettings.usingAdminDefault": "Usando o padrão do administrador: {value}.",
   "settings.defaultOptions.heading": "Opções padrão",
   "settings.defaultOptions.minQtyLabel": "Quantidade mínima padrão",
   "settings.defaultOptions.minPercentLabel": "% mínimo padrão",

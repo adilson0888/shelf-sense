@@ -84,11 +84,15 @@ productsRouter.get(
       throw new HttpError(400, "code query parameter is required");
     }
     const [prefsRow] = await db.select().from(preferences).where(eq(preferences.id, SINGLETON_PREFS_ID)).limit(1);
+    // specs/Advanced Settings.md — each of the four credentials resolves
+    // independently: the user's own saved value, then an operator-set env
+    // var, then nothing. Never the reverse order, and one field's source
+    // never affects another's.
     const result = await lookupBarcode(code, {
-      tavilyApiKey: prefsRow?.tavilyApiKey ?? null,
-      aiApiBaseUrl: prefsRow?.aiApiBaseUrl ?? null,
-      aiApiKey: prefsRow?.aiApiKey ?? null,
-      aiModel: prefsRow?.aiModel ?? null,
+      tavilyApiKey: prefsRow?.tavilyApiKey ?? process.env.TAVILY_API_KEY ?? null,
+      aiApiBaseUrl: prefsRow?.aiApiBaseUrl ?? process.env.AI_API_BASE_URL ?? null,
+      aiApiKey: prefsRow?.aiApiKey ?? process.env.AI_API_KEY ?? null,
+      aiModel: prefsRow?.aiModel ?? process.env.AI_MODEL ?? null,
     });
     res.json(result);
   }),

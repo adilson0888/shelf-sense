@@ -115,6 +115,20 @@ export interface PreferencesResponse {
   default_minimal_percentage: number;
   /** False only when no preferences row has ever been saved — see specs/i18n.md's first-launch detection. */
   has_saved_preferences: boolean;
+  /**
+   * specs/Advanced Settings.md — what an operator has set via env vars,
+   * read fresh off the server's process.env on every request, never
+   * stored. Used only when the matching field above has no user-saved
+   * value, to show "provided by your administrator" instead of "not
+   * configured". Never the raw key values, same convention as
+   * ai_api_key_set/tavily_api_key_set.
+   */
+  env_defaults: {
+    ai_api_base_url: string | null;
+    ai_api_key_set: boolean;
+    ai_model: string | null;
+    tavily_api_key_set: boolean;
+  };
 }
 
 /** Built by apps/web/src/pages/Settings.tsx's Save handler. */
