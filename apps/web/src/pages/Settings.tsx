@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Button, Footer, Input, Select, Switch } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { SectionHeader } from "../components/SectionHeader";
-import { ApiError, type PreferencesResponse, type UpdatePreferencesPayload } from "../lib/api";
+import { ApiError } from "../lib/api";
+import type { PreferencesResponse, UpdatePreferencesPayload } from "shelf-sense-core";
 import { usePreferencesStore } from "../lib/preferencesStore";
 
 const SAVED_MESSAGE_DELAY_MS = 2600;

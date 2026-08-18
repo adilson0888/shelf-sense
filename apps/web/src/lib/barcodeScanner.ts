@@ -41,7 +41,7 @@ export type ScanError = "unsupported" | "camera-denied" | null;
 
 export interface UseBarcodeScanResult {
   /** Attach to the <video> element that shows the live feed. */
-  videoRef: RefObject<HTMLVideoElement>;
+  videoRef: RefObject<HTMLVideoElement | null>;
   error: ScanError;
 }
 

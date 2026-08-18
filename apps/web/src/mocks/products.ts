@@ -1,4 +1,4 @@
-import type { Barcode, Batch, Product } from "../types";
+import type { Barcode, Batch, Product } from "shelf-sense-core"
 
 /**
  * Placeholder data standing in for apps/api's future /products endpoint —

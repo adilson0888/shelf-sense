@@ -1,5 +1,5 @@
-import type { Batch } from "../types";
-import { sortBatchesByExpiry } from "./inventory";
+import type { Batch } from "./types.js";
+import { sortBatchesByExpiry } from "./inventory.js";
 
 /**
  * Local, unsaved state for one open Quick Batch Edit modal (Quick Batch

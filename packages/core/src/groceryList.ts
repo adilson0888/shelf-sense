@@ -1,6 +1,6 @@
-import type { TFunctions } from "shelf-sense-i18n/react";
-import type { Product } from "../types";
-import type { EnrichedProduct, InventoryDefaults } from "./inventory";
+import type { Formatter } from "./formatter.js";
+import type { Product } from "./types.js";
+import type { EnrichedProduct, InventoryDefaults } from "./inventory.js";
 
 // Reuses inventory.ts's InventoryDefaults directly — same shape Product
 // List.md's own lib/productList.ts already reuses for the identical reason
@@ -92,7 +92,7 @@ export function groupByGroceryCategory(
   products: EnrichedProduct[],
   defaults: GroceryListDefaults,
   locale: string,
-  t: TFunctions["t"],
+  t: Formatter["t"],
 ): GroceryGroup[] {
   const defs: { key: GroceryGroup["key"]; label: string; predicate: (p: EnrichedProduct) => boolean }[] = [
     { key: "low", label: t("groceryList.scopeLowStock"), predicate: (p) => isLowStock(p, defaults) },

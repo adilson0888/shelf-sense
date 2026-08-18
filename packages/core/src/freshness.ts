@@ -1,5 +1,5 @@
-import type { TFunctions } from "shelf-sense-i18n/react";
-import type { FreshnessStatus } from "../types";
+import type { Formatter } from "./formatter.js";
+import type { FreshnessStatus } from "./types.js";
 
 /** Whole days between `today` and a date-only ISO string, ignoring time-of-day. */
 export function daysUntil(dateISO: string, today: Date): number {
@@ -31,7 +31,7 @@ export function freshnessStatus(
  * (specs/i18n.md) — every consumer passes this explicitly translated
  * label instead of relying on the component's hardcoded English default.
  */
-export function freshnessBadgeLabel(status: FreshnessStatus, t: TFunctions["t"]): string {
+export function freshnessBadgeLabel(status: FreshnessStatus, t: Formatter["t"]): string {
   switch (status) {
     case "expired":
       return t("freshnessStatus.expired");
@@ -62,7 +62,7 @@ export function formatExpiryLabel(
   thresholdDays: number | null,
   defaultThresholdDays: number,
   today: Date,
-  i18n: Pick<TFunctions, "t" | "tPlural" | "formatDate">,
+  i18n: Pick<Formatter, "t" | "tPlural" | "formatDate">,
 ): string {
   const { t, tPlural, formatDate } = i18n;
   if (!expiresOn) return t("freshness.doesNotExpire");

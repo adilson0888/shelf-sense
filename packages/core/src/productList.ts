@@ -1,5 +1,5 @@
-import type { Product } from "../types";
-import type { InventoryDefaults } from "./inventory";
+import type { Product } from "./types.js";
+import type { InventoryDefaults } from "./inventory.js";
 
 // Reuses inventory.ts's InventoryDefaults directly (identical shape — both
 // pages resolve the same two Settings.md global defaults) rather than
@@ -7,19 +7,22 @@ import type { InventoryDefaults } from "./inventory";
 export type ProductListDefaults = InventoryDefaults;
 
 /**
- * "Occasional" is a derived split, not a stored field (specs/Product
- * List.md's Data section) — a product is Occasional only when its
- * `minimal_quantity` is explicitly `0`; every other case (a positive
- * number, or `null` following a non-zero global default) is Regular. No
- * parallel boolean field to keep in sync — this reuses the existing
- * low-stock-threshold field as the signal.
+ * "Occasional" is derived from the effective minimum for the product's
+ * tracking mode. Percentage products use their percentage threshold; unit
+ * products use their quantity threshold.
  */
 export function isRegular(product: Product, defaults: ProductListDefaults): boolean {
-  return effectiveMinimalQuantity(product, defaults) > 0;
+  return product.tracking_mode === "percentage"
+    ? effectiveMinimalPercentage(product, defaults) > 0
+    : effectiveMinimalQuantity(product, defaults) > 0;
 }
 
 export function effectiveMinimalQuantity(product: Product, defaults: ProductListDefaults): number {
   return product.minimal_quantity ?? defaults.minimalQuantity;
+}
+
+export function effectiveMinimalPercentage(product: Product, defaults: ProductListDefaults): number {
+  return product.minimal_percentage ?? defaults.minimalPercentage;
 }
 
 export function effectiveFreshnessThresholdDays(product: Product, defaults: ProductListDefaults): number | null {

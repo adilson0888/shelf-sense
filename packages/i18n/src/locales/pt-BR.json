@@ -281,5 +281,16 @@
   "quickBatchEdit.noExpiryNewBatch": "Este produto não vence, então o novo lote não tem data.",
   "quickBatchEdit.stockButton": "Estoque",
   "quickBatchEdit.editProductButton": "Editar produto",
-  "quickBatchEdit.resetButton": "Redefinir"
+  "quickBatchEdit.resetButton": "Redefinir",
+
+  "configuration.apiUrlMissing": "O ShelfSense não está configurado. Defina EXPO_PUBLIC_API_URL e gere o aplicativo novamente.",
+  "errors.network": "Não foi possível acessar o servidor. Verifique sua conexão e tente novamente.",
+  "errors.productsLoad": "Não foi possível carregar sua despensa.",
+  "errors.preferencesLoad": "Não foi possível carregar suas configurações.",
+  "offline.warning": "Você está vendo dados salvos. Algumas ações exigem conexão.",
+  "camera.permissionMessage": "Permita o acesso à câmera para ler códigos de barras de produtos.",
+  "camera.allow": "Permitir câmera",
+  "camera.openSettings": "Abrir Configurações",
+  "camera.editManually": "Editar manualmente",
+  "camera.lookupFailed": "Não foi possível consultar este código de barras."
 }

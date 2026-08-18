@@ -2,34 +2,32 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
-import { formatExpiryLabel, freshnessBadgeLabel, freshnessStatus } from "../lib/freshness";
+import { formatExpiryLabel, freshnessBadgeLabel, freshnessStatus } from "shelf-sense-core"
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
-import {
-  addBatch,
-  armSave,
-  canAddBatch,
-  cancelEditExp,
-  cancelEditQty,
-  commitExpEdit,
-  commitQtyEdit,
-  expDraftChange,
-  hasPendingChanges,
-  isEditedRow,
-  isNewRow,
-  newExpChange,
-  newQtyChange,
-  openStockEditState,
-  qtyDraftChange,
-  removeSelected,
-  saveSummary,
-  startEditExp,
-  startEditQty,
-  toggleAddOpen,
-  toggleSelectAll,
-  toggleSelected,
-  type StockEditState,
-} from "../lib/stockEdit";
+import { addBatch,
+armStockSave as armSave,
+canAddBatch,
+cancelEditExp,
+cancelEditQty,
+commitExpEdit,
+commitQtyEdit,
+expDraftChange,
+hasPendingChanges,
+isEditedRow,
+isNewRow,
+newExpChange,
+newQtyChange,
+openStockEditState,
+qtyDraftChange,
+removeSelected,
+stockEditSaveSummary as saveSummary,
+startEditExp,
+startEditQty,
+toggleAddOpen,
+toggleSelectAll,
+toggleSelected,
+type StockEditState, } from "shelf-sense-core"
 
 /**
  * Full-screen batch editor, reached from Quick Batch Edit's "Stock" button.

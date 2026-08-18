@@ -1,5 +1,5 @@
-import type { TFunctions } from "shelf-sense-i18n/react";
-import type { Batch } from "../types";
+import type { Formatter } from "./formatter.js";
+import type { Batch } from "./types.js";
 
 /**
  * Local, unsaved state for the Stock Edit view (Stock Edit.md) — every add,
@@ -168,12 +168,12 @@ export function hasPendingChanges(state: StockEditState): boolean {
   return addedCount > 0 || editedCount > 0 || state.removed.length > 0;
 }
 
-export function armSave(state: StockEditState): StockEditState {
+export function armStockSave(state: StockEditState): StockEditState {
   return { ...state, armed: true };
 }
 
 /** "2 batches added, 1 batch updated, 1 batch removed." — only non-zero categories, singular/plural per count via tPlural, joined via formatList (locale-correct separator/conjunction — see packages/i18n/src/format.ts). */
-export function saveSummary(state: StockEditState, i18n: Pick<TFunctions, "tPlural" | "formatList">): string {
+export function stockEditSaveSummary(state: StockEditState, i18n: Pick<Formatter, "tPlural" | "formatList">): string {
   const { tPlural, formatList } = i18n;
   const added = state.batches.filter((b) => isNewRow(state, b.id)).length;
   const updated = state.batches.filter((b) => isEditedRow(state, b.id)).length;

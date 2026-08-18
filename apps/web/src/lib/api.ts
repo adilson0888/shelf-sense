@@ -1,4 +1,12 @@
-import type { Batch, Product } from "../types";
+import type {
+  BarcodeLookupResult,
+  Batch,
+  CreateProductPayload,
+  PreferencesResponse,
+  Product,
+  UpdatePreferencesPayload,
+  UpdateProductPayload,
+} from "shelf-sense-core";
 
 // Baked in at Vite build time — a published Docker image can't be pointed
 // at a different API host without rebuilding. Fine for the documented
@@ -39,57 +47,16 @@ export function fetchProducts(): Promise<{ products: Product[]; batches: Batch[]
   return request("/products");
 }
 
-/** Built by apps/web/src/lib/addProduct.ts's buildCreateProductPayload(). */
-export interface CreateProductPayload {
-  short_description: string;
-  long_description: string;
-  does_expire: boolean;
-  minimal_quantity: number | null;
-  freshness_threshold_days: number | null;
-  quantity: number;
-  expires_on: string | null;
-  // specs/Relative Tracking.md — fixed at creation, never edited afterward.
-  tracking_mode: "units" | "percentage";
-  stock_percent: number | null;
-  minimal_percentage: number | null;
-  // specs/Barcode Scanner & Product info scrape.md — a barcode scanned
-  // during Add Product that didn't match an existing product; null on every
-  // other entry path (unsupported browser, cancelled scan).
-  barcode: string | null;
-}
 
 export function createProduct(payload: CreateProductPayload): Promise<{ product: Product; batch: Batch | null }> {
   return request("/products", { method: "POST", body: JSON.stringify(payload) });
 }
 
-/** specs/Barcode Scanner & Product info scrape.md's external-lookup pipeline. */
-export interface BarcodeLookupResult {
-  short_description?: string;
-  long_description?: string;
-  source: "open-food-facts" | "tavily" | null;
-}
 
 export function lookupBarcode(code: string): Promise<BarcodeLookupResult> {
   return request(`/products/lookup-barcode?code=${encodeURIComponent(code)}`);
 }
 
-/** Built by apps/web/src/lib/productEdit.ts's buildEditProductPayload(). */
-export interface UpdateProductPayload {
-  short_description: string;
-  long_description: string;
-  does_expire: boolean;
-  minimal_quantity: number | null;
-  freshness_threshold_days: number | null;
-  // specs/Relative Tracking.md — the one field of that spec Product Edit
-  // does touch; tracking_mode/stock_percent are fixed at creation and never
-  // sent here.
-  minimal_percentage: number | null;
-  aliases: string[];
-  barcodes: { code: string; description: string }[];
-  // Cross-product unlinks the confirm-move flow already resolved before
-  // Save was clickable — see Product Edit.md's Data section.
-  other_product_updates: { product_id: string; remove_barcode_codes: string[]; remove_aliases: string[] }[];
-}
 
 export function updateProduct(
   id: string,
@@ -98,37 +65,6 @@ export function updateProduct(
   return request(`/products/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
 }
 
-/** Mirrors apps/api/src/routes/preferences.ts's toPreferencesJson() — see specs/Settings.md's Data section. */
-export interface PreferencesResponse {
-  ai_api_base_url: string | null;
-  ai_api_key_set: boolean;
-  ai_api_key_hint: string | null;
-  ai_model: string | null;
-  /** specs/Barcode Scanner & Product info scrape.md's Open-Food-Facts-miss fallback credential. */
-  tavily_api_key_set: boolean;
-  tavily_api_key_hint: string | null;
-  default_minimal_quantity: number;
-  default_freshness_threshold_days: number;
-  default_does_expire: boolean;
-  language: "en-US" | "pt-BR";
-  /** specs/Relative Tracking.md's low-% fallback for percentage-tracked products. */
-  default_minimal_percentage: number;
-  /** False only when no preferences row has ever been saved — see specs/i18n.md's first-launch detection. */
-  has_saved_preferences: boolean;
-}
-
-/** Built by apps/web/src/pages/Settings.tsx's Save handler. */
-export interface UpdatePreferencesPayload {
-  ai_api_base_url: string | null;
-  ai_api_key?: string | null;
-  ai_model: string | null;
-  tavily_api_key?: string | null;
-  default_minimal_quantity: number;
-  default_freshness_threshold_days: number;
-  default_does_expire: boolean;
-  language: "en-US" | "pt-BR";
-  default_minimal_percentage: number;
-}
 
 export function fetchPreferences(): Promise<PreferencesResponse> {
   return request("/preferences");

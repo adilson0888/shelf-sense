@@ -17,6 +17,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "^0.45.2",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
   }
 }

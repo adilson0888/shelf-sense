@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { ApiError, fetchPreferences, updatePreferences, type PreferencesResponse, type UpdatePreferencesPayload } from "./api";
+import { ApiError, fetchPreferences, updatePreferences } from "./api";
+import type { PreferencesResponse, UpdatePreferencesPayload } from "shelf-sense-core";
 
 /**
  * Mirrors apps/web/src/lib/productsStore.tsx's ProductsProvider/

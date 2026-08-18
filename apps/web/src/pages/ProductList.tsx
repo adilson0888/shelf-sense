@@ -16,54 +16,48 @@ import { useProductsStore } from "../lib/productsStore";
 import { ApiError, lookupBarcode, updateProduct } from "../lib/api";
 import { isBarcodeScanSupported } from "../lib/barcodeScanner";
 import type { AddProductLocationState } from "./AddProduct";
-import { enrichProduct, matchesSearch, type InventoryDefaults } from "../lib/inventory";
-import {
-  compareByName,
-  effectiveFreshnessThresholdDays,
-  effectiveMinimalQuantity,
-  isRegular,
-  matchesExpiryFilter,
-  matchesTypeFilter,
-  type ExpiryFilter,
-  type TypeFilter,
-} from "../lib/productList";
-import {
-  applyQuickEdit,
-  bumpQuickEdit,
-  commitQuickEditDraft,
-  openQuickEditState,
-  resetQuickEdit,
-  type QuickEditState,
-} from "../lib/quickBatchEdit";
-import {
-  addAlias,
-  addBarcode,
-  armSave,
-  buildEditProductPayload,
-  buildSaveResult,
-  cancelConfirm,
-  changeBarcodeDesc,
-  commitBarcodeDescEdit,
-  confirmAliasMove,
-  confirmBarcodeMove,
-  openProductEditState,
-  removeAlias,
-  removeSelectedBarcodes,
-  setDoesExpire,
-  setField,
-  setNewAlias,
-  setNewBarcodeCode,
-  setNewBarcodeDesc,
-  startEditBarcodeDesc,
-  toggleAddBarcode,
-  toggleBarcodeSelected,
-  toggleSelectAllBarcodes,
-  type ProductEditState,
-} from "../lib/productEdit";
+import { enrichProduct, matchesSearch, type InventoryDefaults } from "shelf-sense-core"
+import { compareByName,
+effectiveFreshnessThresholdDays,
+effectiveMinimalQuantity,
+isRegular,
+matchesExpiryFilter,
+matchesTypeFilter,
+type ExpiryFilter,
+type TypeFilter, } from "shelf-sense-core"
+import { applyQuickEdit,
+bumpQuickEdit,
+commitQuickEditDraft,
+openQuickEditState,
+resetQuickEdit,
+type QuickEditState, } from "shelf-sense-core"
+import { addAlias,
+addBarcode,
+armSave,
+buildEditProductPayload,
+buildSaveResult,
+cancelConfirm,
+changeBarcodeDesc,
+commitBarcodeDescEdit,
+confirmAliasMove,
+confirmBarcodeMove,
+openProductEditState,
+removeAlias,
+removeSelectedBarcodes,
+setDoesExpire,
+setField,
+setNewAlias,
+setNewBarcodeCode,
+setNewBarcodeDesc,
+startEditBarcodeDesc,
+toggleAddBarcode,
+toggleBarcodeSelected,
+toggleSelectAllBarcodes,
+type ProductEditState, } from "shelf-sense-core"
 import { BarcodeCaptureModal } from "../components/BarcodeCaptureModal";
 import { QuickBatchEditModal } from "../components/QuickBatchEditModal";
 import { ProductEditView } from "../components/ProductEditView";
-import type { Product } from "../types";
+import type { Product } from "shelf-sense-core"
 
 const SAVED_MESSAGE_DELAY_MS = 2600;
 // Same long-press threshold Inventory.tsx's own hold-to-open gesture uses.

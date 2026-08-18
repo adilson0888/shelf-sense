@@ -1,6 +1,6 @@
 import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Switch } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
-import { canSave, isRenamed, newBarcodeValid, saveSummary, type ProductEditState } from "../lib/productEdit";
+import { canSave, isRenamed, newBarcodeValid, saveSummary, type ProductEditState } from "shelf-sense-core"
 
 export interface ProductEditViewProps {
   edit: ProductEditState | null;

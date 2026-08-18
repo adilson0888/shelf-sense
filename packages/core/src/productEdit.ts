@@ -1,6 +1,6 @@
-import type { TFunctions } from "shelf-sense-i18n/react";
-import type { UpdateProductPayload } from "./api";
-import type { Barcode, Product } from "../types";
+import type { Formatter } from "./formatter.js";
+import type { UpdateProductPayload } from "./contracts.js";
+import type { Barcode, Product } from "./types.js";
 
 /**
  * Local, unsaved state for one open Product Edit view (Product Edit.md).
@@ -147,7 +147,7 @@ export function setNewAlias(state: ProductEditState, value: string): ProductEdit
  * same move-and-confirm flow as a barcode conflict if it collides with
  * another product's alias.
  */
-export function addAlias(state: ProductEditState, allProducts: Product[], t: TFunctions["t"]): ProductEditState {
+export function addAlias(state: ProductEditState, allProducts: Product[], t: Formatter["t"]): ProductEditState {
   const value = state.newAlias.trim();
   if (!value) return state;
   const lower = value.toLowerCase();
@@ -283,7 +283,7 @@ export function canSave(state: ProductEditState): boolean {
  * Non-functional section), then flips Save into its "Confirm?" state. A
  * conflict sets shortError instead of arming, same as any other blocked save.
  */
-export function armSave(state: ProductEditState, allProducts: Product[], t: TFunctions["t"]): ProductEditState {
+export function armSave(state: ProductEditState, allProducts: Product[], t: Formatter["t"]): ProductEditState {
   const trimmed = state.short.trim();
   if (!trimmed) return state;
   const conflict = allProducts.find(
@@ -306,7 +306,7 @@ export function disarmSave(state: ProductEditState): ProductEditState {
 // tPlural is threaded into the freshness-days fragment even though English
 // never actually shows "1 day" here (a blank fresh value always renders
 // "none" instead) — Portuguese grammatical agreement still needs the split.
-export function saveSummary(state: ProductEditState, i18n: Pick<TFunctions, "t" | "tPlural">): string {
+export function saveSummary(state: ProductEditState, i18n: Pick<Formatter, "t" | "tPlural">): string {
   const { t, tPlural } = i18n;
   const orig: Snapshot = JSON.parse(state.orig);
   const bits: string[] = [];

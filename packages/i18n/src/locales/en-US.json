@@ -281,5 +281,16 @@
   "quickBatchEdit.noExpiryNewBatch": "This product doesn't expire, so the new batch has no date.",
   "quickBatchEdit.stockButton": "Stock",
   "quickBatchEdit.editProductButton": "Edit product",
-  "quickBatchEdit.resetButton": "Reset"
+  "quickBatchEdit.resetButton": "Reset",
+
+  "configuration.apiUrlMissing": "ShelfSense is not configured. Set EXPO_PUBLIC_API_URL and rebuild the app.",
+  "errors.network": "Couldn't reach the server. Check your connection and try again.",
+  "errors.productsLoad": "Couldn't load your pantry.",
+  "errors.preferencesLoad": "Couldn't load your settings.",
+  "offline.warning": "You're viewing saved data. Some actions require a connection.",
+  "camera.permissionMessage": "Allow camera access to scan product barcodes.",
+  "camera.allow": "Allow camera",
+  "camera.openSettings": "Open Settings",
+  "camera.editManually": "Edit manually",
+  "camera.lookupFailed": "Couldn't look up this barcode."
 }

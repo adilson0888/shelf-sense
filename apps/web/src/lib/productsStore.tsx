@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { ApiError, fetchProducts } from "./api";
-import type { Batch, Product } from "../types";
+import type { Batch, Product } from "shelf-sense-core"
 
 /**
  * Shared product/batch state, lifted out of InventoryPage so a real

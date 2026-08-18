@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { ApiError, updateProduct } from "../lib/api";
-import { buildLinkBarcodePayload } from "../lib/addProduct";
-import { matchesSearch } from "../lib/inventory";
-import type { Product } from "../types";
+import { buildLinkBarcodePayload } from "shelf-sense-core"
+import { matchesSearch } from "shelf-sense-core"
+import type { Product } from "shelf-sense-core"
 
 export interface LinkExistingProductModalProps {
   open: boolean;

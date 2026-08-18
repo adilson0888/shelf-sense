@@ -14,18 +14,29 @@
     "ios": {
       "bundleIdentifier": "com.shelfsense.mobile",
       "infoPlist": {
-        "NSCameraUsageDescription": "ShelfSense uses the camera to scan shelf/SKU barcodes."
+        "NSCameraUsageDescription": "ShelfSense uses the camera to scan product barcodes."
       }
     },
     "plugins": [
       [
         "expo-camera",
         {
-          "cameraPermission": "ShelfSense uses the camera to scan shelf/SKU barcodes."
+          "cameraPermission": "ShelfSense uses the camera to scan product barcodes."
         }
       ],
       "expo-sqlite",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-localization",
+      "expo-font",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ]
   }
 }

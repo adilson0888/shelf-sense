@@ -4,22 +4,63 @@
   "private": true,
   "main": "index.ts",
   "scripts": {
+    "prestart": "npm run build -w shelf-sense-core && npm run build -w shelf-sense-i18n",
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "preandroid": "npm run build -w shelf-sense-core && npm run build -w shelf-sense-i18n",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
+    "test": "jest",
     "doctor": "expo-doctor"
   },
   "dependencies": {
-    "expo": "^57.0.12",
+    "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@formatjs/intl-listformat": "^8.3.13",
+    "@formatjs/intl-locale": "^5.3.10",
+    "@formatjs/intl-pluralrules": "^6.3.13",
+    "@react-native-community/datetimepicker": "9.1.0",
+    "@react-navigation/native": "^7.3.16",
+    "@react-navigation/native-stack": "^7.18.8",
+    "expo": "~57.0.13",
+    "expo-build-properties": "~57.0.11",
     "expo-camera": "~57.0.3",
+    "expo-font": "~57.0.1",
+    "expo-localization": "~57.0.1",
     "expo-sqlite": "~57.0.1",
     "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.2",
     "react": "19.2.3",
-    "react-native": "0.86.2"
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
+    "shelf-sense-core": "^0.1.0",
+    "shelf-sense-i18n": "^0.1.0"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^14.0.1",
+    "@types/jest": "^29.5.14",
+    "@types/react": "~19.2.4",
     "expo-doctor": "^1.20.1",
+    "jest-expo": "~57.0.4",
+    "react-test-renderer": "^19.2.3",
     "typescript": "~6.0.3"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/android/",
+      "/ios/"
+    ],
+    "moduleNameMapper": {
+      "^react$": "<rootDir>/../../node_modules/react",
+      "^react/(.*)$": "<rootDir>/../../node_modules/react/$1",
+      "^(\\.{1,2}/.*)\\.js$": "$1",
+      "^shelf-sense-core$": "<rootDir>/../../packages/core/src/index.ts",
+      "^shelf-sense-i18n/react$": "<rootDir>/../../packages/i18n/src/react.tsx",
+      "^shelf-sense-i18n$": "<rootDir>/../../packages/i18n/src/index.ts"
+    }
   }
 }

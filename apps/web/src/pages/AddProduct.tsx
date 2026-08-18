@@ -4,10 +4,16 @@ import { Alert, Button, Input, Switch } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
-import { ApiError, createProduct, type BarcodeLookupResult } from "../lib/api";
-import { buildBlankForm, buildCreateProductPayload, buildScannedForm, type AddProductFormState } from "../lib/addProduct";
+import { ApiError, createProduct } from "../lib/api";
+import {
+  buildBlankForm,
+  buildCreateProductPayload,
+  buildScannedForm,
+  type AddProductFormState,
+  type BarcodeLookupResult,
+  type Product,
+} from "shelf-sense-core";
 import { LinkExistingProductModal } from "../components/LinkExistingProductModal";
-import type { Product } from "../types";
 
 /** Passed via navigate(path, { state }) — see Inventory.tsx/ProductList.tsx's "+ Add" wiring. */
 export interface AddProductLocationState {

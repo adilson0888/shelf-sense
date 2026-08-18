@@ -4,52 +4,46 @@ import { Alert, Button, Footer, FreshnessBadge, IconButton, Input, cn } from "sh
 import { useT } from "shelf-sense-i18n/react";
 import { ScopeTile } from "../components/ScopeTile";
 import { SectionHeader } from "../components/SectionHeader";
-import { freshnessBadgeLabel } from "../lib/freshness";
+import { freshnessBadgeLabel } from "shelf-sense-core"
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
 import { ApiError, lookupBarcode, updateProduct } from "../lib/api";
 import { isBarcodeScanSupported } from "../lib/barcodeScanner";
 import type { AddProductLocationState } from "./AddProduct";
-import { enrichProduct, matchesSearch, type EnrichedProduct, type InventoryDefaults } from "../lib/inventory";
-import {
-  groupByGroceryCategory,
-  matchesGroceryScope,
-  type GroceryGroup,
-  type GroceryScope,
-} from "../lib/groceryList";
-import {
-  applyQuickEdit,
-  bumpQuickEdit,
-  commitQuickEditDraft,
-  openQuickEditState,
-  resetQuickEdit,
-  type QuickEditState,
-} from "../lib/quickBatchEdit";
-import {
-  addAlias,
-  addBarcode,
-  armSave,
-  buildEditProductPayload,
-  buildSaveResult,
-  cancelConfirm,
-  changeBarcodeDesc,
-  commitBarcodeDescEdit,
-  confirmAliasMove,
-  confirmBarcodeMove,
-  openProductEditState,
-  removeAlias,
-  removeSelectedBarcodes,
-  setDoesExpire,
-  setField,
-  setNewAlias,
-  setNewBarcodeCode,
-  setNewBarcodeDesc,
-  startEditBarcodeDesc,
-  toggleAddBarcode,
-  toggleBarcodeSelected,
-  toggleSelectAllBarcodes,
-  type ProductEditState,
-} from "../lib/productEdit";
+import { enrichProduct, matchesSearch, type EnrichedProduct, type InventoryDefaults } from "shelf-sense-core"
+import { groupByGroceryCategory,
+matchesGroceryScope,
+type GroceryGroup,
+type GroceryScope, } from "shelf-sense-core"
+import { applyQuickEdit,
+bumpQuickEdit,
+commitQuickEditDraft,
+openQuickEditState,
+resetQuickEdit,
+type QuickEditState, } from "shelf-sense-core"
+import { addAlias,
+addBarcode,
+armSave,
+buildEditProductPayload,
+buildSaveResult,
+cancelConfirm,
+changeBarcodeDesc,
+commitBarcodeDescEdit,
+confirmAliasMove,
+confirmBarcodeMove,
+openProductEditState,
+removeAlias,
+removeSelectedBarcodes,
+setDoesExpire,
+setField,
+setNewAlias,
+setNewBarcodeCode,
+setNewBarcodeDesc,
+startEditBarcodeDesc,
+toggleAddBarcode,
+toggleBarcodeSelected,
+toggleSelectAllBarcodes,
+type ProductEditState, } from "shelf-sense-core"
 import { BarcodeCaptureModal } from "../components/BarcodeCaptureModal";
 import { QuickBatchEditModal } from "../components/QuickBatchEditModal";
 import { ProductEditView } from "../components/ProductEditView";

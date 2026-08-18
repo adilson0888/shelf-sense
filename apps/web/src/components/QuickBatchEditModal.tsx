@@ -1,8 +1,7 @@
 import { Button, cn, FreshnessBadge, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
-import { freshnessBadgeLabel } from "../lib/freshness";
-import type { EnrichedProduct } from "../lib/inventory";
-import type { QuickEditState } from "../lib/quickBatchEdit";
+import { freshnessBadgeLabel } from "shelf-sense-core"
+import type { EnrichedProduct, QuickEditState } from "shelf-sense-core";
 
 export interface QuickBatchEditModalProps {
   quick: QuickEditState | null;

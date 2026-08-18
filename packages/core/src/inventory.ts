@@ -1,6 +1,6 @@
-import type { TFunctions } from "shelf-sense-i18n/react";
-import type { Batch, FreshnessStatus, Product } from "../types";
-import { formatExpiryLabel, freshnessStatus } from "./freshness";
+import type { Formatter } from "./formatter.js";
+import type { Batch, FreshnessStatus, Product } from "./types.js";
+import { formatExpiryLabel, freshnessStatus } from "./freshness.js";
 
 /** specs/Settings.md's Default Options, read live via usePreferencesStore. */
 export interface InventoryDefaults {
@@ -45,7 +45,7 @@ export function enrichProduct(
   batches: Batch[],
   today: Date,
   defaults: InventoryDefaults,
-  i18n: Pick<TFunctions, "t" | "tPlural" | "formatDate">,
+  i18n: Pick<Formatter, "t" | "tPlural" | "formatDate">,
 ): EnrichedProduct {
   // specs/Relative Tracking.md: a percentage-tracked product carries no
   // Batch rows at all — its stock is stock_percent directly, not a sum.
@@ -126,7 +126,7 @@ export interface ProductGroup {
 // day-count is accurate to promise in the header. Built from `t` inline
 // (not a module-level constant) so labels react to locale changes at
 // runtime, same reasoning as lib/menu.ts's getMenuItems().
-function groupDefs(t: TFunctions["t"]): { key: FreshnessStatus; label: string }[] {
+function groupDefs(t: Formatter["t"]): { key: FreshnessStatus; label: string }[] {
   return [
     { key: "expired", label: t("freshnessStatus.expired") },
     { key: "expiring-soon", label: t("freshnessStatus.expiringSoon") },
@@ -135,7 +135,7 @@ function groupDefs(t: TFunctions["t"]): { key: FreshnessStatus; label: string }[
   ];
 }
 
-export function groupByStatus(products: EnrichedProduct[], t: TFunctions["t"]): ProductGroup[] {
+export function groupByStatus(products: EnrichedProduct[], t: Formatter["t"]): ProductGroup[] {
   return groupDefs(t)
     .map(({ key, label }) => {
       const list = products
@@ -150,7 +150,7 @@ export function groupByStatus(products: EnrichedProduct[], t: TFunctions["t"]): 
     .filter((g) => g.count > 0);
 }
 
-export function groupAlphabetically(products: EnrichedProduct[], t: TFunctions["t"]): ProductGroup[] {
+export function groupAlphabetically(products: EnrichedProduct[], t: Formatter["t"]): ProductGroup[] {
   const list = products.slice().sort((a, b) => a.short_description.localeCompare(b.short_description));
   if (list.length === 0) return [];
   return [{ key: "alpha", label: t("inventoryGroups.alphabetical"), status: "alpha", count: list.length, products: list }];

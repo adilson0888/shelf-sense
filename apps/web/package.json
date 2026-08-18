@@ -4,21 +4,24 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "npm run build -w shelf-sense-core && npm run build -w shelf-sense-i18n",
     "dev": "vite",
+    "prebuild": "npm run build -w shelf-sense-core && npm run build -w shelf-sense-i18n",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.2.3",
+    "shelf-sense-core": "*",
+    "react-dom": "^19.2.3",
     "react-router-dom": "^7.18.2",
     "shelf-sense-ds": "*",
     "shelf-sense-i18n": "*"
   },
   "devDependencies": {
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
+    "@types/react": "^19.2.4",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",

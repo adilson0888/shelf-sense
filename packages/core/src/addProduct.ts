@@ -1,6 +1,6 @@
-import type { BarcodeLookupResult, CreateProductPayload, UpdateProductPayload } from "./api";
-import type { InventoryDefaults } from "./inventory";
-import type { Product } from "../types";
+import type { BarcodeLookupResult, CreateProductPayload, UpdateProductPayload } from "./contracts.js";
+import type { InventoryDefaults } from "./inventory.js";
+import type { Product } from "./types.js";
 
 export interface AddProductFormState {
   short: string;
