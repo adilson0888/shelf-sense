@@ -22,6 +22,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/brand/favicon.ico" />
     <title>ShelfSense</title>
+
+    <!-- PWA / add-to-home-screen. vite-plugin-pwa injects the
+         manifest.webmanifest link and registers the service worker itself
+         (see vite.config.ts) — everything here is what it doesn't cover:
+         Android's install-prompt theming, and iOS's Safari-specific tags,
+         since Safari never reads the manifest for any of this. -->
+    <meta name="theme-color" content="#167d76" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ShelfSense" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <script>
       (function () {
         if (localStorage.getItem("ss-theme") === "light") {
