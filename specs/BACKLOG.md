@@ -38,6 +38,14 @@ Covers, when picked back up:
 
 </details>
 
+## Percentage-tracked products in Price History
+
+Pulled from `Price History.md` (2026-08-19) — percentage-tracked products (`specs/Relative Tracking.md`) carry no `Batch` rows at all, so they have no price data and Price History's menu item is simply disabled for them.
+
+Covers, when picked back up:
+- Treating a percentage increase (restocking a percentage-tracked product) as a symbolic purchase event — a record with its own timestamp and optional price, even though there's no real batch/quantity behind it — so these products can feed Price History the same way unit-tracked products do.
+- Needs a real design pass: where this record lives (a lightweight new entity vs. relaxing `Batch` to allow percentage products a row without a `quantity`), and what UI prompts for the optional price at the moment the user bumps the percentage.
+
 ## Locale-correct date input
 
 Pulled from `i18n.md` (2026-08-13) — confirmed empirically while building Quick Batch Edit: the native `<input type="date">` picker's displayed format (`mm/dd/yyyy` vs `dd/mm/yyyy`) is controlled entirely by the visiting browser's own UI language, not the page's `<html lang>` attribute or anything set at the app/JS level (tested both — neither moved it). Every date input in the app today (`Product Add`, `Stock Edit`, `Quick Batch Edit`) inherits whatever format the user's own browser happens to be set to, regardless of the language chosen in Settings.
