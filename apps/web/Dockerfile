@@ -16,7 +16,7 @@
 # topology.
 ARG VITE_API_URL=/api
 
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /repo
 COPY . .
 RUN npm ci
