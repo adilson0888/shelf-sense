@@ -27,7 +27,7 @@ As someone tracking pantry stock, I want to see and correct every individual bat
 
 ## Data
 
-No new entities — reuses `Batch` exactly as defined in `Inventory.md`:
+Reuses `Batch` as defined in `Inventory.md`, extended by `specs/Prices & Product Differentiation.md` with `barcode_id`/`price`/`consumed`:
 
 ```ts
 interface Batch {
@@ -35,12 +35,14 @@ interface Batch {
   product_id: string;
   quantity: number; // whole-unit count, no percentages — same rule as Quick Batch Edit.md
   expires_on: string | null; // null = does not expire
+  barcode_id: string | null; // specs/Prices & Product Differentiation.md — which linked code this purchase was for
+  price: number | null; // specs/Prices & Product Differentiation.md — optional
 }
 ```
 
 Whether the expiration field is shown/required for an add or edit is governed by `Product.does_expire` (established in `Product Add.md`) — it doesn't change `Batch`'s shape, only the UI. Everything the user touches here — adds, inline edits, removes, including a quantity edit reaching 0 — is **local pending state only** until Confirm, same pattern as `Product Edit.md`'s barcode/alias tables.
 
-**Zero-quantity handling is a placeholder, not a settled design** — see Non-functional and `specs/BACKLOG.md`'s "Batch cost tracking & consumed-batch history" entry. This spec currently has an emptied batch hard-deleted at Confirm; that's expected to change once cost tracking lands.
+**Zero-quantity handling**: resolved by `specs/Prices & Product Differentiation.md` — reaching 0 marks the batch `consumed` (persisted via the real `PATCH /products/:id/batches/:batchId` that spec adds) instead of the hard-delete this section originally described. See Non-functional.
 
 ## UI requirements
 
@@ -57,15 +59,16 @@ Whether the expiration field is shown/required for an add or edit is governed by
 
 - **Validation**: `does_expire = true` + quantity > 0 + no `expires_on` is a hard validation error, not a soft warning — same rule as `Product Add.md`/`Quick Batch Edit.md`.
 - **Absolute quantities only**: no percentage-based edits, same reasoning as `Quick Batch Edit.md`.
-- **Zero-quantity is a hard delete today, expected to change**: reaching 0 via inline edit stages that row for removal, same as an explicit checkbox+Remove — actually deleted only at Confirm, not immediately. This mirrors `Quick Batch Edit.md`'s existing cascading-decrease behavior ("any batch emptied to 0 is removed entirely"). Both are placeholders: a planned batch-level **cost/price** attribute means an emptied batch will eventually need to persist as purchase-history data instead of being deleted — see `specs/BACKLOG.md`. When that lands, it changes this spec's zero-quantity behavior *and* `Quick Batch Edit.md`'s Save behavior together, since both hard-delete emptied batches via the same underlying mechanism today.
+- **Zero-quantity marks a batch consumed, not deleted** (`specs/Prices & Product Differentiation.md`): reaching 0 via inline edit stages that row for removal from this view exactly as before — actually committed only at Confirm, not immediately — but "removal" now means the batch persists server-side with `consumed = true` rather than being hard-deleted. Visually and behaviorally identical to the old hard-delete from this screen's perspective (the row disappears from the table, the empty state still reads "All batches consumed"); the only difference is what happens in the database. `Quick Batch Edit.md`'s equivalent cascading-decrease behavior changes the same way, via the same underlying `apps/api` endpoint.
+- **Price**: an optional field on batch creation (`specs/Prices & Product Differentiation.md`) — no format/currency validation beyond "non-negative number."
 - **Confirm-to-commit, not plain Save**: chosen deliberately over `Quick Batch Edit.md`'s pattern — the rule going forward is that independent-route, full-screen views (`Product Edit.md`, this spec) use confirm-to-commit, while the quick-adjust modal keeps its own lighter Save/Reset. Not because batch edits are riskier than Product Edit's — they're arguably lower blast radius (no cross-product effects) — but for consistency across same-shaped surfaces.
 - **Atomicity**: Confirm must persist as a single all-or-nothing operation once a real `apps/api` exists — same requirement as `Product Edit.md`.
-- **Data source**: like every other web spec so far, this operates on `apps/web`'s in-memory mock state for now — no real `apps/api` wiring yet.
+- **Data source**: was `apps/web`'s in-memory mock/local state only, as originally written here — `specs/Prices & Product Differentiation.md` is what finally wires this screen to real `apps/api` batch-mutation endpoints (none existed before it).
 
 ## Out of scope
 
 - **Editing product-level fields** (`does_expire`, `short_description`, etc.) — that's `Product Edit.md`'s job, not this one.
-- **Batch cost/price tracking, and retaining emptied ("consumed") batches as purchase-history data instead of deleting them** — real, and expected to change this spec's zero-quantity behavior — deferred to `specs/BACKLOG.md`.
+- ~~**Batch cost/price tracking, and retaining emptied ("consumed") batches as purchase-history data instead of deleting them**~~ — resolved by `specs/Prices & Product Differentiation.md`.
 - **Cross-product batch moves or conflict resolution** — batches aren't shared across products the way barcodes can be, so no "move" flow is needed here, unlike the barcode-table pattern this view is modeled on.
 - **Undo or history** of edits made here.
 - **Entry points beyond the Quick Batch Edit "Stock" button** — e.g. linking here from Inventory's expanded batch rows — considered, deliberately left for a future pass.

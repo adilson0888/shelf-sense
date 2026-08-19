@@ -6,7 +6,7 @@ import { ScopeTile } from "../components/ScopeTile";
 import { freshnessBadgeLabel } from "../lib/freshness";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
-import { ApiError, lookupBarcode, updateProduct } from "../lib/api";
+import { ApiError, createBatch, lookupBarcode, updateBatch, updateProduct } from "../lib/api";
 import { isBarcodeScanSupported } from "../lib/barcodeScanner";
 import type { AddProductLocationState } from "./AddProduct";
 import {
@@ -20,10 +20,10 @@ import {
   matchesSearch,
 } from "../lib/inventory";
 import {
-  applyQuickEdit,
   bumpQuickEdit,
   commitQuickEditDraft,
   openQuickEditState,
+  planQuickEdit,
   resetQuickEdit,
   type QuickEditState,
 } from "../lib/quickBatchEdit";
@@ -113,6 +113,8 @@ export function InventoryPage() {
 
   // --- Quick Batch Edit: hold-to-open / swipe-to-reveal row gestures -----
   const [quick, setQuick] = useState<QuickEditState | null>(null);
+  const [quickSaving, setQuickSaving] = useState(false);
+  const [quickSaveError, setQuickSaveError] = useState<string | null>(null);
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const [drag, setDrag] = useState<{ id: string; dx: number } | null>(null);
   // Mutable, non-render-triggering bookkeeping for the in-flight gesture —
@@ -295,25 +297,67 @@ export function InventoryPage() {
   function quickAddExpiresOnChange(value: string) {
     setQuick((q) => (q ? { ...q, addExpiresOn: value } : q));
   }
+  function quickAddPriceChange(value: string) {
+    setQuick((q) => (q ? { ...q, addPrice: value } : q));
+  }
+  function quickAddBarcodeIdChange(value: string) {
+    setQuick((q) => (q ? { ...q, addBarcodeId: value || null } : q));
+  }
   function quickReset() {
     setQuick((q) => (q ? resetQuickEdit(q) : q));
+    setQuickSaveError(null);
   }
-  function quickSave() {
+  /**
+   * specs/Prices & Product Differentiation.md — Quick Batch Edit had no
+   * real apps/api wiring before this spec (Save just spliced local
+   * `batches` state). Now plans the same soonest-expiring-first cascade
+   * as before (planQuickEdit), then applies it via the real batch-mutation
+   * endpoints: one PATCH per existing batch that needs its quantity
+   * changed (reaching 0 marks it consumed server-side), one POST for the
+   * new batch if the net delta is positive.
+   */
+  async function quickSave() {
     if (!quick) return;
     const product = products.find((p) => p.id === quick.productId);
-    if (product) {
-      if (product.tracking_mode === "percentage") {
-        // specs/Relative Tracking.md: overwrites stock_percent directly —
-        // no Batch is ever created or cascaded through for this mode.
-        setProducts((ps) => ps.map((p) => (p.id === product.id ? { ...p, stock_percent: quick.target } : p)));
-      } else {
-        const delta = quick.target - quick.base;
-        const productBatches = batches.filter((b) => b.product_id === quick.productId);
-        const updated = applyQuickEdit(productBatches, quick.productId, product.does_expire, delta, quick.addExpiresOn);
-        setBatches((bs) => [...bs.filter((b) => b.product_id !== quick.productId), ...updated]);
-      }
+    if (!product) {
+      setQuick(null);
+      return;
     }
-    setQuick(null);
+    if (product.tracking_mode === "percentage") {
+      // specs/Relative Tracking.md: overwrites stock_percent directly —
+      // no Batch is ever created or cascaded through for this mode.
+      setProducts((ps) => ps.map((p) => (p.id === product.id ? { ...p, stock_percent: quick.target } : p)));
+      setQuick(null);
+      return;
+    }
+    const delta = quick.target - quick.base;
+    if (delta === 0) {
+      setQuick(null);
+      return;
+    }
+    setQuickSaving(true);
+    setQuickSaveError(null);
+    try {
+      const productBatches = batches.filter((b) => b.product_id === quick.productId);
+      const plan = planQuickEdit(productBatches, product.does_expire, delta, quick.addExpiresOn, quick.addPrice, quick.addBarcodeId);
+      const updated = await Promise.all(
+        plan.updates.map((u) => updateBatch(quick.productId, u.batchId, { quantity: u.quantity })),
+      );
+      const created = plan.create ? await createBatch(quick.productId, plan.create) : null;
+      setBatches((bs) => {
+        const byId = new Map(updated.map((u) => [u.batch.id, u.batch]));
+        // A batch reaching 0 is consumed server-side — same "invisible in
+        // every active view" rule GET /products applies, so it's dropped
+        // from local state here too rather than lingering at quantity 0.
+        const next = bs.map((b) => byId.get(b.id) ?? b).filter((b) => !byId.has(b.id) || byId.get(b.id)!.quantity > 0);
+        return created ? [created.batch, ...next] : next;
+      });
+      setQuick(null);
+    } catch (err) {
+      setQuickSaveError(err instanceof ApiError ? err.message : t("inventory.genericSaveError"));
+    } finally {
+      setQuickSaving(false);
+    }
   }
 
   // --- Stock Edit (Stock Edit.md) — a real route, not local modal state,
@@ -336,7 +380,7 @@ export function InventoryPage() {
     setEdit(null);
     setEditSaveError(null);
   }
-  function editFieldChange(key: "short" | "long" | "minQty" | "fresh" | "minPercent", value: string) {
+  function editFieldChange(key: "short" | "minQty" | "fresh" | "minPercent", value: string) {
     if (edit) setEdit(setField(edit, key, value));
   }
   function editDoesExpireChange(value: boolean) {
@@ -637,10 +681,14 @@ export function InventoryPage() {
         onDraftChange={quickDraftChange}
         onDraftCommit={quickDraftCommit}
         onAddExpiresOnChange={quickAddExpiresOnChange}
+        onAddPriceChange={quickAddPriceChange}
+        onAddBarcodeIdChange={quickAddBarcodeIdChange}
         onReset={quickReset}
         onSave={quickSave}
         onStock={() => quick && openStock(quick.productId)}
         onEditProduct={() => quick && openProductEdit(quick.productId)}
+        saving={quickSaving}
+        saveError={quickSaveError}
       />
 
       <ProductEditView

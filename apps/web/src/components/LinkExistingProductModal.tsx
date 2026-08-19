@@ -10,6 +10,8 @@ export interface LinkExistingProductModalProps {
   open: boolean;
   /** The scanned-but-unlinked barcode this modal is trying to attach somewhere. */
   barcode: string;
+  /** Whatever description the user has typed for this code on the Add Product form so far — carried onto the barcode row it ends up linked to. */
+  barcodeDescription: string;
   products: Product[];
   onClose: () => void;
   onLinked: (updatedProduct: Product) => void;
@@ -21,7 +23,14 @@ export interface LinkExistingProductModalProps {
  * product. One Modal, two internal views (search results / confirm) rather
  * than two stacked Modals — simpler than nesting.
  */
-export function LinkExistingProductModal({ open, barcode, products, onClose, onLinked }: LinkExistingProductModalProps) {
+export function LinkExistingProductModal({
+  open,
+  barcode,
+  barcodeDescription,
+  products,
+  onClose,
+  onLinked,
+}: LinkExistingProductModalProps) {
   const { t } = useT();
   const [query, setQuery] = useState("");
   const [target, setTarget] = useState<Product | null>(null);
@@ -45,7 +54,7 @@ export function LinkExistingProductModal({ open, barcode, products, onClose, onL
     setLinking(true);
     setError(null);
     try {
-      const { product: updated } = await updateProduct(target.id, buildLinkBarcodePayload(target, barcode));
+      const { product: updated } = await updateProduct(target.id, buildLinkBarcodePayload(target, barcode, barcodeDescription));
       onLinked(updated);
       reset();
     } catch (err) {
@@ -114,7 +123,8 @@ export function LinkExistingProductModal({ open, barcode, products, onClose, onL
                   className="rounded-lg border border-border bg-surface-1 p-sm text-left hover:border-ink-primary hover:bg-surface-2"
                 >
                   <div className="text-[15px] font-semibold text-ink-primary">{p.short_description}</div>
-                  {p.long_description && <div className="mt-[3px] text-sm text-ink-secondary">{p.long_description}</div>}
+                  {/* specs/Prices & Product Differentiation.md removed Product.long_description —
+                      no single "product detail" line to show anymore, each of p.barcodes carries its own. */}
                 </button>
               ))
             )}

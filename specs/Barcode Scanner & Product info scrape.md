@@ -28,7 +28,7 @@ This spec **substantially simplifies** `Product Add.md`'s current five-step flow
 
 ## Data
 
-No changes to `Product`/`Batch` shape — same as the previous revision of this spec, this is entirely about how existing fields get filled in and linked.
+No changes to `Product`/`Batch` shape — same as the previous revision of this spec, this is entirely about how existing fields get filled in and linked. (**Later note**: `specs/Prices & Product Differentiation.md` does change both — `Product.long_description` is removed and `BarcodeLookupResult.long_description` below now prefills the scanned code's own `description` on Add Product instead of a product-level field. This spec's own lookup/fallback mechanism is otherwise unaffected.)
 
 **New `apps/api` endpoint**, proxied server-side (keeps provider keys off the client, one place for retry/timeout handling — same reasoning `Product Add.md`'s `identify-from-photo` used, even though Open Food Facts itself needs no key):
 

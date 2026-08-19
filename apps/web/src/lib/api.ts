@@ -42,7 +42,6 @@ export function fetchProducts(): Promise<{ products: Product[]; batches: Batch[]
 /** Built by apps/web/src/lib/addProduct.ts's buildCreateProductPayload(). */
 export interface CreateProductPayload {
   short_description: string;
-  long_description: string;
   does_expire: boolean;
   minimal_quantity: number | null;
   freshness_threshold_days: number | null;
@@ -52,14 +51,43 @@ export interface CreateProductPayload {
   tracking_mode: "units" | "percentage";
   stock_percent: number | null;
   minimal_percentage: number | null;
-  // specs/Barcode Scanner & Product info scrape.md — a barcode scanned
-  // during Add Product that didn't match an existing product; null on every
-  // other entry path (unsupported browser, cancelled scan).
-  barcode: string | null;
+  // specs/Prices & Product Differentiation.md — description is always
+  // required; code is either a real scanned/typed value or null, meaning
+  // "generate one for me" (apps/api mints the smallest possible unique one).
+  barcode: { code: string | null; description: string };
+  // Optional; only meaningful alongside an initial batch (quantity > 0).
+  price: number | null;
 }
 
 export function createProduct(payload: CreateProductPayload): Promise<{ product: Product; batch: Batch | null }> {
   return request("/products", { method: "POST", body: JSON.stringify(payload) });
+}
+
+/** specs/Prices & Product Differentiation.md — Stock Edit/Quick Batch Edit's real batch-mutation API (neither had one before this spec). */
+export interface CreateBatchPayload {
+  quantity: number;
+  expires_on: string | null;
+  barcode_id: string | null;
+  price: number | null;
+}
+
+export function createBatch(productId: string, payload: CreateBatchPayload): Promise<{ batch: Batch }> {
+  return request(`/products/${productId}/batches`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+/**
+ * Quantity change — reaching 0 marks the batch consumed server-side
+ * instead of deleting it. `expires_on` is optional: omitted leaves it
+ * unchanged, set/null updates it (Stock Edit's pre-existing inline
+ * expiration edit — apps/api now persists it for real here).
+ */
+export interface UpdateBatchPayload {
+  quantity: number;
+  expires_on?: string | null;
+}
+
+export function updateBatch(productId: string, batchId: string, payload: UpdateBatchPayload): Promise<{ batch: Batch }> {
+  return request(`/products/${productId}/batches/${batchId}`, { method: "PATCH", body: JSON.stringify(payload) });
 }
 
 /** specs/Barcode Scanner & Product info scrape.md's external-lookup pipeline. */
@@ -76,7 +104,6 @@ export function lookupBarcode(code: string): Promise<BarcodeLookupResult> {
 /** Built by apps/web/src/lib/productEdit.ts's buildEditProductPayload(). */
 export interface UpdateProductPayload {
   short_description: string;
-  long_description: string;
   does_expire: boolean;
   minimal_quantity: number | null;
   freshness_threshold_days: number | null;

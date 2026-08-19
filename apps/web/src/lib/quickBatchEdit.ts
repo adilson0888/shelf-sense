@@ -4,7 +4,7 @@ import { sortBatchesByExpiry } from "./inventory";
 /**
  * Local, unsaved state for one open Quick Batch Edit modal (Quick Batch
  * Edit.md). The steppers and the click-to-type total both move `target`;
- * nothing touches real Product/Batch data until Save — see applyQuickEdit.
+ * nothing touches real Product/Batch data until Save — see planQuickEdit.
  */
 export interface QuickEditState {
   productId: string;
@@ -15,10 +15,26 @@ export interface QuickEditState {
   editing: boolean; // true while the total is a typable input instead of the click-to-edit label
   draft: string; // the input's raw text while editing
   addExpiresOn: string; // expires_on for the new batch, relevant only when mode is "units" and target > base
+  // specs/Prices & Product Differentiation.md — optional, relevant only
+  // alongside a new batch (target > base).
+  addPrice: string;
+  // Which of this product's linked codes the new batch is for — only ever
+  // shown/settable when the product has more than one.
+  addBarcodeId: string | null;
 }
 
 export function openQuickEditState(productId: string, total: number, mode: "units" | "percentage" = "units"): QuickEditState {
-  return { productId, mode, base: total, target: total, editing: false, draft: String(total), addExpiresOn: "" };
+  return {
+    productId,
+    mode,
+    base: total,
+    target: total,
+    editing: false,
+    draft: String(total),
+    addExpiresOn: "",
+    addPrice: "",
+    addBarcodeId: null,
+  };
 }
 
 function clampTarget(mode: "units" | "percentage", n: number): number {
@@ -36,45 +52,57 @@ export function commitQuickEditDraft(state: QuickEditState): QuickEditState {
 }
 
 export function resetQuickEdit(state: QuickEditState): QuickEditState {
-  return { ...state, target: state.base, draft: String(state.base), editing: false, addExpiresOn: "" };
+  return { ...state, target: state.base, draft: String(state.base), editing: false, addExpiresOn: "", addPrice: "", addBarcodeId: null };
+}
+
+export interface QuickEditPlan {
+  /** Existing batches whose quantity needs to change — apps/api's PATCH /products/:id/batches/:id, one call per entry. Reaching 0 marks it consumed server-side. */
+  updates: { batchId: string; quantity: number }[];
+  /** A new batch to create — apps/api's POST /products/:id/batches — or null when the net delta isn't positive. */
+  create: { quantity: number; expires_on: string | null; barcode_id: string | null; price: number | null } | null;
 }
 
 /**
- * Applies a Quick Batch Edit save to one product's batches (Quick Batch
- * Edit.md's Data section). A negative net delta subtracts from the
- * soonest-expiring batch first (sortBatchesByExpiry — the same order
- * Inventory already computes), cascading into the next batch as needed;
- * anything emptied to 0 is dropped. A positive net delta appends exactly
- * one new batch — the intermediate stepper taps that got the user to that
- * final number don't each create their own record, only the net result at
- * Save does.
+ * Plans a Quick Batch Edit save against one product's batches (Quick Batch
+ * Edit.md's Data section) — the caller (Inventory.tsx) turns this into real
+ * apps/api calls (specs/Prices & Product Differentiation.md; neither
+ * endpoint existed before that spec). A negative net delta subtracts from
+ * the soonest-expiring batch first (sortBatchesByExpiry — the same order
+ * Inventory already computes), cascading into the next batch as needed. A
+ * positive net delta plans exactly one new batch — the intermediate
+ * stepper taps that got the user to that final number don't each create
+ * their own record, only the net result at Save does.
  */
-export function applyQuickEdit(
+export function planQuickEdit(
   productBatches: Batch[],
-  productId: string,
   doesExpire: boolean,
   delta: number,
   addExpiresOn: string,
-): Batch[] {
+  addPrice: string,
+  addBarcodeId: string | null,
+): QuickEditPlan {
   const addQty = Math.max(0, delta);
   let toRemove = Math.max(0, -delta);
 
-  const reduced = sortBatchesByExpiry(productBatches)
-    .map((b) => {
-      const take = Math.min(toRemove, b.quantity);
-      toRemove -= take;
-      return { ...b, quantity: b.quantity - take };
-    })
-    .filter((b) => b.quantity > 0);
-
-  if (addQty > 0) {
-    reduced.push({
-      id: `${productId}-b${Date.now()}`,
-      product_id: productId,
-      quantity: addQty,
-      expires_on: doesExpire && addExpiresOn ? addExpiresOn : null,
-    });
+  const updates: QuickEditPlan["updates"] = [];
+  for (const b of sortBatchesByExpiry(productBatches)) {
+    if (toRemove <= 0) break;
+    const take = Math.min(toRemove, b.quantity);
+    if (take <= 0) continue;
+    toRemove -= take;
+    updates.push({ batchId: b.id, quantity: b.quantity - take });
   }
 
-  return reduced;
+  return {
+    updates,
+    create:
+      addQty > 0
+        ? {
+            quantity: addQty,
+            expires_on: doesExpire && addExpiresOn ? addExpiresOn : null,
+            barcode_id: addBarcodeId,
+            price: addPrice.trim() ? Number.parseFloat(addPrice) : null,
+          }
+        : null,
+  };
 }

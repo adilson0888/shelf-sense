@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, FreshnessBadge, Input, cn } from "shelf-sense-ds";
+import { Alert, Button, FreshnessBadge, Input, Select, cn } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
+import { ApiError, createBatch, updateBatch } from "../lib/api";
 import { formatExpiryLabel, freshnessBadgeLabel, freshnessStatus } from "../lib/freshness";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
@@ -17,7 +18,9 @@ import {
   hasPendingChanges,
   isEditedRow,
   isNewRow,
+  newBarcodeIdChange,
   newExpChange,
+  newPriceChange,
   newQtyChange,
   openStockEditState,
   qtyDraftChange,
@@ -50,6 +53,8 @@ export function StockEditPage() {
   const product = products.find((p) => p.id === id);
 
   const [edit, setEdit] = useState<StockEditState | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Re-initializes only when navigating to a different product's Stock Edit
   // (id changes) — not on every store update, which would blow away
@@ -73,15 +78,52 @@ export function StockEditPage() {
   const today = new Date();
   const pending = hasPendingChanges(edit);
 
-  function commit() {
+  /**
+   * specs/Prices & Product Differentiation.md — real apps/api persistence
+   * (neither Stock Edit nor Quick Batch Edit had any before this spec).
+   * The three categories `stockEdit.ts` already tracks map directly onto
+   * the batch-mutation endpoints: new rows -> POST, edited rows -> PATCH
+   * (quantity and/or expires_on), removed rows -> PATCH quantity: 0
+   * (marks consumed server-side instead of deleting).
+   */
+  async function commit() {
     if (!edit) return;
-    setBatches((bs) => [...bs.filter((b) => b.product_id !== edit.productId), ...edit.batches]);
-    goBack();
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const newRows = edit.batches.filter((b) => isNewRow(edit, b.id));
+      const editedRows = edit.batches.filter((b) => isEditedRow(edit, b.id));
+
+      const created = await Promise.all(
+        newRows.map((b) =>
+          createBatch(edit.productId, { quantity: b.quantity, expires_on: b.expires_on, barcode_id: b.barcode_id, price: b.price }),
+        ),
+      );
+      const updated = await Promise.all(
+        editedRows.map((b) => updateBatch(edit.productId, b.id, { quantity: b.quantity, expires_on: b.expires_on })),
+      );
+      const consumed = await Promise.all(edit.removed.map((batchId) => updateBatch(edit.productId, batchId, { quantity: 0 })));
+
+      setBatches((bs) => {
+        const byId = new Map([...updated, ...consumed].map((r) => [r.batch.id, r.batch]));
+        // Reaching 0 (explicit remove, or a quantity edit staged down to it)
+        // marks the batch consumed server-side — same "invisible in every
+        // active view" rule GET /products applies, so dropped here too
+        // rather than lingering locally at quantity 0.
+        const next = bs.map((b) => byId.get(b.id) ?? b).filter((b) => !byId.has(b.id) || byId.get(b.id)!.quantity > 0);
+        return [...next, ...created.map((r) => r.batch)];
+      });
+      goBack();
+    } catch (err) {
+      setSaveError(err instanceof ApiError ? err.message : t("inventory.genericSaveError"));
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleSave() {
     if (!edit || !hasPendingChanges(edit)) return;
-    if (edit.armed) commit();
+    if (edit.armed) void commit();
     else setEdit(armSave(edit));
   }
 
@@ -253,6 +295,23 @@ export function StockEditPage() {
               ) : (
                 <p className="text-xs text-ink-muted">{t("stockEdit.noExpiryTrackingHint")}</p>
               )}
+              <Input
+                label={t("quickBatchEdit.priceLabel")}
+                type="number"
+                min={0}
+                placeholder={t("common.optionalPlaceholder")}
+                value={edit.newPrice}
+                onChange={(e) => setEdit((s) => (s ? newPriceChange(s, e.target.value) : s))}
+              />
+              {product.barcodes.length > 1 && (
+                <Select
+                  label={t("quickBatchEdit.codeLabel")}
+                  placeholder={t("quickBatchEdit.codePlaceholder")}
+                  options={product.barcodes.map((b) => ({ value: b.id, label: b.description || b.code }))}
+                  value={edit.newBarcodeId ?? ""}
+                  onChange={(e) => setEdit((s) => (s ? newBarcodeIdChange(s, e.target.value || null) : s))}
+                />
+              )}
               <div className="flex justify-end gap-sm">
                 <Button variant="ghost" size="sm" onClick={() => setEdit((s) => (s ? toggleAddOpen(s) : s))}>
                   {t("common.cancel")}
@@ -276,13 +335,18 @@ export function StockEditPage() {
         </div>
 
         <div className="flex flex-shrink-0 flex-col gap-sm border-t border-border bg-surface-0 px-md py-[12px]">
+          {saveError && (
+            <Alert variant="danger" title={t("common.saveErrorTitle")}>
+              {saveError}
+            </Alert>
+          )}
           {edit.armed && pending && <p className="text-xs text-ink-secondary">{saveSummary(edit, i18n)}</p>}
           <div className="flex justify-end gap-sm">
             <Button variant="outline" size="sm" onClick={goBack}>
               {t("common.cancel")}
             </Button>
-            <Button variant={edit.armed ? "confirm" : "primary"} size="sm" disabled={!pending} onClick={handleSave}>
-              {edit.armed ? t("common.confirmQuestion") : t("common.save")}
+            <Button variant={edit.armed ? "confirm" : "primary"} size="sm" disabled={!pending || saving} onClick={handleSave}>
+              {saving ? t("common.saving") : edit.armed ? t("common.confirmQuestion") : t("common.save")}
             </Button>
           </div>
         </div>
