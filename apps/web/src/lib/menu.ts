@@ -15,7 +15,11 @@ export function getMenuItems(t: (key: string) => string): MenuItem[] {
   return [
     { key: "inventory", label: t("menu.inventory"), route: "/", icon: "▤" },
     { key: "products", label: t("menu.products"), route: "/products", icon: "🗂" },
-    { key: "grocery", label: t("menu.groceryList"), route: "/grocery", icon: "🛒" },
+    // Was 🛒 — renders as a two-tone colored glyph on some platforms
+    // (confirmed on Linux Chrome), breaking from the other three items'
+    // plain monochrome symbols. ☑ matches their weight/style exactly and
+    // reads just as well for "shopping list" (a checklist).
+    { key: "grocery", label: t("menu.groceryList"), route: "/grocery", icon: "☑" },
     { key: "settings", label: t("menu.settings"), route: "/settings", icon: "⚙" },
   ];
 }
