@@ -56,7 +56,9 @@ import {
 } from "../lib/productEdit";
 import { BarcodeCaptureModal } from "../components/BarcodeCaptureModal";
 import { QuickBatchEditModal } from "../components/QuickBatchEditModal";
+import { PriceHistoryModal } from "../components/PriceHistoryModal";
 import { ProductEditView } from "../components/ProductEditView";
+import { usePriceHistory } from "../lib/usePriceHistory";
 
 const SAVED_MESSAGE_DELAY_MS = 2600;
 // Same long-press threshold Inventory.tsx's/Product List's own hold-to-open gesture uses.
@@ -93,6 +95,10 @@ export function GroceryListPage() {
   const i18n = useT();
   const { t } = i18n;
   const navigate = useNavigate();
+  // specs/Price History.md — reachable only via Quick Batch Edit's own
+  // Price History button on this page (no "⋯" menu here, see this page's
+  // own doc comment above).
+  const priceHistory = usePriceHistory(t("priceHistory.generalLabel"));
 
   // --- Add Product flow: barcode-scan-first entry (specs/Barcode Scanner &
   // Product info scrape.md), identical wiring to Inventory.tsx's own — this
@@ -680,6 +686,12 @@ export function GroceryListPage() {
         onSave={quickSave}
         onStock={() => quick && openStock(quick.productId)}
         onEditProduct={() => quick && openProductEdit(quick.productId)}
+        onPriceHistory={() => {
+          if (!quick) return;
+          const product = products.find((p) => p.id === quick.productId);
+          setQuick(null);
+          if (product) priceHistory.open(product, batches.filter((b) => b.product_id === product.id));
+        }}
         saving={quickSaving}
         saveError={quickSaveError}
       />
@@ -711,6 +723,28 @@ export function GroceryListPage() {
         onSave={editSave}
         saving={editSaving}
         saveError={editSaveError}
+      />
+
+      <PriceHistoryModal
+        open={!!priceHistory.state}
+        product={priceHistory.state?.product ?? null}
+        series={priceHistory.state?.series ?? []}
+        visibleKeys={priceHistory.state?.visibleKeys ?? new Set()}
+        loading={priceHistory.state?.loading ?? false}
+        error={priceHistory.state?.error ?? null}
+        onToggleSeries={priceHistory.toggleSeries}
+        onClose={priceHistory.close}
+        onJumpToQuickBatchEdit={() => {
+          const product = priceHistory.state?.product;
+          priceHistory.close();
+          if (product) {
+            const total =
+              product.tracking_mode === "percentage"
+                ? (product.stock_percent ?? 0)
+                : batches.filter((b) => b.product_id === product.id).reduce((sum, b) => sum + b.quantity, 0);
+            openQuick(product.id, total, product.tracking_mode);
+          }
+        }}
       />
     </div>
   );

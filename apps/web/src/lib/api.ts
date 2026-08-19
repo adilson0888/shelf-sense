@@ -90,6 +90,11 @@ export function updateBatch(productId: string, batchId: string, payload: UpdateB
   return request(`/products/${productId}/batches/${batchId}`, { method: "PATCH", body: JSON.stringify(payload) });
 }
 
+/** specs/Price History.md — a product's retained, consumed (history-only) batches, combined client-side with GET /products' active batches for the full purchase history. */
+export function fetchConsumedBatches(productId: string): Promise<{ batches: Batch[] }> {
+  return request(`/products/${productId}/batches?consumed=true`);
+}
+
 /** specs/Barcode Scanner & Product info scrape.md's external-lookup pipeline. */
 export interface BarcodeLookupResult {
   short_description?: string;

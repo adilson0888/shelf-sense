@@ -1,4 +1,4 @@
-import { boolean, date, integer, numeric, pgSequence, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, integer, numeric, pgSequence, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 /**
  * Schema for the entities defined in specs/Inventory.md, specs/Product
@@ -66,6 +66,11 @@ export const batches = pgTable("batches", {
   // replaces the previous hard-delete-at-zero. GET /products filters these
   // out by default; see routes/products.ts.
   consumed: boolean("consumed").notNull().default(false),
+  // specs/Price History.md — when this purchase lot was recorded. Auto-set
+  // at insert, never user-editable. Pre-existing rows are backfilled to
+  // this migration's run time, not their real purchase date — historical
+  // accuracy only starts going forward from this migration.
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const productAliases = pgTable(

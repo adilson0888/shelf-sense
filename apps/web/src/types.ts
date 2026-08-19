@@ -36,6 +36,7 @@ export interface Batch {
   expires_on: string | null; // date-only ISO 8601 ("YYYY-MM-DD"); null = does not expire
   barcode_id: string | null; // specs/Prices & Product Differentiation.md — which linked code this purchase was for
   price: number | null; // specs/Prices & Product Differentiation.md — optional, no currency code/symbol
+  created_at: string; // specs/Price History.md — ISO 8601 instant, system-set, never client-writable
 }
 
 export type FreshnessStatus = "fresh" | "expiring-soon" | "expired" | "no-expiration";

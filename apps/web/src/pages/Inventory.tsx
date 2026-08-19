@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Alert, Button, Footer, FreshnessBadge, Input, cn } from "shelf-sense-ds";
+import { Alert, Button, Footer, FreshnessBadge, Input, Popover, PopoverItem, cn } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { ScopeTile } from "../components/ScopeTile";
 import { freshnessBadgeLabel } from "../lib/freshness";
@@ -58,7 +58,9 @@ import {
 } from "../lib/productEdit";
 import { BarcodeCaptureModal } from "../components/BarcodeCaptureModal";
 import { QuickBatchEditModal } from "../components/QuickBatchEditModal";
+import { PriceHistoryModal } from "../components/PriceHistoryModal";
 import { ProductEditView } from "../components/ProductEditView";
+import { usePriceHistory } from "../lib/usePriceHistory";
 
 const SAVED_MESSAGE_DELAY_MS = 2600;
 
@@ -120,6 +122,15 @@ export function InventoryPage() {
   const [quickSaving, setQuickSaving] = useState(false);
   const [quickSaveError, setQuickSaveError] = useState<string | null>(null);
   const [swipedId, setSwipedId] = useState<string | null>(null);
+
+  // --- Row actions popover: the "•••" swipe button, converted from a
+  // direct Quick Batch Edit shortcut into a real menu (specs/Price
+  // History.md) — same PopoverState shape ProductList.tsx's own "⋯" uses.
+  const [rowActions, setRowActions] = useState<{ productId: string; total: number; mode: "units" | "percentage"; x: number; y: number } | null>(
+    null,
+  );
+  // specs/Price History.md
+  const priceHistory = usePriceHistory(t("priceHistory.generalLabel"));
   const [drag, setDrag] = useState<{ id: string; dx: number } | null>(null);
   // Mutable, non-render-triggering bookkeeping for the in-flight gesture —
   // must be read synchronously inside pointer handlers, not via state.
@@ -217,6 +228,28 @@ export function InventoryPage() {
   function openQuickFromSwipe(id: string, total: number, mode: "units" | "percentage") {
     setSwipedId(null);
     openQuick(id, total, mode);
+  }
+
+  // --- Row actions popover -------------------------------------------------
+
+  function openRowActions(e: ReactMouseEvent<HTMLButtonElement>, id: string, total: number, mode: "units" | "percentage") {
+    e.stopPropagation();
+    setSwipedId(null);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setRowActions({ productId: id, total, mode, x: Math.max(8, rect.right - 158), y: rect.bottom + 6 });
+  }
+  function rowActionsEditStock() {
+    if (!rowActions) return;
+    const { productId, total, mode } = rowActions;
+    setRowActions(null);
+    // Same call the "•••" button made directly before it became a menu.
+    openQuickFromSwipe(productId, total, mode);
+  }
+  function rowActionsPriceHistory() {
+    if (!rowActions) return;
+    const product = products.find((p) => p.id === rowActions.productId);
+    setRowActions(null);
+    if (product) priceHistory.open(product, batches.filter((b) => b.product_id === product.id));
   }
 
   // Long-press: pointer down starts a threshold timer; any real movement
@@ -663,7 +696,7 @@ export function InventoryPage() {
                   onPressMove={handlePressMove}
                   onPressEnd={(e) => handlePressEnd(p.id, e)}
                   onPressAbort={handlePressAbort}
-                  onOpenQuick={() => openQuickFromSwipe(p.id, p.totalQty, p.tracking_mode)}
+                  onOpenActions={(e) => openRowActions(e, p.id, p.totalQty, p.tracking_mode)}
                 />
               ))}
             </div>
@@ -703,6 +736,12 @@ export function InventoryPage() {
         onSave={quickSave}
         onStock={() => quick && openStock(quick.productId)}
         onEditProduct={() => quick && openProductEdit(quick.productId)}
+        onPriceHistory={() => {
+          if (!quick) return;
+          const product = products.find((p) => p.id === quick.productId);
+          setQuick(null);
+          if (product) priceHistory.open(product, batches.filter((b) => b.product_id === product.id));
+        }}
         saving={quickSaving}
         saveError={quickSaveError}
       />
@@ -734,6 +773,46 @@ export function InventoryPage() {
         onSave={editSave}
         saving={editSaving}
         saveError={editSaveError}
+      />
+
+      <Popover
+        open={!!rowActions}
+        onClose={() => setRowActions(null)}
+        position={rowActions ? { x: rowActions.x, y: rowActions.y } : { x: 0, y: 0 }}
+      >
+        <PopoverItem onClick={rowActionsEditStock}>{t("productList.popoverEditStock")}</PopoverItem>
+        {/* specs/Price History.md: percentage-tracked products carry no
+            Batch rows at all — nothing to plot, same disabled treatment
+            ProductList.tsx's own popover gives this case. */}
+        {rowActions?.mode === "percentage" ? (
+          <PopoverItem disabled title={t("quickBatchEdit.stockDisabledPercentTitle")} className="cursor-not-allowed opacity-50">
+            {t("productList.popoverPriceHistory")}
+          </PopoverItem>
+        ) : (
+          <PopoverItem onClick={rowActionsPriceHistory}>{t("productList.popoverPriceHistory")}</PopoverItem>
+        )}
+      </Popover>
+
+      <PriceHistoryModal
+        open={!!priceHistory.state}
+        product={priceHistory.state?.product ?? null}
+        series={priceHistory.state?.series ?? []}
+        visibleKeys={priceHistory.state?.visibleKeys ?? new Set()}
+        loading={priceHistory.state?.loading ?? false}
+        error={priceHistory.state?.error ?? null}
+        onToggleSeries={priceHistory.toggleSeries}
+        onClose={priceHistory.close}
+        onJumpToQuickBatchEdit={() => {
+          const product = priceHistory.state?.product;
+          priceHistory.close();
+          if (product) {
+            const total =
+              product.tracking_mode === "percentage"
+                ? (product.stock_percent ?? 0)
+                : batches.filter((b) => b.product_id === product.id).reduce((sum, b) => sum + b.quantity, 0);
+            openQuick(product.id, total, product.tracking_mode);
+          }
+        }}
       />
     </div>
   );
@@ -790,7 +869,7 @@ function ProductRow({
   onPressMove,
   onPressEnd,
   onPressAbort,
-  onOpenQuick,
+  onOpenActions,
 }: {
   product: EnrichedProduct;
   expanded: boolean;
@@ -803,7 +882,8 @@ function ProductRow({
   onPressMove: (e: ReactPointerEvent) => void;
   onPressEnd: (e: ReactPointerEvent) => void;
   onPressAbort: () => void;
-  onOpenQuick: () => void;
+  /** Opens the row actions popover (Edit Stock / Price History) — specs/Price History.md. Was a direct Quick Batch Edit shortcut before that spec. */
+  onOpenActions: (e: ReactMouseEvent<HTMLButtonElement>) => void;
 }) {
   const { t } = useT();
   const isPercentage = p.tracking_mode === "percentage";
@@ -820,8 +900,8 @@ function ProductRow({
         <div className="absolute inset-y-0 right-0 flex w-[76px] items-center justify-center border-l border-border bg-surface-2">
           <button
             type="button"
-            onClick={onOpenQuick}
-            title={t("common.quickBatchEditLabel")}
+            onClick={onOpenActions}
+            title={t("productList.rowActionsLabel")}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface-0 text-sm tracking-[0.08em] text-ink-primary"
           >
             •••

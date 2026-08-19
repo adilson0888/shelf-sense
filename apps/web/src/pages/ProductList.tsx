@@ -66,7 +66,9 @@ import {
 } from "../lib/productEdit";
 import { BarcodeCaptureModal } from "../components/BarcodeCaptureModal";
 import { QuickBatchEditModal } from "../components/QuickBatchEditModal";
+import { PriceHistoryModal } from "../components/PriceHistoryModal";
 import { ProductEditView } from "../components/ProductEditView";
+import { usePriceHistory } from "../lib/usePriceHistory";
 import type { Product } from "../types";
 
 const SAVED_MESSAGE_DELAY_MS = 2600;
@@ -107,6 +109,8 @@ export function ProductListPage() {
   const { preferences } = usePreferencesStore();
   const i18n = useT();
   const { t, tPlural } = i18n;
+  // specs/Price History.md
+  const priceHistory = usePriceHistory(t("priceHistory.generalLabel"));
   const navigate = useNavigate();
   const location = useLocation();
   const [justSavedMessage, setJustSavedMessage] = useState<string | null>(
@@ -335,6 +339,12 @@ export function ProductListPage() {
     const id = popover.productId;
     setPopover(null);
     openStock(id);
+  }
+  function popoverPriceHistory() {
+    if (!popover) return;
+    const product = products.find((p) => p.id === popover.productId);
+    setPopover(null);
+    if (product) priceHistory.open(product, batches.filter((b) => b.product_id === product.id));
   }
 
   // --- Stock Edit — a real route (Stock Edit.md), same as Inventory.tsx's own.
@@ -720,6 +730,16 @@ export function ProductListPage() {
         ) : (
           <PopoverItem onClick={popoverEditStock}>{t("productList.popoverEditStock")}</PopoverItem>
         )}
+        {/* specs/Price History.md: percentage-tracked products carry no
+            Batch rows at all — nothing to plot, same disabled treatment
+            as Edit Stock above. */}
+        {popover && products.find((p) => p.id === popover.productId)?.tracking_mode === "percentage" ? (
+          <PopoverItem disabled title={t("quickBatchEdit.stockDisabledPercentTitle")} className="cursor-not-allowed opacity-50">
+            {t("productList.popoverPriceHistory")}
+          </PopoverItem>
+        ) : (
+          <PopoverItem onClick={popoverPriceHistory}>{t("productList.popoverPriceHistory")}</PopoverItem>
+        )}
       </Popover>
 
       <BarcodeCaptureModal open={scanOpen} onDetect={handleDetect} onCancel={handleCancelScan} />
@@ -739,6 +759,12 @@ export function ProductListPage() {
         onSave={quickSave}
         onStock={() => quick && openStock(quick.productId)}
         onEditProduct={() => quick && openProductEdit(quick.productId)}
+        onPriceHistory={() => {
+          if (!quick) return;
+          const product = products.find((p) => p.id === quick.productId);
+          setQuick(null);
+          if (product) priceHistory.open(product, batches.filter((b) => b.product_id === product.id));
+        }}
         saving={quickSaving}
         saveError={quickSaveError}
       />
@@ -770,6 +796,22 @@ export function ProductListPage() {
         onSave={editSave}
         saving={editSaving}
         saveError={editSaveError}
+      />
+
+      <PriceHistoryModal
+        open={!!priceHistory.state}
+        product={priceHistory.state?.product ?? null}
+        series={priceHistory.state?.series ?? []}
+        visibleKeys={priceHistory.state?.visibleKeys ?? new Set()}
+        loading={priceHistory.state?.loading ?? false}
+        error={priceHistory.state?.error ?? null}
+        onToggleSeries={priceHistory.toggleSeries}
+        onClose={priceHistory.close}
+        onJumpToQuickBatchEdit={() => {
+          const id = priceHistory.state?.product.id;
+          priceHistory.close();
+          if (id) openQuick(id);
+        }}
       />
     </div>
   );

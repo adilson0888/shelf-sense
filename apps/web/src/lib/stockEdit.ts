@@ -164,6 +164,9 @@ export function addBatch(state: StockEditState, doesExpire: boolean): StockEditS
     expires_on: doesExpire ? state.newExp : null,
     barcode_id: state.newBarcodeId,
     price: state.newPrice.trim() ? Number.parseFloat(state.newPrice) : null,
+    // Local placeholder like `id` above — replaced by the server's real
+    // value once this batch is actually persisted (createBatch's response).
+    created_at: new Date().toISOString(),
   };
   return {
     ...state,
