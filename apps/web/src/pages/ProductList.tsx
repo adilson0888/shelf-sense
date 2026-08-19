@@ -65,6 +65,7 @@ import {
   type ProductEditState,
 } from "../lib/productEdit";
 import { BarcodeCaptureModal } from "../components/BarcodeCaptureModal";
+import { DeleteProductModal } from "../components/DeleteProductModal";
 import { QuickBatchEditModal } from "../components/QuickBatchEditModal";
 import { PriceHistoryModal } from "../components/PriceHistoryModal";
 import { ProductEditView } from "../components/ProductEditView";
@@ -104,6 +105,8 @@ export function ProductListPage() {
   // this page's primary interaction, not a secondary one.
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [popover, setPopover] = useState<PopoverState | null>(null);
+  // --- Delete product (specs/Delete products.md), opened via the "⋯" popover.
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
 
   const { products, batches, setProducts, setBatches, loading, error, refetch } = useProductsStore();
   const { preferences } = usePreferencesStore();
@@ -205,6 +208,16 @@ export function ProductListPage() {
     () => (edit ? batches.filter((b) => b.product_id === edit.productId && b.expires_on !== null).length : 0),
     [batches, edit],
   );
+
+  // specs/Delete products.md — current stock the confirm modal warns about
+  // losing: total Batch.quantity for a units-tracked product (same sum
+  // openQuick computes below), or stock_percent for a percentage-tracked
+  // one (which carries no Batch rows at all — specs/Relative Tracking.md).
+  const deleteActiveStock = useMemo(() => {
+    if (!deleteTarget) return 0;
+    if (deleteTarget.tracking_mode === "percentage") return deleteTarget.stock_percent ?? 0;
+    return batches.filter((b) => b.product_id === deleteTarget.id).reduce((sum, b) => sum + b.quantity, 0);
+  }, [deleteTarget, batches]);
 
   function clearFilters() {
     setQuery("");
@@ -345,6 +358,25 @@ export function ProductListPage() {
     const product = products.find((p) => p.id === popover.productId);
     setPopover(null);
     if (product) priceHistory.open(product, batches.filter((b) => b.product_id === product.id));
+  }
+  function popoverDeleteProduct() {
+    if (!popover) return;
+    const product = products.find((p) => p.id === popover.productId);
+    setPopover(null);
+    if (product) setDeleteTarget(product);
+  }
+
+  // specs/Delete products.md — the delete itself already committed
+  // server-side (cascading batches/aliases/barcodes via FK) by the time
+  // this fires; this just drops the same rows from local state and shows
+  // the same one-shot success message editSave's own Save success uses.
+  function handleProductDeleted(deleted: Product) {
+    setProducts((ps) => ps.filter((p) => p.id !== deleted.id));
+    setBatches((bs) => bs.filter((b) => b.product_id !== deleted.id));
+    setDeleteTarget(null);
+    setJustSavedMessage(t("productList.productDeleted", { name: deleted.short_description }));
+    if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
+    savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
   }
 
   // --- Stock Edit — a real route (Stock Edit.md), same as Inventory.tsx's own.
@@ -740,6 +772,12 @@ export function ProductListPage() {
         ) : (
           <PopoverItem onClick={popoverPriceHistory}>{t("productList.popoverPriceHistory")}</PopoverItem>
         )}
+        {/* specs/Delete products.md — divider separates the one destructive
+            option from the three above it. */}
+        <div role="separator" className="my-1 h-px bg-border" />
+        <PopoverItem className="text-danger" onClick={popoverDeleteProduct}>
+          {t("productList.popoverDeleteProduct")}
+        </PopoverItem>
       </Popover>
 
       <BarcodeCaptureModal open={scanOpen} onDetect={handleDetect} onCancel={handleCancelScan} />
@@ -796,6 +834,13 @@ export function ProductListPage() {
         onSave={editSave}
         saving={editSaving}
         saveError={editSaveError}
+      />
+
+      <DeleteProductModal
+        product={deleteTarget}
+        activeStockCount={deleteActiveStock}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={handleProductDeleted}
       />
 
       <PriceHistoryModal
