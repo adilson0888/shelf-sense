@@ -13,7 +13,7 @@ import { ScopeTile } from "../components/ScopeTile";
 import { SectionHeader } from "../components/SectionHeader";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
-import { ApiError, lookupBarcode, updateProduct } from "../lib/api";
+import { ApiError, createBatch, lookupBarcode, updateBatch, updateProduct } from "../lib/api";
 import { isBarcodeScanSupported } from "../lib/barcodeScanner";
 import type { AddProductLocationState } from "./AddProduct";
 import { enrichProduct, matchesSearch, type InventoryDefaults } from "../lib/inventory";
@@ -28,10 +28,10 @@ import {
   type TypeFilter,
 } from "../lib/productList";
 import {
-  applyQuickEdit,
   bumpQuickEdit,
   commitQuickEditDraft,
   openQuickEditState,
+  planQuickEdit,
   resetQuickEdit,
   type QuickEditState,
 } from "../lib/quickBatchEdit";
@@ -123,6 +123,8 @@ export function ProductListPage() {
   // as Inventory.tsx's own, minus its swipe-to-reveal panel (this page's
   // per-row actions already live in the "⋯" popover column instead).
   const [quick, setQuick] = useState<QuickEditState | null>(null);
+  const [quickSaving, setQuickSaving] = useState(false);
+  const [quickSaveError, setQuickSaveError] = useState<string | null>(null);
   // Mutable, non-render-triggering bookkeeping for the in-flight hold —
   // must be read synchronously inside pointer handlers, not via state,
   // same reasoning Inventory.tsx's own pressRef documents.
@@ -261,23 +263,54 @@ export function ProductListPage() {
   function quickAddExpiresOnChange(value: string) {
     setQuick((q) => (q ? { ...q, addExpiresOn: value } : q));
   }
+  function quickAddPriceChange(value: string) {
+    setQuick((q) => (q ? { ...q, addPrice: value } : q));
+  }
+  function quickAddBarcodeIdChange(value: string) {
+    setQuick((q) => (q ? { ...q, addBarcodeId: value || null } : q));
+  }
   function quickReset() {
     setQuick((q) => (q ? resetQuickEdit(q) : q));
+    setQuickSaveError(null);
   }
-  function quickSave() {
+  /** specs/Prices & Product Differentiation.md — see Inventory.tsx's quickSave for the full explanation; same logic, duplicated per-page like the rest of this file's Quick Batch Edit wiring. */
+  async function quickSave() {
     if (!quick) return;
     const product = products.find((p) => p.id === quick.productId);
-    if (product) {
-      if (product.tracking_mode === "percentage") {
-        setProducts((ps) => ps.map((p) => (p.id === product.id ? { ...p, stock_percent: quick.target } : p)));
-      } else {
-        const delta = quick.target - quick.base;
-        const productBatches = batches.filter((b) => b.product_id === quick.productId);
-        const updated = applyQuickEdit(productBatches, quick.productId, product.does_expire, delta, quick.addExpiresOn);
-        setBatches((bs) => [...bs.filter((b) => b.product_id !== quick.productId), ...updated]);
-      }
+    if (!product) {
+      setQuick(null);
+      return;
     }
-    setQuick(null);
+    if (product.tracking_mode === "percentage") {
+      setProducts((ps) => ps.map((p) => (p.id === product.id ? { ...p, stock_percent: quick.target } : p)));
+      setQuick(null);
+      return;
+    }
+    const delta = quick.target - quick.base;
+    if (delta === 0) {
+      setQuick(null);
+      return;
+    }
+    setQuickSaving(true);
+    setQuickSaveError(null);
+    try {
+      const productBatches = batches.filter((b) => b.product_id === quick.productId);
+      const plan = planQuickEdit(productBatches, product.does_expire, delta, quick.addExpiresOn, quick.addPrice, quick.addBarcodeId);
+      const updated = await Promise.all(
+        plan.updates.map((u) => updateBatch(quick.productId, u.batchId, { quantity: u.quantity })),
+      );
+      const created = plan.create ? await createBatch(quick.productId, plan.create) : null;
+      setBatches((bs) => {
+        const byId = new Map(updated.map((u) => [u.batch.id, u.batch]));
+        const next = bs.map((b) => byId.get(b.id) ?? b).filter((b) => !byId.has(b.id) || byId.get(b.id)!.quantity > 0);
+        return created ? [created.batch, ...next] : next;
+      });
+      setQuick(null);
+    } catch (err) {
+      setQuickSaveError(err instanceof ApiError ? err.message : t("inventory.genericSaveError"));
+    } finally {
+      setQuickSaving(false);
+    }
   }
 
   // --- Row actions popover -------------------------------------------------
@@ -320,7 +353,7 @@ export function ProductListPage() {
     setEdit(null);
     setEditSaveError(null);
   }
-  function editFieldChange(key: "short" | "long" | "minQty" | "fresh" | "minPercent", value: string) {
+  function editFieldChange(key: "short" | "minQty" | "fresh" | "minPercent", value: string) {
     if (edit) setEdit(setField(edit, key, value));
   }
   function editDoesExpireChange(value: boolean) {
@@ -684,10 +717,14 @@ export function ProductListPage() {
         onDraftChange={quickDraftChange}
         onDraftCommit={quickDraftCommit}
         onAddExpiresOnChange={quickAddExpiresOnChange}
+        onAddPriceChange={quickAddPriceChange}
+        onAddBarcodeIdChange={quickAddBarcodeIdChange}
         onReset={quickReset}
         onSave={quickSave}
         onStock={() => quick && openStock(quick.productId)}
         onEditProduct={() => quick && openProductEdit(quick.productId)}
+        saving={quickSaving}
+        saveError={quickSaveError}
       />
 
       <ProductEditView

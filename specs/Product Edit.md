@@ -9,7 +9,7 @@ As someone maintaining their pantry inventory, I want to edit a product's own de
 ## Acceptance criteria
 
 - [ ] Given the user is viewing the Quick Batch Edit modal (`Quick Batch Edit.md`), when they tap the product-edit button, then they're taken to the Product Edit view for that product.
-- [ ] Given the Product Edit view loads, when it renders, then every field except `id` is directly editable and pre-filled with the product's current values: `short_description`, `long_description`, `does_expire`, `freshness_threshold_days`, `minimal_quantity`, plus a barcodes table and an aliases section (see below). There is no separate read-only "details" view — this editable view is the whole thing.
+- [ ] Given the Product Edit view loads, when it renders, then every field except `id` is directly editable and pre-filled with the product's current values: `short_description`, `does_expire`, `freshness_threshold_days`, `minimal_quantity`, plus a barcodes table and an aliases section (see below). There is no separate read-only "details" view — this editable view is the whole thing. (`long_description` was originally in this list — removed by `specs/Prices & Product Differentiation.md`, which drops the field entirely in favor of the barcodes table's own per-code `description` below.)
 - [ ] Given the user changes `short_description` to a value already used by another product, when they attempt to confirm the save, then an inline error is shown naming the conflict and nothing persists.
 - [ ] Given the user changes `short_description` to a new, unique value, when the field is edited, then an informational note appears stating the rename applies everywhere this product is referenced — this is a heads-up about blast radius, not a mutation warning: barcodes and batches key off `product_id`, not the name itself, so nothing about them technically changes.
 
@@ -53,8 +53,9 @@ interface Barcode {
 }
 
 interface Product {
-  // ...id, short_description, long_description, freshness_threshold_days, minimal_quantity, does_expire
+  // ...id, short_description, freshness_threshold_days, minimal_quantity, does_expire
   // (see Inventory.md / Product Add.md — unchanged here)
+  // long_description removed by specs/Prices & Product Differentiation.md
 
   aliases: string[]; // unchanged shape; this spec is the first to give it an editing UI
   barcodes: Barcode[]; // was string[] in Product Add.md/Inventory.md's Data sections — this spec upgrades every

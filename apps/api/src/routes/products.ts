@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../db/client.js";
@@ -19,7 +19,6 @@ function toProductJson(
   return {
     id: p.id,
     short_description: p.shortDescription,
-    long_description: p.longDescription,
     does_expire: p.doesExpire,
     freshness_threshold_days: p.freshnessThresholdDays,
     minimal_quantity: p.minimalQuantity,
@@ -32,21 +31,32 @@ function toProductJson(
 }
 
 function toBatchJson(b: typeof batches.$inferSelect) {
-  return { id: b.id, product_id: b.productId, quantity: b.quantity, expires_on: b.expiresOn };
+  return {
+    id: b.id,
+    product_id: b.productId,
+    quantity: b.quantity,
+    expires_on: b.expiresOn,
+    barcode_id: b.barcodeId,
+    price: b.price,
+  };
 }
 
 /**
  * GET / — everything Inventory.md needs: every product with its
  * aliases/barcodes nested, and a separate flat Batch[] (product_id links
  * them) — shaped to match apps/web/src/types.ts exactly, so the client does
- * no reshaping of the response.
+ * no reshaping of the response. Batches are filtered to consumed = false —
+ * every current consumer (Inventory, Product List, Stock Edit, Quick Batch
+ * Edit) already treats this array as "current stock"; consumed batches are
+ * retained purchase history, reachable via GET /:id/batches?consumed=true
+ * instead (specs/Prices & Product Differentiation.md).
  */
 productsRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
     const [productRows, batchRows, aliasRows, barcodeRows] = await Promise.all([
       db.select().from(products),
-      db.select().from(batches),
+      db.select().from(batches).where(eq(batches.consumed, false)),
       db.select().from(productAliases),
       db.select().from(barcodes),
     ]);
@@ -106,7 +116,6 @@ productsRouter.get(
 const createProductSchema = z
   .object({
     short_description: z.string().trim().min(1, "short_description is required"),
-    long_description: z.string().trim().default(""),
     does_expire: z.boolean(),
     minimal_quantity: z.number().int().nonnegative().nullable().default(null),
     freshness_threshold_days: z.number().int().nonnegative().nullable().default(null),
@@ -118,12 +127,19 @@ const createProductSchema = z
     tracking_mode: z.enum(["units", "percentage"]).default("units"),
     stock_percent: z.number().int().min(0).max(100).nullable().default(null),
     minimal_percentage: z.number().int().min(0).max(100).nullable().default(null),
-    // specs/Barcode Scanner & Product info scrape.md — a barcode scanned
-    // during Add Product that didn't match an existing product gets linked
-    // to the new one at creation time. No digit-count validation here
-    // (unlike editBarcodeSchema's manually-typed codes below): this value
-    // came from BarcodeDetector, not user typing, so it's trusted as-is.
-    barcode: z.string().trim().min(1).nullable().default(null),
+    // specs/Prices & Product Differentiation.md — description is always
+    // required regardless of who/what supplies the code; code is either a
+    // real scanned/typed value or null, meaning "generate one for me".
+    // No digit-count validation on a provided code (unlike
+    // editBarcodeSchema's manually-typed codes below): a scanned value came
+    // from BarcodeDetector, not user typing, so it's trusted as-is, and a
+    // manually-typed one is validated client-side instead.
+    barcode: z.object({
+      code: z.string().trim().min(1).nullable(),
+      description: z.string().trim().min(1, "barcode description is required"),
+    }),
+    // Optional; only meaningful alongside an initial batch (quantity > 0).
+    price: z.number().nonnegative().nullable().default(null),
   })
   .superRefine((val, ctx) => {
     // Product Add.md's Non-functional section: a hard validation error, not
@@ -178,14 +194,22 @@ productsRouter.post(
     const batchId = !isPercentage && input.quantity > 0 ? randomUUID() : null;
     const stockPercent = isPercentage ? (input.stock_percent ?? 100) : null;
     const minimalPercentage = isPercentage ? input.minimal_percentage : null;
-    const barcodeId = input.barcode ? randomUUID() : null;
+    const barcodeId = randomUUID();
 
+    let resolvedCode: string;
     try {
-      await db.transaction(async (tx) => {
+      resolvedCode = await db.transaction(async (tx) => {
+        // specs/Prices & Product Differentiation.md — every product gets at
+        // least one barcode now; when the user has no real code, the
+        // smallest possible unique one is generated here. nextval() can't
+        // repeat, so no collision-retry is needed for the generated case.
+        const code =
+          input.barcode.code ??
+          String((await tx.execute<{ code: string }>(sql`select nextval('generated_barcode_code_seq') as code`)).rows[0].code);
+
         await tx.insert(products).values({
           id: productId,
           shortDescription: input.short_description,
-          longDescription: input.long_description,
           doesExpire: input.does_expire,
           freshnessThresholdDays: input.freshness_threshold_days,
           minimalQuantity: input.minimal_quantity,
@@ -193,17 +217,20 @@ productsRouter.post(
           stockPercent,
           minimalPercentage,
         });
+        // Barcode must exist before a batch can reference it via barcodeId.
+        await tx.insert(barcodes).values({ id: barcodeId, productId, code, description: input.barcode.description });
         if (batchId) {
           await tx.insert(batches).values({
             id: batchId,
             productId,
             quantity: input.quantity,
             expiresOn: input.does_expire ? input.expires_on : null,
+            barcodeId,
+            price: input.price,
           });
         }
-        if (barcodeId && input.barcode) {
-          await tx.insert(barcodes).values({ id: barcodeId, productId, code: input.barcode, description: "" });
-        }
+
+        return code;
       });
     } catch (err) {
       // short_description's own uniqueness is pre-checked above and never
@@ -222,7 +249,6 @@ productsRouter.post(
       product: {
         id: productId,
         short_description: input.short_description,
-        long_description: input.long_description,
         does_expire: input.does_expire,
         freshness_threshold_days: input.freshness_threshold_days,
         minimal_quantity: input.minimal_quantity,
@@ -230,9 +256,9 @@ productsRouter.post(
         stock_percent: stockPercent,
         minimal_percentage: minimalPercentage,
         aliases: [] as string[],
-        barcodes: (barcodeId && input.barcode
-          ? [{ id: barcodeId, code: input.barcode, description: "", product_id: productId }]
-          : []) as { id: string; code: string; description: string; product_id: string }[],
+        barcodes: [
+          { id: barcodeId, code: resolvedCode, description: input.barcode.description, product_id: productId },
+        ] as { id: string; code: string; description: string; product_id: string }[],
       },
       batch: batchId
         ? {
@@ -240,6 +266,8 @@ productsRouter.post(
             product_id: productId,
             quantity: input.quantity,
             expires_on: input.does_expire ? input.expires_on : null,
+            barcode_id: barcodeId,
+            price: input.price,
           }
         : null,
     });
@@ -248,12 +276,16 @@ productsRouter.post(
 
 // Same "at least 8 digits" rule apps/web/src/lib/productEdit.ts's
 // newBarcodeValid() already enforces client-side — re-checked here too.
+// The "at least 8 digits" rule apps/web/src/lib/productEdit.ts's
+// newBarcodeValid() enforces is UX gating for a human typing a brand-new
+// code by hand — not re-enforced here, since this array is always the
+// product's *full* desired list (specs/Prices & Product Differentiation.md's
+// Data section), including every code it already had before this edit,
+// unchanged or not. A system-generated code (deliberately short, see that
+// spec) or a moved-in code from another product would otherwise fail this
+// check every time the product is saved for any unrelated reason.
 const editBarcodeSchema = z.object({
-  code: z
-    .string()
-    .trim()
-    .min(1, "barcode code is required")
-    .refine((c) => c.replace(/\D/g, "").length >= 8, "barcode code must contain at least 8 digits"),
+  code: z.string().trim().min(1, "barcode code is required"),
   description: z.string().trim().default(""),
 });
 
@@ -275,7 +307,6 @@ const otherProductUpdateSchema = z.object({
 // `code` and mints UUIDs for genuinely new rows.
 const editProductSchema = z.object({
   short_description: z.string().trim().min(1, "short_description is required"),
-  long_description: z.string().trim().default(""),
   does_expire: z.boolean(),
   minimal_quantity: z.number().int().nonnegative().nullable().default(null),
   freshness_threshold_days: z.number().int().nonnegative().nullable().default(null),
@@ -421,7 +452,6 @@ productsRouter.patch(
           .update(products)
           .set({
             shortDescription: input.short_description,
-            longDescription: input.long_description,
             doesExpire: input.does_expire,
             freshnessThresholdDays: input.freshness_threshold_days,
             minimalQuantity: input.minimal_quantity,
@@ -441,7 +471,9 @@ productsRouter.patch(
         const [finalAliasRows, finalBarcodeRows, finalBatchRows] = await Promise.all([
           tx.select({ alias: productAliases.alias }).from(productAliases).where(eq(productAliases.productId, id)),
           tx.select().from(barcodes).where(eq(barcodes.productId, id)),
-          tx.select().from(batches).where(eq(batches.productId, id)),
+          // consumed = false — same "invisible in every active view" rule
+          // GET / applies (specs/Prices & Product Differentiation.md).
+          tx.select().from(batches).where(and(eq(batches.productId, id), eq(batches.consumed, false))),
         ]);
 
         return {
@@ -459,5 +491,141 @@ productsRouter.patch(
     }
 
     res.json(response);
+  }),
+);
+
+// specs/Prices & Product Differentiation.md — Stock Edit and Quick Batch
+// Edit were local-state only until this spec; these three routes are the
+// real batch-mutation API neither of them had before.
+
+const createBatchSchema = z.object({
+  quantity: z.number().int().positive(),
+  // date-only ISO 8601 ("YYYY-MM-DD"); required only when the product expires.
+  expires_on: z.string().nullable().default(null),
+  barcode_id: z.string().uuid().nullable().default(null),
+  price: z.number().nonnegative().nullable().default(null),
+});
+
+/**
+ * POST /:id/batches — add a batch (a purchase/lot) to an existing product.
+ * Percentage-tracked products carry no Batch rows at all (specs/Relative
+ * Tracking.md) — rejected here rather than silently accepted.
+ */
+productsRouter.post(
+  "/:id/batches",
+  asyncHandler(async (req, res) => {
+    const parsed = createBatchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new HttpError(400, parsed.error.issues.map((i) => i.message).join("; "));
+    }
+    const input = parsed.data;
+    const productId = req.params.id;
+
+    const [product] = await db.select().from(products).where(eq(products.id, productId)).limit(1);
+    if (!product) {
+      throw new HttpError(404, "Product not found");
+    }
+    if (product.trackingMode === "percentage") {
+      throw new HttpError(400, "This product is tracked by percentage — it doesn't carry batches");
+    }
+    if (product.doesExpire && !input.expires_on) {
+      throw new HttpError(400, "expires_on is required for a product that expires");
+    }
+    if (input.barcode_id) {
+      const [barcode] = await db
+        .select({ id: barcodes.id })
+        .from(barcodes)
+        .where(and(eq(barcodes.id, input.barcode_id), eq(barcodes.productId, productId)))
+        .limit(1);
+      if (!barcode) {
+        throw new HttpError(400, "barcode_id must belong to this product");
+      }
+    }
+
+    const batchId = randomUUID();
+    const [inserted] = await db
+      .insert(batches)
+      .values({
+        id: batchId,
+        productId,
+        quantity: input.quantity,
+        expiresOn: product.doesExpire ? input.expires_on : null,
+        barcodeId: input.barcode_id,
+        price: input.price,
+      })
+      .returning();
+
+    res.status(201).json({ batch: toBatchJson(inserted) });
+  }),
+);
+
+const updateBatchSchema = z.object({
+  quantity: z.number().int().nonnegative(),
+  // Stock Edit.md's pre-existing inline expiration edit — unrelated to
+  // this spec, but this is now the only real persistence path for it.
+  // Omitted = leave expires_on unchanged; price/barcode_id aren't
+  // editable after creation either way.
+  expires_on: z.string().nullable().optional(),
+});
+
+/**
+ * PATCH /:id/batches/:batchId — quantity (and optionally expires_on)
+ * change. Reaching 0 sets consumed = true instead of deleting the row, so
+ * a recorded price survives the batch being fully used — resolves
+ * specs/BACKLOG.md's "Batch cost tracking & consumed-batch history" entry.
+ */
+productsRouter.patch(
+  "/:id/batches/:batchId",
+  asyncHandler(async (req, res) => {
+    const parsed = updateBatchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new HttpError(400, parsed.error.issues.map((i) => i.message).join("; "));
+    }
+    const { id: productId, batchId } = req.params;
+    const expiresOnProvided = "expires_on" in req.body;
+
+    const [batch] = await db
+      .select()
+      .from(batches)
+      .where(and(eq(batches.id, batchId), eq(batches.productId, productId)))
+      .limit(1);
+    if (!batch) {
+      throw new HttpError(404, "Batch not found");
+    }
+    if (batch.consumed) {
+      throw new HttpError(400, "This batch has already been consumed and can't be edited");
+    }
+
+    const [updated] = await db
+      .update(batches)
+      .set({
+        quantity: parsed.data.quantity,
+        consumed: parsed.data.quantity === 0,
+        ...(expiresOnProvided ? { expiresOn: parsed.data.expires_on ?? null } : {}),
+      })
+      .where(eq(batches.id, batchId))
+      .returning();
+
+    res.json({ batch: toBatchJson(updated) });
+  }),
+);
+
+/**
+ * GET /:id/batches?consumed=true — reads a product's consumed (retained,
+ * history-only) batches. Not consumed by any UI in this pass — exists so
+ * the future Prices/purchase-history view has real data to query.
+ * Omitting the query param (or ?consumed=false) mirrors GET /'s own
+ * "current stock" default instead.
+ */
+productsRouter.get(
+  "/:id/batches",
+  asyncHandler(async (req, res) => {
+    const productId = req.params.id;
+    const consumed = req.query.consumed === "true";
+    const rows = await db
+      .select()
+      .from(batches)
+      .where(and(eq(batches.productId, productId), eq(batches.consumed, consumed)));
+    res.json({ batches: rows.map(toBatchJson) });
   }),
 );

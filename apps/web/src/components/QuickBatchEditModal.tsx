@@ -1,4 +1,4 @@
-import { Button, cn, FreshnessBadge, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "shelf-sense-ds";
+import { Button, cn, FreshnessBadge, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Select } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { freshnessBadgeLabel } from "../lib/freshness";
 import type { EnrichedProduct } from "../lib/inventory";
@@ -14,10 +14,15 @@ export interface QuickBatchEditModalProps {
   onDraftChange: (value: string) => void;
   onDraftCommit: () => void;
   onAddExpiresOnChange: (value: string) => void;
+  // specs/Prices & Product Differentiation.md
+  onAddPriceChange: (value: string) => void;
+  onAddBarcodeIdChange: (value: string) => void;
   onReset: () => void;
   onSave: () => void;
   onStock: () => void;
   onEditProduct: () => void;
+  saving: boolean;
+  saveError: string | null;
 }
 
 const UNIT_STEPS = [-10, -5, -1, 1, 5, 10];
@@ -39,10 +44,14 @@ export function QuickBatchEditModal({
   onDraftChange,
   onDraftCommit,
   onAddExpiresOnChange,
+  onAddPriceChange,
+  onAddBarcodeIdChange,
   onReset,
   onSave,
   onStock,
   onEditProduct,
+  saving,
+  saveError,
 }: QuickBatchEditModalProps) {
   const { t, tPlural } = useT();
   const open = !!quick && !!product;
@@ -63,7 +72,11 @@ export function QuickBatchEditModal({
   // positive delta (i.e. a new batch) + no expires_on is a hard error, not
   // a soft warning. The prototype this was translated from didn't enforce
   // this — same gap found and fixed for real in AddProduct.tsx.
-  const saveDisabled = !quick || delta === 0 || (showExpiry && quick.addExpiresOn.trim().length === 0);
+  const saveDisabled = !quick || delta === 0 || (showExpiry && quick.addExpiresOn.trim().length === 0) || saving;
+  // specs/Prices & Product Differentiation.md — only relevant alongside a
+  // new batch; a code picker only when there's an actual choice to make.
+  const showPriceAndCode = !isPercentage && delta > 0;
+  const barcodeOptions = (product?.barcodes ?? []).map((b) => ({ value: b.id, label: b.description || b.code }));
 
   const decHint = isPercentage
     ? t("quickBatchEdit.percentHint")
@@ -167,7 +180,29 @@ export function QuickBatchEditModal({
                 )}
                 {noExpiryLine && <p className="text-xs text-ink-muted">{t("quickBatchEdit.noExpiryNewBatch")}</p>}
                 {noNewBatchLine && <p className="text-xs text-ink-muted">{noNewBatchHint}</p>}
+                {showPriceAndCode && (
+                  <Input
+                    label={t("quickBatchEdit.priceLabel")}
+                    type="number"
+                    min={0}
+                    placeholder={t("common.optionalPlaceholder")}
+                    value={quick.addPrice}
+                    onChange={(e) => onAddPriceChange(e.target.value)}
+                  />
+                )}
+                {showPriceAndCode && barcodeOptions.length > 1 && (
+                  <Select
+                    label={t("quickBatchEdit.codeLabel")}
+                    placeholder={t("quickBatchEdit.codePlaceholder")}
+                    options={barcodeOptions}
+                    value={quick.addBarcodeId ?? ""}
+                    onChange={(e) => onAddBarcodeIdChange(e.target.value)}
+                  />
+                )}
               </div>
+            )}
+            {saveError && (
+              <p className="text-xs text-danger">{saveError}</p>
             )}
 
             <div className="flex gap-sm border-t border-border pt-sm">
@@ -196,7 +231,7 @@ export function QuickBatchEditModal({
           {t("common.cancel")}
         </Button>
         <Button size="sm" disabled={saveDisabled} onClick={onSave}>
-          {t("common.save")}
+          {saving ? t("common.saving") : t("common.save")}
         </Button>
       </ModalFooter>
     </Modal>

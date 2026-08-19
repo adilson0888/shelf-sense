@@ -7,7 +7,7 @@ export interface ProductEditViewProps {
   /** Batches for this product that currently carry a real expires_on — drives the "turning expiry off clears N dates" warning. */
   datedBatchCount: number;
   onClose: () => void;
-  onFieldChange: (key: "short" | "long" | "minQty" | "fresh" | "minPercent", value: string) => void;
+  onFieldChange: (key: "short" | "minQty" | "fresh" | "minPercent", value: string) => void;
   onDoesExpireChange: (value: boolean) => void;
   onNewAliasChange: (value: string) => void;
   onAddAlias: () => void;
@@ -106,12 +106,6 @@ export function ProductEditView({
               />
               {edit.shortError && <Alert variant="danger" title={edit.shortError} />}
               {!edit.shortError && isRenamed(edit) && <Alert variant="info" title={t("productEdit.renameNotice")} />}
-              <Input
-                label={t("common.longDescriptionLabel")}
-                placeholder={t("common.longDescriptionPlaceholder")}
-                value={edit.long}
-                onChange={(e) => onFieldChange("long", e.target.value)}
-              />
             </div>
 
             <div className="flex flex-col gap-md border-t border-border pt-lg">

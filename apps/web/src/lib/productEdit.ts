@@ -13,8 +13,9 @@ export interface ProductEditState {
   /** JSON Snapshot of the product's editable slice as loaded — the change-detection and save-summary baseline. */
   orig: string;
 
+  // long removed by specs/Prices & Product Differentiation.md — detail
+  // text now lives on each Barcode's own description (barcodes below).
   short: string;
-  long: string;
   doesExpire: boolean;
   minQty: string;
   fresh: string;
@@ -54,7 +55,6 @@ export type EditConfirm =
 
 interface Snapshot {
   short: string;
-  long: string;
   doesExpire: boolean;
   minQty: string;
   fresh: string;
@@ -64,11 +64,10 @@ interface Snapshot {
 }
 
 function snapshot(
-  s: Pick<ProductEditState, "short" | "long" | "doesExpire" | "minQty" | "fresh" | "minPercent" | "aliases" | "barcodes">,
+  s: Pick<ProductEditState, "short" | "doesExpire" | "minQty" | "fresh" | "minPercent" | "aliases" | "barcodes">,
 ): Snapshot {
   return {
     short: s.short,
-    long: s.long,
     doesExpire: s.doesExpire,
     minQty: s.minQty,
     fresh: s.fresh,
@@ -81,7 +80,6 @@ function snapshot(
 export function openProductEditState(product: Product): ProductEditState {
   const base = {
     short: product.short_description,
-    long: product.long_description,
     doesExpire: product.does_expire,
     minQty: product.minimal_quantity == null ? "" : String(product.minimal_quantity),
     fresh: product.freshness_threshold_days == null ? "" : String(product.freshness_threshold_days),
@@ -124,7 +122,7 @@ export function isRenamed(state: ProductEditState): boolean {
 
 export function setField(
   state: ProductEditState,
-  key: "short" | "long" | "minQty" | "fresh" | "minPercent",
+  key: "short" | "minQty" | "fresh" | "minPercent",
   value: string,
 ): ProductEditState {
   return { ...state, [key]: value, saveArmed: false, shortError: key === "short" ? null : state.shortError };
@@ -311,7 +309,6 @@ export function saveSummary(state: ProductEditState, i18n: Pick<TFunctions, "t" 
   const orig: Snapshot = JSON.parse(state.orig);
   const bits: string[] = [];
   if (orig.short !== state.short.trim()) bits.push(t("productEdit.saveSummary.renamedTo", { name: state.short.trim() }));
-  if (orig.long !== state.long) bits.push(t("productEdit.saveSummary.longDescriptionUpdated"));
   if (orig.doesExpire !== state.doesExpire) {
     bits.push(state.doesExpire ? t("productEdit.saveSummary.expiryOn") : t("productEdit.saveSummary.expiryOff"));
   }
@@ -350,7 +347,6 @@ export function buildSaveResult(state: ProductEditState, currentProduct: Product
   const updatedProduct: Product = {
     ...currentProduct,
     short_description: state.short.trim(),
-    long_description: state.long,
     does_expire: state.doesExpire,
     minimal_quantity: state.minQty === "" ? null : Number.parseInt(state.minQty, 10) || 0,
     freshness_threshold_days: state.fresh === "" ? null : Number.parseInt(state.fresh, 10) || 0,
@@ -381,7 +377,6 @@ export function buildSaveResult(state: ProductEditState, currentProduct: Product
 export function buildEditProductPayload(result: ProductEditResult): UpdateProductPayload {
   return {
     short_description: result.updatedProduct.short_description,
-    long_description: result.updatedProduct.long_description,
     does_expire: result.updatedProduct.does_expire,
     minimal_quantity: result.updatedProduct.minimal_quantity,
     freshness_threshold_days: result.updatedProduct.freshness_threshold_days,

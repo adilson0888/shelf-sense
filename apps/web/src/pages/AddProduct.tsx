@@ -64,8 +64,15 @@ export function AddProductPage() {
 
   // Product Add.md's Non-functional section: does_expire=true + quantity>0
   // + no expires_on is a hard validation error, not a soft warning.
+  // specs/Prices & Product Differentiation.md: a code description is
+  // always required; a typed/scanned code is required unless the user
+  // chose "I don't have a code" (server generates one instead).
   const saveDisabled =
-    saving || form.short.trim().length === 0 || (showExpiresOn && form.expiresOn.trim().length === 0);
+    saving ||
+    form.short.trim().length === 0 ||
+    form.codeDescription.trim().length === 0 ||
+    (form.codeChoice === "provided" && form.code.trim().length === 0) ||
+    (showExpiresOn && form.expiresOn.trim().length === 0);
 
   function setField<K extends keyof AddProductFormState>(key: K, value: AddProductFormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -76,7 +83,7 @@ export function AddProductPage() {
   }
   // Keeps the pending barcode (still unlinked) but drops whatever the lookup prefilled.
   function clearPrefill() {
-    setForm((f) => ({ ...buildBlankForm(preferences.default_does_expire), barcode: f.barcode }));
+    setForm((f) => ({ ...buildBlankForm(preferences.default_does_expire), barcode: f.barcode, code: f.barcode ?? "" }));
   }
 
   function goBack() {
@@ -107,7 +114,7 @@ export function AddProductPage() {
   let prefillNote = "";
   if (form.prefillSource === "open-food-facts") prefillNote = t("addProduct.prefillNoteOpenFoodFacts");
   else if (form.prefillSource === "tavily") prefillNote = t("addProduct.prefillNoteTavily");
-  else if (form.barcode && !form.short && !form.long) prefillNote = t("addProduct.prefillNoteNothingFound");
+  else if (form.barcode && !form.short && !form.codeDescription) prefillNote = t("addProduct.prefillNoteNothingFound");
 
   return (
     <div className="fixed inset-0 z-[6] flex justify-center bg-surface-1 font-sans text-ink-primary">
@@ -131,7 +138,7 @@ export function AddProductPage() {
           {prefillNote && (
             <div className="flex flex-col gap-sm rounded-md border border-border bg-info-bg p-sm">
               <span className="text-xs leading-relaxed text-info">{prefillNote}</span>
-              {(form.short || form.long) && (
+              {(form.short || form.codeDescription) && (
                 <button
                   type="button"
                   onClick={clearPrefill}
@@ -148,11 +155,33 @@ export function AddProductPage() {
             value={form.short}
             onChange={(e) => setField("short", e.target.value)}
           />
+          {/* specs/Prices & Product Differentiation.md — every product gets at
+              least one code + its own description now, replacing the old
+              product-level long_description. A scanned barcode (form.barcode
+              set) already fixes the code, so the "I don't have a code" toggle
+              only makes sense on a pure manual entry. */}
+          {form.codeChoice === "provided" && !form.barcode && (
+            <Input
+              label={t("addProduct.codeLabel")}
+              placeholder={t("addProduct.codePlaceholder")}
+              value={form.code}
+              onChange={(e) => setField("code", e.target.value)}
+            />
+          )}
+          {!form.barcode && (
+            <button
+              type="button"
+              onClick={() => setField("codeChoice", form.codeChoice === "generate" ? "provided" : "generate")}
+              className="self-start bg-transparent p-0 text-xs font-semibold text-brand-600 underline"
+            >
+              {form.codeChoice === "generate" ? t("addProduct.iHaveACode") : t("addProduct.iDontHaveACode")}
+            </button>
+          )}
           <Input
-            label={t("common.longDescriptionLabel")}
-            placeholder={t("common.longDescriptionPlaceholder")}
-            value={form.long}
-            onChange={(e) => setField("long", e.target.value)}
+            label={t("addProduct.codeDescriptionLabel")}
+            placeholder={t("addProduct.codeDescriptionPlaceholder")}
+            value={form.codeDescription}
+            onChange={(e) => setField("codeDescription", e.target.value)}
           />
           <Switch
             label={t("addProduct.trackingModeLabel")}
@@ -230,6 +259,16 @@ export function AddProductPage() {
               ) : (
                 <p className="text-xs text-ink-muted">{expiresHiddenReason}</p>
               )}
+              {qtyNum > 0 && (
+                <Input
+                  label={t("quickBatchEdit.priceLabel")}
+                  type="number"
+                  min={0}
+                  placeholder={t("common.optionalPlaceholder")}
+                  value={form.price}
+                  onChange={(e) => setField("price", e.target.value)}
+                />
+              )}
             </>
           )}
           {saveError && (
@@ -262,6 +301,7 @@ export function AddProductPage() {
         <LinkExistingProductModal
           open={linkOpen}
           barcode={form.barcode}
+          barcodeDescription={form.codeDescription}
           products={products}
           onClose={() => setLinkOpen(false)}
           onLinked={handleLinked}

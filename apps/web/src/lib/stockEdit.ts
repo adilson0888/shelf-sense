@@ -20,6 +20,12 @@ export interface StockEditState {
   addOpen: boolean;
   newQty: string;
   newExp: string;
+  // specs/Prices & Product Differentiation.md — optional on a new batch.
+  newPrice: string;
+  // Which of this product's linked codes the new batch is for — only ever
+  // shown/settable when the product has more than one; null with exactly
+  // one (auto-assigned) or zero (nothing to pick).
+  newBarcodeId: string | null;
   armed: boolean; // true once Save has been clicked once — a second click commits
 }
 
@@ -39,6 +45,8 @@ export function openStockEditState(productId: string, batches: Batch[]): StockEd
     addOpen: false,
     newQty: "",
     newExp: "",
+    newPrice: "",
+    newBarcodeId: null,
     armed: false,
   };
 }
@@ -121,7 +129,7 @@ export function cancelEditExp(state: StockEditState): StockEditState {
 }
 
 export function toggleAddOpen(state: StockEditState): StockEditState {
-  return { ...state, addOpen: !state.addOpen, newQty: "", newExp: "" };
+  return { ...state, addOpen: !state.addOpen, newQty: "", newExp: "", newPrice: "", newBarcodeId: null };
 }
 
 export function newQtyChange(state: StockEditState, value: string): StockEditState {
@@ -130,6 +138,14 @@ export function newQtyChange(state: StockEditState, value: string): StockEditSta
 
 export function newExpChange(state: StockEditState, value: string): StockEditState {
   return { ...state, newExp: value };
+}
+
+export function newPriceChange(state: StockEditState, value: string): StockEditState {
+  return { ...state, newPrice: value };
+}
+
+export function newBarcodeIdChange(state: StockEditState, value: string | null): StockEditState {
+  return { ...state, newBarcodeId: value };
 }
 
 export function canAddBatch(state: StockEditState, doesExpire: boolean): boolean {
@@ -146,8 +162,19 @@ export function addBatch(state: StockEditState, doesExpire: boolean): StockEditS
     product_id: state.productId,
     quantity: Number.parseInt(state.newQty, 10),
     expires_on: doesExpire ? state.newExp : null,
+    barcode_id: state.newBarcodeId,
+    price: state.newPrice.trim() ? Number.parseFloat(state.newPrice) : null,
   };
-  return { ...state, addOpen: false, newQty: "", newExp: "", armed: false, batches: [...state.batches, batch] };
+  return {
+    ...state,
+    addOpen: false,
+    newQty: "",
+    newExp: "",
+    newPrice: "",
+    newBarcodeId: null,
+    armed: false,
+    batches: [...state.batches, batch],
+  };
 }
 
 export function isNewRow(state: StockEditState, id: string): boolean {

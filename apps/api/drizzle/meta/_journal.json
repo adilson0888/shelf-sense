@@ -29,6 +29,13 @@
       "when": 1786748106105,
       "tag": "0003_fresh_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787100523463,
+      "tag": "0004_slim_namora",
+      "breakpoints": true
     }
   ]
 }
