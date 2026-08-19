@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { IconButton, NavDrawer, type NavDrawerItem } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
+import { InstallPromptBanner } from "./InstallPromptBanner";
 import { getMenuItems } from "../lib/menu";
 import { useTheme } from "../lib/theme";
 
@@ -41,6 +42,8 @@ export function AppShell({ children }: AppShellProps) {
         <IconButton icon="☰" aria-label={t("appShell.openNavigation")} size="lg" onClick={() => setDrawerOpen(true)} />
         <h1 className="m-0 flex-1 truncate pl-1 text-[19px] font-bold tracking-[-0.01em]">{activeItem.label}</h1>
       </div>
+
+      <InstallPromptBanner />
 
       <div className="flex flex-1 flex-col">{children}</div>
 

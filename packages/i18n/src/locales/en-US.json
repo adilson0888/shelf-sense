@@ -28,6 +28,10 @@
   "appShell.theme": "Theme",
   "appShell.switchToLightTheme": "Switch to light theme",
   "appShell.switchToDarkTheme": "Switch to dark theme",
+  "installPrompt.title": "Install ShelfSense",
+  "installPrompt.description": "Add ShelfSense to your home screen for quick, full-screen access.",
+  "installPrompt.install": "Install",
+  "installPrompt.notNow": "Not now",
 
   "menu.inventory": "Inventory",
   "menu.products": "Products",
