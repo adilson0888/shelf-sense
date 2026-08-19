@@ -6,6 +6,16 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
+// The install prompt is only useful on a phone — "add to home screen" isn't
+// a meaningful ask on desktop, even though desktop Chrome/Edge do fire
+// beforeinstallprompt and would otherwise trigger it there too. UA sniffing
+// is the only cross-browser way to tell (no Client Hint for OS is available
+// everywhere, and Safari has none at all) — the standard, pragmatic
+// approach for exactly this kind of install-prompt gating.
+function isMobileOS(): boolean {
+  return /Android/i.test(navigator.userAgent) || /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 function isStandalone(): boolean {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -21,13 +31,17 @@ function isStandalone(): boolean {
  * and Safari never fire it, so `canInstall` simply stays false there) and
  * exposes a way to trigger the native install dialog on demand. See
  * InstallPromptBanner.tsx for the UI that consumes this.
+ *
+ * `canInstall` is further restricted to Android/iOS (see isMobileOS) — the
+ * event still fires on desktop Chrome/Edge, but there's nothing to install
+ * to a "home screen" there, so this hook simply never surfaces it.
  */
 export function useInstallPrompt() {
   const [deferredEvent, setDeferredEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(isStandalone);
 
   useEffect(() => {
-    if (installed) return;
+    if (installed || !isMobileOS()) return;
 
     function onBeforeInstallPrompt(event: Event) {
       event.preventDefault();
