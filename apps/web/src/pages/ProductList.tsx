@@ -759,6 +759,12 @@ export function ProductListPage() {
         onSave={quickSave}
         onStock={() => quick && openStock(quick.productId)}
         onEditProduct={() => quick && openProductEdit(quick.productId)}
+        onPriceHistory={() => {
+          if (!quick) return;
+          const product = products.find((p) => p.id === quick.productId);
+          setQuick(null);
+          if (product) priceHistory.open(product, batches.filter((b) => b.product_id === product.id));
+        }}
         saving={quickSaving}
         saveError={quickSaveError}
       />

@@ -130,7 +130,7 @@
   "productList.rowActionsLabel": "Row actions",
   "productList.popoverEditProduct": "Edit product",
   "productList.popoverEditStock": "Edit stock",
-  "productList.popoverPriceHistory": "Price History",
+  "productList.popoverPriceHistory": "Price history",
   "productList.loading": "Loading your products…",
   "productList.loadError": "Couldn't load your products",
   "productList.emptyNoneTitle": "No products yet",

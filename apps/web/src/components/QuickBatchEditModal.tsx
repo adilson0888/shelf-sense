@@ -21,6 +21,8 @@ export interface QuickBatchEditModalProps {
   onSave: () => void;
   onStock: () => void;
   onEditProduct: () => void;
+  // specs/Price History.md
+  onPriceHistory: () => void;
   saving: boolean;
   saveError: string | null;
 }
@@ -50,6 +52,7 @@ export function QuickBatchEditModal({
   onSave,
   onStock,
   onEditProduct,
+  onPriceHistory,
   saving,
   saveError,
 }: QuickBatchEditModalProps) {
@@ -218,6 +221,18 @@ export function QuickBatchEditModal({
               </Button>
               <Button type="button" variant="outline" size="sm" onClick={onEditProduct}>
                 {t("quickBatchEdit.editProductButton")}
+              </Button>
+              {/* specs/Price History.md — percentage-tracked products carry
+                  no Batch rows at all, same disabled treatment as Stock above. */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isPercentage}
+                title={isPercentage ? t("quickBatchEdit.stockDisabledPercentTitle") : undefined}
+                onClick={onPriceHistory}
+              >
+                {t("priceHistory.ariaLabel")}
               </Button>
             </div>
           </>
