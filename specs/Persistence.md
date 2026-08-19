@@ -1,6 +1,8 @@
 # Persistence & Migrations
 
-**Status:** in-progress — Postgres + Drizzle wired into `apps/api` (`GET`/`POST /products`, `PATCH /products/:id`, auto-migrate-on-boot); `apps/web`'s Inventory, Product Add, and Product Edit now read/write through it instead of `mocks/products.ts`. Quick Batch Edit / Stock Edit still local-state only (unchanged, per their own specs). Decided in conversation (2026-08-12) rather than via a Claude Design prototype — this is backend infra with no UI, so the spec loop's prototyping step doesn't apply.
+**Status:** in-progress — Postgres + Drizzle wired into `apps/api` (`GET`/`POST /products`, `PATCH /products/:id`, auto-migrate-on-boot); `apps/web`'s Inventory, Product Add, and Product Edit now read/write through it instead of `mocks/products.ts`. Quick Batch Edit / Stock Edit still local-state only (unchanged, per their own specs) — `specs/Prices & Product Differentiation.md` is what finally gives them real batch-mutation endpoints. Decided in conversation (2026-08-12) rather than via a Claude Design prototype — this is backend infra with no UI, so the spec loop's prototyping step doesn't apply.
+
+**The schema sketch below is stale in two ways as of `specs/Prices & Product Differentiation.md`**: `products.longDescription` is removed there, and `batches` gains `barcode_id`/`price`/`consumed`. `apps/api/src/db/schema.ts` is the authoritative current shape (it had already drifted from this sketch even before that — see its own comments); this doc isn't rewritten wholesale to track it, same as it wasn't for `tracking_mode`/`stock_percent`/`minimal_percentage` (`specs/Relative Tracking.md`) or the `preferences` table (`specs/Settings.md`).
 
 ## User story
 
@@ -90,7 +92,7 @@ Exact request/response shapes get finalized during implementation against these 
 ## Out of scope
 
 - **Multi-user / auth** (`user_id`, row-level scoping) — no spec defines accounts yet; add this alongside a real auth spec, not speculatively here.
-- **Batch cost tracking & consumed-batch history** — already tracked in `specs/BACKLOG.md`; the schema above hard-deletes an emptied batch, matching today's spec'd behavior, not the deferred one.
+- ~~**Batch cost tracking & consumed-batch history** — already tracked in `specs/BACKLOG.md`; the schema above hard-deletes an emptied batch, matching today's spec'd behavior, not the deferred one.~~ Resolved by `specs/Prices & Product Differentiation.md` — no longer out of scope project-wide, just not part of this particular doc's original cut.
 - **Product icon storage** (`Product.icon`) — deferred, see `specs/BACKLOG.md`.
 - **The external integrations themselves** (`identify-from-photo` vision call, barcode-lookup-by-value against Open Food Facts) — `Product Add.md`'s scan/photo steps stay client-simulated (`MOCK_BARCODE_MATCH`) for this pass; this doc only makes the manual-entry/create and list/read paths real. Wiring the external calls is separate follow-up work, not blocked by this doc.
 - **Backup/restore automation** — a self-hoster's Postgres volume is theirs to back up; the app doesn't automate this.

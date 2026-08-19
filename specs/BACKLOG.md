@@ -20,8 +20,13 @@ Pulled from `Menu.md` (2026-08-12) — the drawer is scoped to Inventory and Set
 Covers, when picked back up:
 - **Reports** and **Prices** as confirmed future sections — exact scope/UI for each is undefined, this is just a placeholder for "these will need a `MenuItem` entry and a real page."
 - Re-check at that point whether the flat, ungrouped list in `Menu.md` still holds, or whether the item count justifies grouping/categorizing the drawer.
+- **Prices** specifically now has real underlying data to build on: `specs/Prices & Product Differentiation.md` adds `Batch.price` and retains consumed batches as history — this entry is just the browsing/comparison UI on top, still undesigned.
 
-## Batch cost tracking & consumed-batch history
+## Batch cost tracking & consumed-batch history — promoted 2026-08-19
+
+Promoted into `specs/Prices & Product Differentiation.md`, which resolves the open question below: `consumed` is a single boolean status field on `Batch` itself, not a separate history entity. Building the actual browsable purchase-history/Prices UI on top of this retained data is still deferred — see that spec's Out of scope and the "Additional Menu sections (Reports, Prices)" entry above.
+
+<details><summary>Original entry (2026-08-12), kept for context</summary>
 
 Pulled from `Stock Edit.md` (2026-08-12) — raised while deciding what happens to a batch whose quantity reaches 0. Today (in both `Stock Edit.md` and `Quick Batch Edit.md`) an emptied batch is hard-deleted; that's a placeholder, not a settled design.
 
@@ -30,6 +35,8 @@ Covers, when picked back up:
 - **Emptied batches are retained, not deleted** — once a batch hits 0 quantity it becomes "consumed" rather than removed, so it can still serve as purchase/price history. Consumed batches must **not** appear in any active view (Inventory rollups, Quick Batch Edit, Stock Edit's table) — they're history-only.
 - **Open question, not yet decided**: whether "consumed" is a state on `Batch` itself (e.g. a status field) or price history moves to its own separate entity keyed off the purchase rather than the batch. Needs a real design pass, not just a field bolted on.
 - **Touches two existing specs when this lands**: `Quick Batch Edit.md`'s Save behavior ("any batch emptied to 0 is removed entirely") and `Stock Edit.md`'s zero-quantity handling both hard-delete via the same underlying mechanism today — both need updating together, not independently, or they'll drift back out of sync.
+
+</details>
 
 ## Locale-correct date input
 
