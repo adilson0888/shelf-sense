@@ -38,6 +38,9 @@ function toBatchJson(b: typeof batches.$inferSelect) {
     expires_on: b.expiresOn,
     barcode_id: b.barcodeId,
     price: b.price,
+    // specs/Price History.md — system-set at insert, never accepted from a
+    // request body (not in createBatchSchema/updateBatchSchema below).
+    created_at: b.createdAt.toISOString(),
   };
 }
 
@@ -612,10 +615,10 @@ productsRouter.patch(
 
 /**
  * GET /:id/batches?consumed=true — reads a product's consumed (retained,
- * history-only) batches. Not consumed by any UI in this pass — exists so
- * the future Prices/purchase-history view has real data to query.
- * Omitting the query param (or ?consumed=false) mirrors GET /'s own
- * "current stock" default instead.
+ * history-only) batches. Combined with GET /'s active batches, this is
+ * specs/Price History.md's data source (PriceHistoryModal fetches this
+ * on demand when opened). Omitting the query param (or ?consumed=false)
+ * mirrors GET /'s own "current stock" default instead.
  */
 productsRouter.get(
   "/:id/batches",
