@@ -1,6 +1,6 @@
 # Prices & Product Differentiation
 
-**Status:** draft
+**Status:** in-progress — schema (`products.longDescription` dropped, `batches` gained `barcode_id`/`price`/`consumed`, `generated_barcode_code_seq`), the long_description-backfill migration, and every `apps/api` route (updated `POST`/`PATCH /products`, new `POST`/`PATCH /products/:id/batches`, `GET /products/:id/batches`) implemented and verified against a real running server. `apps/web` fully wired: Add Product's code/description/"I don't have a code" UI, Product Edit's `long_description` removal, and — the larger piece — Stock Edit and Quick Batch Edit both converted from local-only state to the real batch-mutation API, with price/code-picker fields added to both. Verified end-to-end through the real browser UI: a generated-code product, a Quick-Batch-Edit-created batch with a price, and a cascading consume that correctly marks the emptied batch `consumed` (confirmed excluded from `GET /products`, present via `GET /products/:id/batches?consumed=true`).
 
 ## User story
 
@@ -81,9 +81,10 @@ interface CreateBatchPayload {
   price: number | null;
 }
 
-// PATCH /products/:id/batches/:batchId — quantity change only (this spec's scope)
+// PATCH /products/:id/batches/:batchId
 interface UpdateBatchPayload {
   quantity: number; // reaching 0 sets consumed = true server-side instead of deleting the row
+  expires_on?: string | null; // Stock Edit's pre-existing inline expiry edit — omitted leaves it unchanged
 }
 ```
 
@@ -118,4 +119,4 @@ interface UpdateBatchPayload {
 - **Editing, reactivating, or otherwise interacting with a consumed batch** — write-once from this spec's perspective; a real "purchase history" UI is future work.
 - **Attaching more than one code at Add-Product creation time** — one code at creation; additional codes are added afterward via Product Edit's existing, unchanged flow.
 - **Any change to the AI/Tavily barcode-lookup pipeline** (`specs/Barcode Scanner & Product info scrape.md`) beyond where its result now lands (the code's description instead of a product field) — the lookup mechanism itself is unchanged.
-- **Batch-mutation endpoints beyond quantity** — `PATCH /products/:id/batches/:batchId` in this spec only changes `quantity` (and, as a side effect, `consumed`); editing a batch's `price`/`expires_on`/`barcode_id` after creation isn't covered here.
+- **Editing a batch's `price`/`barcode_id` after creation** — `PATCH /products/:id/batches/:batchId` changes `quantity` (and, as a side effect, `consumed`) and `expires_on`. That second field isn't new scope — it's Stock Edit's own pre-existing inline expiration edit, which had nowhere real to persist to before this spec built the endpoint at all, so it rides along here rather than shipping still-broken. `price`/`barcode_id` stay write-once, set only at creation.

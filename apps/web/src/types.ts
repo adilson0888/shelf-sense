@@ -12,7 +12,8 @@ export interface Barcode {
 export interface Product {
   id: string;
   short_description: string; // generic/canonical name — drives identity, search, and display
-  long_description: string; // more detail, still generic/brand-free
+  // long_description removed by specs/Prices & Product Differentiation.md —
+  // detail text now lives on Barcode.description instead.
   aliases: string[]; // alternate names that resolve to this product
   freshness_threshold_days: number | null; // per-product override of the "expiring soon" window; null = follow the global preference
   minimal_quantity: number | null; // per-product low-stock threshold; null = follow the global preference
@@ -33,6 +34,8 @@ export interface Batch {
   product_id: string;
   quantity: number; // unit count
   expires_on: string | null; // date-only ISO 8601 ("YYYY-MM-DD"); null = does not expire
+  barcode_id: string | null; // specs/Prices & Product Differentiation.md — which linked code this purchase was for
+  price: number | null; // specs/Prices & Product Differentiation.md — optional, no currency code/symbol
 }
 
 export type FreshnessStatus = "fresh" | "expiring-soon" | "expired" | "no-expiration";

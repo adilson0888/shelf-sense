@@ -1,4 +1,4 @@
-import { boolean, date, integer, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, integer, numeric, pgSequence, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 /**
  * Schema for the entities defined in specs/Inventory.md, specs/Product
@@ -15,7 +15,8 @@ export const products = pgTable(
   {
     id: uuid("id").primaryKey(),
     shortDescription: text("short_description").notNull(),
-    longDescription: text("long_description").notNull().default(""),
+    // long_description removed by specs/Prices & Product Differentiation.md —
+    // detail text now lives on Barcode.description instead (see below).
     doesExpire: boolean("does_expire").notNull().default(true),
     // null = follow the global preference (see Inventory.md's Non-functional section)
     freshnessThresholdDays: integer("freshness_threshold_days"),
@@ -39,6 +40,13 @@ export const products = pgTable(
   ],
 );
 
+// specs/Prices & Product Differentiation.md — hands out the smallest
+// possible unique code ("1", "2", "47", …) when a product has no real
+// scannable barcode, via nextval() in routes/products.ts. A sequence
+// can't repeat a value, so no collision-retry logic is ever needed for
+// the generated case, unlike a user-typed/scanned code.
+export const generatedBarcodeCodeSeq = pgSequence("generated_barcode_code_seq", { startWith: 1 });
+
 export const batches = pgTable("batches", {
   id: uuid("id").primaryKey(),
   productId: uuid("product_id")
@@ -47,6 +55,17 @@ export const batches = pgTable("batches", {
   quantity: integer("quantity").notNull(),
   // date-only, ISO 8601 ("YYYY-MM-DD"); null = does not expire
   expiresOn: date("expires_on", { mode: "string" }),
+  // specs/Prices & Product Differentiation.md — which linked code this
+  // purchase was for; null for a batch on a barcode-less legacy product,
+  // or where the user skipped picking one. onDelete: "set null" so
+  // removing a barcode in Product Edit doesn't take purchase history with it.
+  barcodeId: uuid("barcode_id").references(() => barcodes.id, { onDelete: "set null" }),
+  // Plain number, no currency code/symbol — see that spec's Non-functional.
+  price: numeric("price", { precision: 10, scale: 2, mode: "number" }),
+  // True once quantity reached 0 through Stock Edit/Quick Batch Edit —
+  // replaces the previous hard-delete-at-zero. GET /products filters these
+  // out by default; see routes/products.ts.
+  consumed: boolean("consumed").notNull().default(false),
 });
 
 export const productAliases = pgTable(
