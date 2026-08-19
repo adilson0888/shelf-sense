@@ -1,6 +1,7 @@
 import { Alert, Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Switch } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { canSave, isRenamed, newBarcodeValid, saveSummary, type ProductEditState } from "../lib/productEdit";
+import { BarcodeCaptureModal } from "./BarcodeCaptureModal";
 
 export interface ProductEditViewProps {
   edit: ProductEditState | null;
@@ -17,10 +18,17 @@ export interface ProductEditViewProps {
   onStartEditBarcodeDesc: (id: string) => void;
   onBarcodeDescChange: (id: string, value: string) => void;
   onCommitBarcodeDescEdit: () => void;
+  /** "+ Add barcode" itself — branches to the camera capture screen or the blank inline form depending on browser support. */
+  onOpenAddBarcode: () => void;
+  /** Closes the inline add-barcode form (its own Cancel button). */
   onToggleAddBarcode: () => void;
   onNewBarcodeDescChange: (value: string) => void;
   onNewBarcodeCodeChange: (value: string) => void;
   onAddBarcode: () => void;
+  /** BarcodeCaptureModal's onDetect — looks the code up and opens the inline form pre-filled. */
+  onAddBarcodeDetect: (code: string) => void;
+  /** BarcodeCaptureModal's onCancel ("Edit manually") — falls through to the blank inline form. */
+  onCancelAddBarcodeScan: () => void;
   onRemoveSelectedBarcodes: () => void;
   /** Confirms whichever move is pending — a barcode conflict or an alias conflict (edit.confirm names which). */
   onConfirmMove: () => void;
@@ -59,10 +67,13 @@ export function ProductEditView({
   onStartEditBarcodeDesc,
   onBarcodeDescChange,
   onCommitBarcodeDescEdit,
+  onOpenAddBarcode,
   onToggleAddBarcode,
   onNewBarcodeDescChange,
   onNewBarcodeCodeChange,
   onAddBarcode,
+  onAddBarcodeDetect,
+  onCancelAddBarcodeScan,
   onRemoveSelectedBarcodes,
   onConfirmMove,
   onCancelConfirm,
@@ -273,7 +284,9 @@ export function ProductEditView({
                   ))
                 )}
               </div>
-              {edit.addBarcodeOpen ? (
+              {edit.addBarcodeLookupLoading ? (
+                <Alert variant="info" title={t("addProduct.lookingUpProduct")} />
+              ) : edit.addBarcodeOpen ? (
                 <div className="flex flex-col gap-sm rounded-lg border border-dashed border-border-strong p-md">
                   <Input
                     label={t("productEdit.barcodeDescriptionLabel")}
@@ -297,7 +310,7 @@ export function ProductEditView({
                   </div>
                 </div>
               ) : (
-                <Button type="button" variant="outline" size="sm" className="self-start" onClick={onToggleAddBarcode}>
+                <Button type="button" variant="outline" size="sm" className="self-start" onClick={onOpenAddBarcode}>
                   {t("productEdit.addBarcodeToggle")}
                 </Button>
               )}
@@ -328,6 +341,8 @@ export function ProductEditView({
           </div>
         </div>
       </div>
+
+      <BarcodeCaptureModal open={edit.addBarcodeScanOpen} onDetect={onAddBarcodeDetect} onCancel={onCancelAddBarcodeScan} />
 
       <Modal
         open={edit.confirm?.type === "barcode" || edit.confirm?.type === "alias"}
