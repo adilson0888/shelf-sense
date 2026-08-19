@@ -17,6 +17,8 @@ specs/             feature specs — the source of truth; see specs/README.md fo
 
 ## Setup
 
+Requires **Node 24+** (see `.nvmrc` / `package.json`'s `engines`) — `nvm use` picks it up automatically if you have nvm. Both deployable Dockerfiles (`apps/web/Dockerfile`, `apps/api/Dockerfile`) build on `node:24-alpine`, so local and containerized builds stay on the same major version.
+
 ```bash
 npm install          # installs all workspaces from the root
 ```

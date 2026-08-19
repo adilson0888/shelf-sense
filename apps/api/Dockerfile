@@ -7,13 +7,13 @@
 # stage still needs the full monorepo (npm ci at root) because the
 # TypeScript toolchain is resolved from root/workspace devDependencies.
 
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /repo
 COPY . .
 RUN npm ci
 RUN npm run build -w shelf-sense-api
 
-FROM node:20-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3001

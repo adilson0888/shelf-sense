@@ -7,6 +7,9 @@
     "packages/*",
     "apps/*"
   ],
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "storybook": "npm run storybook -w shelf-sense-ds",
     "build:ds": "npm run build -w shelf-sense-ds",
