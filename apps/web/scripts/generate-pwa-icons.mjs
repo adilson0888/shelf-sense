@@ -1,6 +1,7 @@
-// Regenerates apps/web/public/icons/* from public/brand/icon-tote-tile.svg.
-// Run manually (`node scripts/generate-pwa-icons.mjs`) whenever that source
-// SVG changes — output is committed, this isn't part of the build.
+// Regenerates apps/web/public/icons/* and public/brand/favicon.ico from
+// public/brand/icon-tote-tile.svg. Run manually
+// (`node scripts/generate-pwa-icons.mjs`) whenever that source SVG changes
+// — output is committed, this isn't part of the build.
 //
 // "any"-purpose icons (and the apple touch icon) rasterize the source SVG
 // as-is: it's already a full-bleed rounded tile, which is exactly what a
@@ -17,10 +18,12 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import sharp from "sharp";
+import pngToIco from "png-to-ico";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(here, "..", "public");
 const outDir = path.join(publicDir, "icons");
+const brandDir = path.join(publicDir, "brand");
 mkdirSync(outDir, { recursive: true });
 
 const sourceSvg = readFileSync(path.join(publicDir, "brand", "icon-tote-tile.svg"), "utf8");
@@ -58,3 +61,19 @@ for (const { file, svg, size } of targets) {
     .toFile(path.join(outDir, file));
   console.log(`wrote public/icons/${file} (${size}x${size})`);
 }
+
+// brand/favicon.ico — same source tile as the "any"-purpose PWA icons
+// above (see specs/Brand.md's "Icon — Tote" amendment: Tote is the one
+// icon identity now, favicon included). Multi-resolution .ico bundling
+// 16/32/48px, the sizes browsers actually pick between for a tab/
+// bookmark favicon — built via png-to-ico from PNG buffers rendered
+// here, since sharp itself can't write .ico.
+const faviconSizes = [16, 32, 48];
+const faviconPngs = await Promise.all(
+  faviconSizes.map((size) =>
+    sharp(Buffer.from(sourceSvg), { density: 384 }).resize(size, size).png().toBuffer()
+  )
+);
+const icoBuffer = await pngToIco(faviconPngs);
+writeFileSync(path.join(brandDir, "favicon.ico"), icoBuffer);
+console.log(`wrote brand/favicon.ico (${faviconSizes.join("/")}px)`);

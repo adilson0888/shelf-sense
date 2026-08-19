@@ -31,12 +31,15 @@ import {
   armSave,
   buildEditProductPayload,
   buildSaveResult,
+  cancelAddBarcodeScan,
   cancelConfirm,
   changeBarcodeDesc,
   commitBarcodeDescEdit,
   confirmAliasMove,
   confirmBarcodeMove,
+  openAddBarcode,
   openProductEditState,
+  prefillNewBarcodeFromScan,
   removeAlias,
   removeSelectedBarcodes,
   setDoesExpire,
@@ -44,6 +47,7 @@ import {
   setNewAlias,
   setNewBarcodeCode,
   setNewBarcodeDesc,
+  startAddBarcodeLookup,
   startEditBarcodeDesc,
   toggleAddBarcode,
   toggleBarcodeSelected,
@@ -365,6 +369,18 @@ export function GroceryListPage() {
   function editToggleAddBarcode() {
     if (edit) setEdit(toggleAddBarcode(edit));
   }
+  function editOpenAddBarcode() {
+    if (edit) setEdit(openAddBarcode(edit, isBarcodeScanSupported()));
+  }
+  async function editAddBarcodeDetect(code: string) {
+    if (!edit) return;
+    setEdit(startAddBarcodeLookup(edit));
+    const lookup = await lookupBarcode(code);
+    setEdit((current) => (current ? prefillNewBarcodeFromScan(current, code, lookup.long_description || "") : current));
+  }
+  function editCancelAddBarcodeScan() {
+    if (edit) setEdit(cancelAddBarcodeScan(edit));
+  }
   function editNewBarcodeDescChange(value: string) {
     if (edit) setEdit(setNewBarcodeDesc(edit, value));
   }
@@ -682,10 +698,13 @@ export function GroceryListPage() {
         onStartEditBarcodeDesc={editStartEditBarcodeDesc}
         onBarcodeDescChange={editBarcodeDescChange}
         onCommitBarcodeDescEdit={editCommitBarcodeDescEdit}
+        onOpenAddBarcode={editOpenAddBarcode}
         onToggleAddBarcode={editToggleAddBarcode}
         onNewBarcodeDescChange={editNewBarcodeDescChange}
         onNewBarcodeCodeChange={editNewBarcodeCodeChange}
         onAddBarcode={editAddBarcode}
+        onAddBarcodeDetect={editAddBarcodeDetect}
+        onCancelAddBarcodeScan={editCancelAddBarcodeScan}
         onRemoveSelectedBarcodes={editRemoveSelectedBarcodes}
         onConfirmMove={editConfirmMove}
         onCancelConfirm={editCancelConfirm}

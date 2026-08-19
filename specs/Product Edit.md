@@ -1,6 +1,6 @@
 # Product Edit
 
-**Status:** in-progress — UI built in `apps/web` against the approved design, now saving for real through `apps/api`'s `PATCH /products/:id` (Postgres via Drizzle — see `specs/Persistence.md`)
+**Status:** in-progress — UI built in `apps/web` against the approved design, now saving for real through `apps/api`'s `PATCH /products/:id` (Postgres via Drizzle — see `specs/Persistence.md`). "+ Add barcode"'s scan-first flow (`BarcodeCaptureModal`, `GET /products/lookup-barcode` pre-fill) is implemented and verified via `npm run typecheck`/a real build — see this spec's later Barcodes revision.
 
 ## User story
 

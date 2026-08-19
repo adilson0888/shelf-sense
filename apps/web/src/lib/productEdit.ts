@@ -37,6 +37,10 @@ export interface ProductEditState {
   addBarcodeOpen: boolean;
   newBarcodeDesc: string;
   newBarcodeCode: string;
+  /** True while BarcodeCaptureModal is open for "+ Add barcode" — scan-first per Product Edit.md's later revision. */
+  addBarcodeScanOpen: boolean;
+  /** True between a successful scan and GET /products/lookup-barcode resolving — see startAddBarcodeLookup/prefillNewBarcodeFromScan. */
+  addBarcodeLookupLoading: boolean;
 
   // Staged cross-product effects — applied to the OTHER product(s) only at
   // Save, atomically alongside this product's own changes.
@@ -100,6 +104,8 @@ export function openProductEditState(product: Product): ProductEditState {
     addBarcodeOpen: false,
     newBarcodeDesc: "",
     newBarcodeCode: "",
+    addBarcodeScanOpen: false,
+    addBarcodeLookupLoading: false,
     unlinkBarcodesFrom: [],
     unlinkAliasFrom: [],
     confirm: null,
@@ -214,8 +220,56 @@ export function commitBarcodeDescEdit(state: ProductEditState): ProductEditState
   return { ...state, editingBarcodeId: null, saveArmed: false };
 }
 
+/** Closes the inline add-barcode form — the Cancel button inside it, or reopening it fresh. */
 export function toggleAddBarcode(state: ProductEditState): ProductEditState {
   return { ...state, addBarcodeOpen: !state.addBarcodeOpen, newBarcodeDesc: "", newBarcodeCode: "" };
+}
+
+/**
+ * "+ Add barcode" itself (Product Edit.md's later revision, mirrors Add
+ * Product's own scan-first entry point): opens the camera capture screen
+ * when the browser supports BarcodeDetector, or the blank inline form
+ * directly when it doesn't — the caller passes the result of
+ * isBarcodeScanSupported() since that's a browser capability check, not
+ * state this module tracks.
+ */
+export function openAddBarcode(state: ProductEditState, scanSupported: boolean): ProductEditState {
+  if (scanSupported) return { ...state, addBarcodeScanOpen: true };
+  return { ...state, addBarcodeOpen: true, newBarcodeDesc: "", newBarcodeCode: "" };
+}
+
+/**
+ * A barcode was decoded — closes the capture screen and marks the lookup
+ * as in flight. The caller (page-level, alongside its own `lookupBarcode`
+ * fetch) awaits GET /products/lookup-barcode and then calls
+ * prefillNewBarcodeFromScan with whatever it found.
+ */
+export function startAddBarcodeLookup(state: ProductEditState): ProductEditState {
+  return { ...state, addBarcodeScanOpen: false, addBarcodeLookupLoading: true };
+}
+
+/**
+ * The lookup resolved (hit or miss) — opens the inline form pre-filled
+ * with the scanned code and whatever description was found (blank on a
+ * miss, per "partial info still fills the form"). Both fields stay
+ * editable before the user commits with "Add code."
+ */
+export function prefillNewBarcodeFromScan(state: ProductEditState, code: string, description: string): ProductEditState {
+  return {
+    ...state,
+    addBarcodeLookupLoading: false,
+    addBarcodeOpen: true,
+    newBarcodeCode: code,
+    newBarcodeDesc: description,
+  };
+}
+
+/**
+ * The capture screen's "Edit manually" escape hatch — falls through to
+ * the blank inline form, same destination as an unsupported browser.
+ */
+export function cancelAddBarcodeScan(state: ProductEditState): ProductEditState {
+  return { ...state, addBarcodeScanOpen: false, addBarcodeOpen: true, newBarcodeDesc: "", newBarcodeCode: "" };
 }
 
 export function setNewBarcodeDesc(state: ProductEditState, value: string): ProductEditState {
