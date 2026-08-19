@@ -497,6 +497,27 @@ productsRouter.patch(
   }),
 );
 
+/**
+ * DELETE /:id — specs/Delete products.md. Hard-deletes the Product row.
+ * apps/api/src/db/schema.ts's onDelete: "cascade" FKs (batches,
+ * product_aliases, barcodes -> products.id) do the rest in the same
+ * statement — including consumed batches, i.e. this product's entire
+ * Price History.md data. No manual cascade code needed here, and nothing
+ * else references a product (Grocery List is a derived, unstored view —
+ * see specs/Delete products.md's Out of scope).
+ */
+productsRouter.delete(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const id = req.params.id;
+    const deleted = await db.delete(products).where(eq(products.id, id)).returning({ id: products.id });
+    if (deleted.length === 0) {
+      throw new HttpError(404, "Product not found");
+    }
+    res.status(204).end();
+  }),
+);
+
 // specs/Prices & Product Differentiation.md — Stock Edit and Quick Batch
 // Edit were local-state only until this spec; these three routes are the
 // real batch-mutation API neither of them had before.

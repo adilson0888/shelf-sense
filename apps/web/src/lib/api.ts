@@ -32,6 +32,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const body = await res.json().catch(() => null);
     throw new ApiError(res.status, body?.error ?? `Request failed (${res.status})`);
   }
+  // 204 No Content (specs/Delete products.md's DELETE /products/:id) has no
+  // body — res.json() would throw on the empty string.
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
@@ -128,6 +131,17 @@ export function updateProduct(
   payload: UpdateProductPayload,
 ): Promise<{ product: Product; batches: Batch[] }> {
   return request(`/products/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+}
+
+/**
+ * specs/Delete products.md — hard-deletes the product; apps/api cascades
+ * its batches (including consumed ones, i.e. Price History.md data),
+ * aliases, and barcodes via FK, so there's nothing else for the client to
+ * clean up server-side (the caller still drops the local product/batch
+ * cache entries itself — see DeleteProductModal.tsx).
+ */
+export function deleteProduct(id: string): Promise<void> {
+  return request(`/products/${id}`, { method: "DELETE" });
 }
 
 /** Mirrors apps/api/src/routes/preferences.ts's toPreferencesJson() — see specs/Settings.md's Data section. */
