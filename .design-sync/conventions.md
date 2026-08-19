@@ -13,7 +13,7 @@ Every color, spacing, radius, and shadow class here resolves to a `--ss-*` CSS c
 | Text | `text-ink-primary`, `text-ink-secondary`, `text-ink-muted`, `text-ink-inverse` (on filled/brand backgrounds) |
 | Borders | `border-border`, `border-border-strong` |
 | **Stock status** (the DS's core vocabulary — always pair the dot + bg, never invent new status colors) | `bg-stock-in-stock`/`bg-stock-in-stock-bg`, `bg-stock-low`/`bg-stock-low-bg`, `bg-stock-out`/`bg-stock-out-bg`, `bg-stock-incoming`/`bg-stock-incoming-bg`, plus matching `text-stock-*` |
-| Generic semantic (alerts, banners) | `bg-success`/`bg-success-bg`, `bg-warning`/`bg-warning-bg`, `bg-danger`/`bg-danger-bg`, `bg-info`/`bg-info-bg` (and `text-*` equivalents) |
+| Generic semantic (alerts, banners) | `bg-warning`/`bg-warning-bg`, `bg-danger`/`bg-danger-bg` (solid form used by `Button`'s `danger`/`confirm` variants); `bg-success-bg`/`bg-info-bg` only — no bare `bg-success`/`bg-info` ships, nothing uses that solid form today; `text-success`/`text-warning`/`text-danger`/`text-info` all ship |
 | Radius | `rounded-md` (default control), `rounded-lg` (cards), `rounded-full` (badges/pills) |
 | Spacing (use these, not arbitrary Tailwind numerics) | `gap-xs`/`gap-sm`/`gap-md`, `px-sm`/`px-md`/`px-lg`, `py-sm`/`py-md`/`py-lg` |
 | Type | Body text is Inter by default (no class needed); `font-mono` for SKUs/codes/barcodes |
