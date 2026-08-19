@@ -52,6 +52,17 @@ function toPreferencesJson(row: typeof preferences.$inferSelect, hasSavedPrefere
     // default_minimal_quantity/default_freshness_threshold_days.
     default_minimal_percentage: row.defaultMinimalPercentage,
     has_saved_preferences: hasSavedPreferences,
+    // specs/Advanced Settings.md — read fresh off process.env on every
+    // call, not stored anywhere; lets Settings show "provided by your
+    // administrator" instead of "not configured" without the client
+    // needing its own copy of the server's environment. Never the raw
+    // key values, same never-echoed convention as ai_api_key_set above.
+    env_defaults: {
+      ai_api_base_url: process.env.AI_API_BASE_URL ?? null,
+      ai_api_key_set: Boolean(process.env.AI_API_KEY),
+      ai_model: process.env.AI_MODEL ?? null,
+      tavily_api_key_set: Boolean(process.env.TAVILY_API_KEY),
+    },
   };
 }
 

@@ -182,6 +182,17 @@ export function SettingsPage() {
   // exclusive, and there's nothing saved-key-related to show mid-edit.
   const showSavedKeyRow = preferences.ai_api_key_set && !pendingClearKey && !newApiKey;
   const showSavedTavilyKeyRow = preferences.tavily_api_key_set && !pendingClearTavilyKey && !newTavilyKey;
+  // specs/Advanced Settings.md — only relevant when there's no user-owned
+  // key (saved or mid-typing) to show instead: either the user's own key
+  // is what's in effect, or the operator's env-var one is, never both
+  // messages at once. preferences.ai_api_key_set (not showSavedKeyRow)
+  // deliberately keeps this hidden during a pending clear too — the saved
+  // key is still the one in effect until that clear is actually saved.
+  const showAdminKeyHint = !preferences.ai_api_key_set && !newApiKey && preferences.env_defaults.ai_api_key_set;
+  const showAdminTavilyKeyHint =
+    !preferences.tavily_api_key_set && !newTavilyKey && preferences.env_defaults.tavily_api_key_set;
+  const showAdminBaseUrlHint = !form.aiApiBaseUrl.trim() && preferences.env_defaults.ai_api_base_url;
+  const showAdminModelHint = !form.aiModel.trim() && preferences.env_defaults.ai_model;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -197,12 +208,19 @@ export function SettingsPage() {
           <SectionHeader label={t("settings.aiSettings.heading")} open={aiOpen} onToggle={() => setAiOpen((v) => !v)} />
           {aiOpen && (
             <>
-              <Input
-                label={t("settings.aiSettings.baseUrlLabel")}
-                placeholder={t("settings.aiSettings.baseUrlPlaceholder")}
-                value={form.aiApiBaseUrl}
-                onChange={(e) => setField("aiApiBaseUrl", e.target.value)}
-              />
+              <div className="flex flex-col gap-xs">
+                <Input
+                  label={t("settings.aiSettings.baseUrlLabel")}
+                  placeholder={t("settings.aiSettings.baseUrlPlaceholder")}
+                  value={form.aiApiBaseUrl}
+                  onChange={(e) => setField("aiApiBaseUrl", e.target.value)}
+                />
+                {showAdminBaseUrlHint && (
+                  <p className="text-xs text-ink-muted">
+                    {t("settings.aiSettings.usingAdminDefault", { value: preferences.env_defaults.ai_api_base_url ?? "" })}
+                  </p>
+                )}
+              </div>
               <div className="flex flex-col gap-xs">
                 <Input
                   label={t("settings.aiSettings.apiKeyLabel")}
@@ -220,14 +238,22 @@ export function SettingsPage() {
                     </button>
                   </div>
                 )}
+                {showAdminKeyHint && <p className="text-xs text-ink-muted">{t("settings.aiSettings.providedByAdmin")}</p>}
                 {pendingClearKey && <p className="text-xs text-ink-muted">{t("settings.aiSettings.keyWillBeCleared")}</p>}
               </div>
-              <Input
-                label={t("settings.aiSettings.modelLabel")}
-                placeholder={t("settings.aiSettings.modelPlaceholder")}
-                value={form.aiModel}
-                onChange={(e) => setField("aiModel", e.target.value)}
-              />
+              <div className="flex flex-col gap-xs">
+                <Input
+                  label={t("settings.aiSettings.modelLabel")}
+                  placeholder={t("settings.aiSettings.modelPlaceholder")}
+                  value={form.aiModel}
+                  onChange={(e) => setField("aiModel", e.target.value)}
+                />
+                {showAdminModelHint && (
+                  <p className="text-xs text-ink-muted">
+                    {t("settings.aiSettings.usingAdminDefault", { value: preferences.env_defaults.ai_model ?? "" })}
+                  </p>
+                )}
+              </div>
               <div className="flex flex-col gap-xs">
                 <Input
                   label={t("settings.aiSettings.tavilyApiKeyLabel")}
@@ -250,6 +276,7 @@ export function SettingsPage() {
                     </button>
                   </div>
                 )}
+                {showAdminTavilyKeyHint && <p className="text-xs text-ink-muted">{t("settings.aiSettings.providedByAdmin")}</p>}
                 {pendingClearTavilyKey && <p className="text-xs text-ink-muted">{t("settings.aiSettings.keyWillBeCleared")}</p>}
               </div>
               <div className="flex justify-end">
