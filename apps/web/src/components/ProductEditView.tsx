@@ -37,6 +37,12 @@ export interface ProductEditViewProps {
   onSave: () => void;
   saving: boolean;
   saveError: string | null;
+  /**
+   * specs/Delete products.md — opens the same DeleteProductModal confirmation
+   * flow Product List's own "⋯" popover uses; the caller owns that modal's
+   * state (deleteTarget) and closes this view first, same as it closes on Save.
+   */
+  onDeleteProduct: () => void;
 }
 
 /**
@@ -80,6 +86,7 @@ export function ProductEditView({
   onSave,
   saving,
   saveError,
+  onDeleteProduct,
 }: ProductEditViewProps) {
   const i18n = useT();
   const { t } = i18n;
@@ -314,6 +321,16 @@ export function ProductEditView({
                   {t("productEdit.addBarcodeToggle")}
                 </Button>
               )}
+            </div>
+
+            {/* specs/Delete products.md — same destructive action Product
+                List's own "⋯" popover offers, surfaced here too since this
+                view is also reached from Inventory/Grocery List's Quick
+                Batch Edit, which has no "⋯" menu of its own. */}
+            <div className="flex flex-col gap-sm border-t border-border pt-lg">
+              <Button type="button" variant="danger" size="sm" className="self-start" onClick={onDeleteProduct}>
+                {t("productList.popoverDeleteProduct")}
+              </Button>
             </div>
           </div>
 
