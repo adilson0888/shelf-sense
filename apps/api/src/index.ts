@@ -3,8 +3,10 @@ import cors from "cors";
 import express from "express";
 import { runMigrations } from "./db/migrate.js";
 import { errorHandler } from "./lib/http-error.js";
+import { comparisonSitesRouter } from "./routes/comparisonSites.js";
 import { healthRouter } from "./routes/health.js";
 import { preferencesRouter } from "./routes/preferences.js";
+import { priceSearchRouter } from "./routes/priceSearch.js";
 import { productsRouter } from "./routes/products.js";
 
 const app = express();
@@ -20,6 +22,8 @@ app.use(express.json());
 app.use("/health", healthRouter);
 app.use("/products", productsRouter);
 app.use("/preferences", preferencesRouter);
+app.use("/comparison-sites", comparisonSitesRouter);
+app.use("/price-search", priceSearchRouter);
 
 // Domain routes land here once specs define them — e.g. app.use("/shelves", shelvesRouter)
 
