@@ -1,8 +1,10 @@
 import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Button, cn, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, StatCard } from "shelf-sense-ds";
+import { Alert, Button, cn, DataTable, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, StatCard, type DataTableColumn } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
-import { computeVisibleStats, type PriceSeries } from "../lib/priceHistory";
+import type { PriceSearchRow } from "../lib/api";
+import { computeVisibleStats, GENERAL_SERIES_KEY, type PriceSeries } from "../lib/priceHistory";
+import type { PriceSearchState } from "../lib/usePriceHistory";
 import type { Product } from "../types";
 
 export interface PriceHistoryModalProps {
@@ -16,6 +18,13 @@ export interface PriceHistoryModalProps {
   onToggleSeries: (key: string) => void;
   onClose: () => void;
   onJumpToQuickBatchEdit: () => void;
+  // specs/Price comparison.md
+  priceSearch: PriceSearchState;
+  onSearchPrices: () => void;
+  /** Whether Settings has at least one saved comparison site. */
+  hasComparisonSites: boolean;
+  /** Whether both a Tavily key and AI credentials are configured (user-saved or admin env default). */
+  hasSearchCredentials: boolean;
 }
 
 // packages/design-system/README.md's Charts section — cycle back to
@@ -51,6 +60,10 @@ export function PriceHistoryModal({
   onToggleSeries,
   onClose,
   onJumpToQuickBatchEdit,
+  priceSearch,
+  onSearchPrices,
+  hasComparisonSites,
+  hasSearchCredentials,
 }: PriceHistoryModalProps) {
   const { t, formatNumber, formatDate } = useT();
 
@@ -99,6 +112,33 @@ export function PriceHistoryModal({
   function formatPrice(n: number) {
     return formatNumber(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
+
+  // specs/Price comparison.md — "General" (no real barcode) is never
+  // searched, even if its legend entry happens to be visible.
+  const visibleBarcodeCount = [...visibleKeys].filter((k) => k !== GENERAL_SERIES_KEY).length;
+  const searchDisabledReason = !hasComparisonSites || !hasSearchCredentials
+    ? t("priceHistory.searchDisabledConfig")
+    : visibleBarcodeCount === 0
+      ? t("priceHistory.searchDisabledNoBarcode")
+      : null;
+
+  // specs/Price comparison.md's result matrix — sites as columns (derived
+  // from the first row; lib/priceSearch.ts guarantees every row carries the
+  // same site set in the same order), searched sub-products as rows.
+  function buildMatrixColumns(): DataTableColumn<PriceSearchRow>[] {
+    if (priceSearch.status !== "done" || priceSearch.rows.length === 0) return [];
+    const siteColumns: DataTableColumn<PriceSearchRow>[] = priceSearch.rows[0].results.map((r) => ({
+      key: r.site_id,
+      header: r.label,
+      align: "right" as const,
+      render: (row) => {
+        const cell = row.results.find((c) => c.site_id === r.site_id);
+        return cell?.price != null ? formatPrice(cell.price) : t("priceHistory.searchNotFound");
+      },
+    }));
+    return [{ key: "product", header: t("priceHistory.searchProductColumn"), render: (row) => row.label }, ...siteColumns];
+  }
+  const matrixColumns = buildMatrixColumns();
 
   return (
     <Modal open={open} onClose={onClose} aria-label={t("priceHistory.ariaLabel")} className="max-w-lg">
@@ -199,22 +239,54 @@ export function PriceHistoryModal({
               </div>
             )}
 
-            <div className="flex flex-wrap gap-xs">
-              {chartSeries.map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  onClick={() => onToggleSeries(s.key)}
-                  className={cn(
-                    "flex items-center gap-xs rounded-full border border-border bg-surface-1 px-sm py-xs text-xs text-ink-secondary",
-                    !s.visible && "opacity-45",
-                  )}
-                >
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: s.visible ? s.color : "var(--ss-border-strong)" }} />
-                  <span className={cn(!s.visible && "line-through")}>{s.label}</span>
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center justify-between gap-sm">
+              <div className="flex flex-wrap gap-xs">
+                {chartSeries.map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => onToggleSeries(s.key)}
+                    className={cn(
+                      "flex items-center gap-xs rounded-full border border-border bg-surface-1 px-sm py-xs text-xs text-ink-secondary",
+                      !s.visible && "opacity-45",
+                    )}
+                  >
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: s.visible ? s.color : "var(--ss-border-strong)" }} />
+                    <span className={cn(!s.visible && "line-through")}>{s.label}</span>
+                  </button>
+                ))}
+              </div>
+              {/* specs/Price comparison.md — one button, scoped to whatever's
+                  currently visible above (excluding "General"), not a
+                  per-line action. */}
+              <Button
+                variant="outline"
+                size="sm"
+                loading={priceSearch.status === "loading"}
+                disabled={!!searchDisabledReason}
+                title={searchDisabledReason ?? undefined}
+                onClick={onSearchPrices}
+              >
+                {t("priceHistory.searchPricesButton")}
+              </Button>
             </div>
+
+            {priceSearch.status === "loading" && (
+              <p className="text-center text-xs text-ink-muted">{t("priceHistory.searchLoading")}</p>
+            )}
+            {priceSearch.status === "error" && (
+              <Alert variant="danger" title={t("priceHistory.searchError")}>
+                {priceSearch.message}
+                <div className="mt-sm">
+                  <Button variant="outline" size="sm" onClick={onSearchPrices}>
+                    {t("common.tryAgain")}
+                  </Button>
+                </div>
+              </Alert>
+            )}
+            {priceSearch.status === "done" && (
+              <DataTable columns={matrixColumns} data={priceSearch.rows} getRowKey={(row) => row.barcode_id} />
+            )}
           </>
         )}
       </ModalBody>
