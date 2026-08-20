@@ -2,7 +2,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../db/client.js";
-import { barcodes, comparisonSites, preferences } from "../db/schema.js";
+import { barcodes, comparisonSites, preferences, products } from "../db/schema.js";
 import { asyncHandler, HttpError } from "../lib/http-error.js";
 import { searchPrices } from "../lib/priceSearch.js";
 
@@ -44,9 +44,21 @@ priceSearchRouter.post(
     const barcodeById = new Map(barcodeRows.map((b) => [b.id, b]));
     const orderedBarcodes = barcode_ids.map((id) => barcodeById.get(id)!);
 
+    // The Tavily query is the product + barcode's own description text,
+    // never the bare code — see lib/priceSearch.ts's module doc for why.
+    const productRows = await db
+      .select({ id: products.id, shortDescription: products.shortDescription })
+      .from(products)
+      .where(inArray(products.id, [...new Set(orderedBarcodes.map((b) => b.productId))]));
+    const productById = new Map(productRows.map((p) => [p.id, p]));
+
     const prefsRow = prefsRows[0];
     const rows = await searchPrices(
-      orderedBarcodes.map((b) => ({ id: b.id, code: b.code, label: b.description || b.code })),
+      orderedBarcodes.map((b) => {
+        const label = b.description || b.code;
+        const productName = productById.get(b.productId)?.shortDescription;
+        return { id: b.id, query: [productName, b.description].filter(Boolean).join(" ") || b.code, label };
+      }),
       siteRows.map((s) => ({ id: s.id, label: s.label, domain: s.domain })),
       {
         // Same independent-per-credential env-var fallback products.ts's

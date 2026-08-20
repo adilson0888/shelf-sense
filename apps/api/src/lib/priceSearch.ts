@@ -6,6 +6,15 @@
  * sites via include_domains), then ONE AI-extraction call across every
  * barcode's raw results together — see that spec's Non-functional
  * cost/latency note on why this isn't one AI call per barcode.
+ *
+ * Query text is the product/barcode's own description, NOT the bare
+ * barcode code — verified empirically (manual testing against a real
+ * Tavily key): a numeric-only query combined with include_domains has
+ * almost no recall, since shopping sites essentially never index the raw
+ * EAN as visible page text. Barcode Scanner's own "search the barcode
+ * number" fallback (barcodeLookup.ts) gets away with this because it
+ * searches the *open* web with no domain restriction — that combination
+ * doesn't transfer here.
  */
 import { tavilySearch, withTimeout } from "./barcodeLookup.js";
 
@@ -17,7 +26,8 @@ export interface ComparisonSiteInput {
 
 export interface PriceSearchBarcodeInput {
   id: string;
-  code: string;
+  /** Product + barcode description text, e.g. "Macarrão Renata com Ovos Espaguete nº 8 500g" — the actual Tavily query. Never the bare code (see module doc). */
+  query: string;
   label: string;
 }
 
@@ -143,7 +153,7 @@ export async function searchPrices(
 
   const domains = sites.map((s) => s.domain);
   const searches = await Promise.all(
-    barcodes.map(async (b) => ({ barcode: b, results: await tavilySearch(b.code, creds.tavilyApiKey as string, domains) })),
+    barcodes.map(async (b) => ({ barcode: b, results: await tavilySearch(b.query, creds.tavilyApiKey as string, domains) })),
   );
   const withResults = searches.filter((s): s is { barcode: PriceSearchBarcodeInput; results: NonNullable<typeof s.results> } =>
     Boolean(s.results?.length),
