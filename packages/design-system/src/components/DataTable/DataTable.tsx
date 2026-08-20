@@ -107,6 +107,15 @@ export function DataTable<T>({
                   "border-t border-border first:border-t-0",
                   (onRowClick || onRowPointerDown) && "cursor-pointer hover:bg-surface-1",
                 )}
+                style={
+                  // Suppresses the browser/OS's native long-press gesture recognition
+                  // (text-select callout, and the haptic tick bundled with it) so a
+                  // caller's own hold-timer haptic is the only one that fires — see
+                  // apps/web/src/lib/haptics.ts.
+                  onRowPointerDown
+                    ? { WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }
+                    : undefined
+                }
               >
                 {columns.map((col) => (
                   <td

@@ -11,6 +11,7 @@ import { Alert, Button, DataTable, Footer, IconButton, Input, Popover, PopoverIt
 import { useT } from "shelf-sense-i18n/react";
 import { ScopeTile } from "../components/ScopeTile";
 import { SectionHeader } from "../components/SectionHeader";
+import { vibrateHold } from "../lib/haptics";
 import { useComparisonSitesStore } from "../lib/comparisonSitesStore";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
@@ -256,6 +257,7 @@ export function ProductListPage() {
       const press = pressRef.current;
       if (!press || press.moved) return;
       pressRef.current = null;
+      vibrateHold();
       openQuick(press.id);
     }, HOLD_MS);
   }

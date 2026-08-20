@@ -4,6 +4,7 @@ import { Alert, Button, Footer, FreshnessBadge, Input, Popover, PopoverItem, cn 
 import { useT } from "shelf-sense-i18n/react";
 import { ScopeTile } from "../components/ScopeTile";
 import { freshnessBadgeLabel } from "../lib/freshness";
+import { suppressNativeLongPressStyle, vibrateHold } from "../lib/haptics";
 import { useComparisonSitesStore } from "../lib/comparisonSitesStore";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
@@ -64,6 +65,7 @@ import { ProductEditView } from "../components/ProductEditView";
 import { usePriceHistory } from "../lib/usePriceHistory";
 
 const SAVED_MESSAGE_DELAY_MS = 2600;
+const HOLD_MS = 480;
 
 /**
  * Real implementation of the approved Claude Design prototype, merged
@@ -269,10 +271,11 @@ export function InventoryPage() {
       const press = pressRef.current;
       if (!press || press.moved) return;
       press.fired = true;
+      vibrateHold();
       setSwipedId(null);
       setDrag(null);
       openQuick(id, total, mode);
-    }, 480);
+    }, HOLD_MS);
   }
 
   // Distinguishes a horizontal swipe (drags the row to reveal the "•••"
@@ -929,6 +932,7 @@ function ProductRow({
             transform: `translateX(${slideX}px)`,
             transition: dragging ? "none" : "transform 180ms ease",
             touchAction: "pan-y",
+            ...suppressNativeLongPressStyle,
           }}
         >
           <button

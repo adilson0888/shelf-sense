@@ -5,6 +5,7 @@ import { useT } from "shelf-sense-i18n/react";
 import { ScopeTile } from "../components/ScopeTile";
 import { SectionHeader } from "../components/SectionHeader";
 import { freshnessBadgeLabel } from "../lib/freshness";
+import { suppressNativeLongPressStyle, vibrateHold } from "../lib/haptics";
 import { useComparisonSitesStore } from "../lib/comparisonSitesStore";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
@@ -234,6 +235,7 @@ export function GroceryListPage() {
       const press = pressRef.current;
       if (!press || press.moved) return;
       press.fired = true;
+      vibrateHold();
       openQuick(id, total, mode);
     }, HOLD_MS);
   }
@@ -827,7 +829,7 @@ function GroceryRow({
         onPointerCancel={onPressAbort}
         onContextMenu={(e) => e.preventDefault()}
         className="relative min-w-0 flex-1 bg-surface-0"
-        style={{ touchAction: "pan-y" }}
+        style={{ touchAction: "pan-y", ...suppressNativeLongPressStyle }}
       >
         <button
           type="button"
