@@ -78,7 +78,10 @@ export function QuickBatchEditModal({
   const saveDisabled = !quick || delta === 0 || (showExpiry && quick.addExpiresOn.trim().length === 0) || saving;
   // specs/Prices & Product Differentiation.md — only relevant alongside a
   // new batch; a code picker only when there's an actual choice to make.
-  const showPriceAndCode = !isPercentage && delta > 0;
+  // specs/Price History for % tracked products.md: also applies to a
+  // percentage-tracked product's positive delta, not just units' — that's
+  // what conditionally creates its symbolic price-log Batch (see below).
+  const showPriceAndCode = delta > 0;
   const barcodeOptions = (product?.barcodes ?? []).map((b) => ({ value: b.id, label: b.description || b.code }));
 
   const decHint = isPercentage
@@ -170,7 +173,12 @@ export function QuickBatchEditModal({
               <span className="text-xs leading-relaxed text-ink-muted">{decHint}</span>
             </div>
 
-            {!isPercentage && (
+            {/* specs/Price History for % tracked products.md: this section
+                also renders for a percentage-tracked product when the
+                pending delta is positive — only the price/code fields
+                apply there, the expiry-related lines above them are
+                unit-only and stay gated by isPercentage below. */}
+            {(!isPercentage || showPriceAndCode) && (
               <div className="flex flex-col gap-sm border-t border-border pt-sm">
                 {showExpiry && (
                   <Input
@@ -222,16 +230,12 @@ export function QuickBatchEditModal({
               <Button type="button" variant="outline" size="sm" onClick={onEditProduct}>
                 {t("quickBatchEdit.editProductButton")}
               </Button>
-              {/* specs/Price History.md — percentage-tracked products carry
-                  no Batch rows at all, same disabled treatment as Stock above. */}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={isPercentage}
-                title={isPercentage ? t("quickBatchEdit.stockDisabledPercentTitle") : undefined}
-                onClick={onPriceHistory}
-              >
+              {/* specs/Price History for % tracked products.md — a
+                  percentage-tracked product can now carry (symbolic,
+                  price-log) Batch rows, so this is no longer disabled for it
+                  like Stock above; it falls into the ordinary empty state
+                  when it has none yet. */}
+              <Button type="button" variant="outline" size="sm" onClick={onPriceHistory}>
                 {t("priceHistory.ariaLabel")}
               </Button>
             </div>

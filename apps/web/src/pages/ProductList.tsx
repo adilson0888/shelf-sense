@@ -781,16 +781,12 @@ export function ProductListPage() {
         ) : (
           <PopoverItem onClick={popoverEditStock}>{t("productList.popoverEditStock")}</PopoverItem>
         )}
-        {/* specs/Price History.md: percentage-tracked products carry no
-            Batch rows at all — nothing to plot, same disabled treatment
-            as Edit Stock above. */}
-        {popover && products.find((p) => p.id === popover.productId)?.tracking_mode === "percentage" ? (
-          <PopoverItem disabled title={t("quickBatchEdit.stockDisabledPercentTitle")} className="cursor-not-allowed opacity-50">
-            {t("productList.popoverPriceHistory")}
-          </PopoverItem>
-        ) : (
-          <PopoverItem onClick={popoverPriceHistory}>{t("productList.popoverPriceHistory")}</PopoverItem>
-        )}
+        {/* specs/Price History for % tracked products.md: a percentage-tracked
+            product can now carry (symbolic, price-log) Batch rows, so this
+            entry is no longer disabled for it — same treatment as a
+            unit-tracked product, falling into the ordinary empty state when
+            it has none yet. */}
+        <PopoverItem onClick={popoverPriceHistory}>{t("productList.popoverPriceHistory")}</PopoverItem>
         {/* specs/Delete products.md — divider separates the one destructive
             option from the three above it. */}
         <div role="separator" className="my-1 h-px bg-border" />

@@ -106,3 +106,25 @@ export function planQuickEdit(
         : null,
   };
 }
+
+/**
+ * specs/Price History for % tracked products.md — a percentage-tracked
+ * product's stock_percent is always overwritten directly (Inventory.tsx's
+ * quickSave), never cascaded through batches; this only plans the optional
+ * symbolic Batch that purchase becomes when the user entered a price
+ * alongside a positive delta. quantity is the % delta itself (e.g. a +25%
+ * top-up plans quantity: 25) — a historical figure, never summed into any
+ * total. expires_on is always null: a percentage-tracked product never
+ * expires. A blank price, or a zero/negative delta, plans no batch at all —
+ * unlike units, price presence is what decides whether a batch is created,
+ * not the delta's sign alone.
+ */
+export function planPercentBatch(delta: number, addPrice: string, addBarcodeId: string | null): QuickEditPlan["create"] {
+  if (delta <= 0 || !addPrice.trim()) return null;
+  return {
+    quantity: delta,
+    expires_on: null,
+    barcode_id: addBarcodeId,
+    price: Number.parseFloat(addPrice),
+  };
+}

@@ -15,13 +15,7 @@ Covers, when picked back up:
 
 ## Batch cost tracking & consumed-batch history — resolved, see `specs/Prices & Product Differentiation.md`.
 
-## Percentage-tracked products in Price History
-
-Pulled from `Price History.md` (2026-08-19) — percentage-tracked products (`specs/Relative Tracking.md`) carry no `Batch` rows at all, so they have no price data and Price History's menu item is simply disabled for them.
-
-Covers, when picked back up:
-- Treating a percentage increase (restocking a percentage-tracked product) as a symbolic purchase event — a record with its own timestamp and optional price, even though there's no real batch/quantity behind it — so these products can feed Price History the same way unit-tracked products do.
-- Needs a real design pass: where this record lives (a lightweight new entity vs. relaxing `Batch` to allow percentage products a row without a `quantity`), and what UI prompts for the optional price at the moment the user bumps the percentage.
+## Percentage-tracked products in Price History — resolved, see `specs/Price History for % tracked products.md`.
 
 ## Locale-correct date input
 

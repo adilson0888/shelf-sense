@@ -26,6 +26,7 @@ import {
   bumpQuickEdit,
   commitQuickEditDraft,
   openQuickEditState,
+  planPercentBatch,
   planQuickEdit,
   resetQuickEdit,
   type QuickEditState,
@@ -386,10 +387,29 @@ export function InventoryPage() {
       return;
     }
     if (product.tracking_mode === "percentage") {
-      // specs/Relative Tracking.md: overwrites stock_percent directly —
-      // no Batch is ever created or cascaded through for this mode.
+      // specs/Relative Tracking.md: overwrites stock_percent directly,
+      // regardless of whether a batch is also created below.
       setProducts((ps) => ps.map((p) => (p.id === product.id ? { ...p, stock_percent: quick.target } : p)));
-      setQuick(null);
+      // specs/Price History for % tracked products.md: a positive delta
+      // with a price entered also creates one symbolic, write-once Batch —
+      // quantity is the % delta itself, expires_on always null. A blank
+      // price (or a non-positive delta) creates nothing, same as before.
+      const create = planPercentBatch(quick.target - quick.base, quick.addPrice, quick.addBarcodeId);
+      if (!create) {
+        setQuick(null);
+        return;
+      }
+      setQuickSaving(true);
+      setQuickSaveError(null);
+      try {
+        const created = await createBatch(quick.productId, create);
+        setBatches((bs) => [created.batch, ...bs]);
+        setQuick(null);
+      } catch (err) {
+        setQuickSaveError(err instanceof ApiError ? err.message : t("inventory.genericSaveError"));
+      } finally {
+        setQuickSaving(false);
+      }
       return;
     }
     const delta = quick.target - quick.base;
@@ -835,16 +855,12 @@ export function InventoryPage() {
         position={rowActions ? { x: rowActions.x, y: rowActions.y } : { x: 0, y: 0 }}
       >
         <PopoverItem onClick={rowActionsEditStock}>{t("productList.popoverEditStock")}</PopoverItem>
-        {/* specs/Price History.md: percentage-tracked products carry no
-            Batch rows at all — nothing to plot, same disabled treatment
-            ProductList.tsx's own popover gives this case. */}
-        {rowActions?.mode === "percentage" ? (
-          <PopoverItem disabled title={t("quickBatchEdit.stockDisabledPercentTitle")} className="cursor-not-allowed opacity-50">
-            {t("productList.popoverPriceHistory")}
-          </PopoverItem>
-        ) : (
-          <PopoverItem onClick={rowActionsPriceHistory}>{t("productList.popoverPriceHistory")}</PopoverItem>
-        )}
+        {/* specs/Price History for % tracked products.md: a percentage-tracked
+            product can now carry (symbolic, price-log) Batch rows, so this
+            entry is no longer disabled for it — same treatment as a
+            unit-tracked product, falling into the ordinary empty state when
+            it has none yet. */}
+        <PopoverItem onClick={rowActionsPriceHistory}>{t("productList.popoverPriceHistory")}</PopoverItem>
       </Popover>
 
       <PriceHistoryModal

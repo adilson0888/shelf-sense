@@ -532,8 +532,17 @@ const createBatchSchema = z.object({
 
 /**
  * POST /:id/batches — add a batch (a purchase/lot) to an existing product.
- * Percentage-tracked products carry no Batch rows at all (specs/Relative
- * Tracking.md) — rejected here rather than silently accepted.
+ * A percentage-tracked product carries no *real* Batch rows (Relative
+ * Tracking.md's stock_percent stays the only source of truth for its
+ * current stock) but, as of specs/Price History for % tracked
+ * products.md, it can carry symbolic, write-once ones purely to log a
+ * purchase's price over time — those require a price (that's what
+ * distinguishes "log this purchase" from "just adjust the % bar", decided
+ * client-side but re-checked here too, same defense-in-depth convention
+ * this file already applies elsewhere) and always end up with a null
+ * expires_on, same as the existing does_expire-driven line below already
+ * guarantees for this tracking_mode (does_expire is permanently false for
+ * it — Relative Tracking.md).
  */
 productsRouter.post(
   "/:id/batches",
@@ -549,8 +558,8 @@ productsRouter.post(
     if (!product) {
       throw new HttpError(404, "Product not found");
     }
-    if (product.trackingMode === "percentage") {
-      throw new HttpError(400, "This product is tracked by percentage — it doesn't carry batches");
+    if (product.trackingMode === "percentage" && input.price == null) {
+      throw new HttpError(400, "price is required to log a purchase for a percentage-tracked product");
     }
     if (product.doesExpire && !input.expires_on) {
       throw new HttpError(400, "expires_on is required for a product that expires");
