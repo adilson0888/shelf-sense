@@ -1,6 +1,6 @@
 # Price History
 
-**Status:** ready
+**Status:** done
 
 ## User story
 

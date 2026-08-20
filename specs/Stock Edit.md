@@ -1,6 +1,6 @@
 # Stock Edit
 
-**Status:** ready — approved in Claude Design as `templates/stock-edit/StockEdit.dc.html`; implementing against that prototype.
+**Status:** done
 
 ## User story
 

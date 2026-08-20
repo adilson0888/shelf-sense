@@ -8,6 +8,10 @@ storybook-static
 .design-sync/*.local.json
 .obsidian/
 
+# Obsidian's own trash folder for specs/ (not app-generated)
+specs/.trash/
+**/nohup.out
+
 # Local secrets/config (DATABASE_URL, etc.) — see apps/api/.env.example
 .env
 

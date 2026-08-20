@@ -1,6 +1,6 @@
 # Delete products
 
-**Status:** draft
+**Status:** done
 
 ## User story
 
