@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { AppLocaleProvider } from "./lib/AppLocaleProvider";
+import { ComparisonSitesProvider } from "./lib/comparisonSitesStore";
 import { PreferencesProvider } from "./lib/preferencesStore";
 import { ProductsProvider } from "./lib/productsStore";
 import { AddProductPage } from "./pages/AddProduct";
@@ -33,21 +34,23 @@ export function App() {
   return (
     <PreferencesProvider>
       <AppLocaleProvider>
-        <ProductsProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/products/:id/stock" element={<StockEditPage />} />
-              {/* specs/Barcode Scanner & Product info scrape.md — the real
-                  route the old fifth Add Product modal step became. Same
-                  chrome-less-outside-AppShell treatment as Stock Edit, for
-                  the same reason: a focused entry screen with unsaved
-                  pending state shouldn't invite navigating away via the
-                  drawer. */}
-              <Route path="/products/add" element={<AddProductPage />} />
-              <Route path="/*" element={<ShellRoutes />} />
-            </Routes>
-          </BrowserRouter>
-        </ProductsProvider>
+        <ComparisonSitesProvider>
+          <ProductsProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/products/:id/stock" element={<StockEditPage />} />
+                {/* specs/Barcode Scanner & Product info scrape.md — the real
+                    route the old fifth Add Product modal step became. Same
+                    chrome-less-outside-AppShell treatment as Stock Edit, for
+                    the same reason: a focused entry screen with unsaved
+                    pending state shouldn't invite navigating away via the
+                    drawer. */}
+                <Route path="/products/add" element={<AddProductPage />} />
+                <Route path="/*" element={<ShellRoutes />} />
+              </Routes>
+            </BrowserRouter>
+          </ProductsProvider>
+        </ComparisonSitesProvider>
       </AppLocaleProvider>
     </PreferencesProvider>
   );

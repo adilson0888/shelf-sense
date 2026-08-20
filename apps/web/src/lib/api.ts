@@ -197,3 +197,50 @@ export function fetchPreferences(): Promise<PreferencesResponse> {
 export function updatePreferences(payload: UpdatePreferencesPayload): Promise<PreferencesResponse> {
   return request("/preferences", { method: "PATCH", body: JSON.stringify(payload) });
 }
+
+/** specs/Price comparison.md — a shopping site the user's price searches check, managed from Settings. */
+export interface ComparisonSite {
+  id: string;
+  label: string;
+  domain: string;
+}
+
+export interface ComparisonSitePayload {
+  label: string;
+  domain: string;
+}
+
+export function fetchComparisonSites(): Promise<{ sites: ComparisonSite[] }> {
+  return request("/comparison-sites");
+}
+
+export function createComparisonSite(payload: ComparisonSitePayload): Promise<{ site: ComparisonSite }> {
+  return request("/comparison-sites", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function updateComparisonSite(id: string, payload: ComparisonSitePayload): Promise<{ site: ComparisonSite }> {
+  return request(`/comparison-sites/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+}
+
+export function deleteComparisonSite(id: string): Promise<void> {
+  return request(`/comparison-sites/${id}`, { method: "DELETE" });
+}
+
+/** specs/Price comparison.md's POST /price-search response shape. */
+export interface PriceSearchResult {
+  site_id: string;
+  label: string;
+  price: number | null;
+  /** The listing page the price came from — deterministically matched server-side, never AI-generated. null whenever price is null, or no matching URL was found. */
+  url: string | null;
+}
+
+export interface PriceSearchRow {
+  barcode_id: string;
+  label: string;
+  results: PriceSearchResult[];
+}
+
+export function searchPrices(barcodeIds: string[]): Promise<{ rows: PriceSearchRow[] }> {
+  return request("/price-search", { method: "POST", body: JSON.stringify({ barcode_ids: barcodeIds }) });
+}

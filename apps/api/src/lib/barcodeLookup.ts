@@ -24,7 +24,7 @@ const OFF_TIMEOUT_MS = 8_000;
 const TAVILY_TIMEOUT_MS = 10_000;
 const AI_TIMEOUT_MS = 15_000;
 
-async function withTimeout<T>(ms: number, run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+export async function withTimeout<T>(ms: number, run: (signal: AbortSignal) => Promise<T>): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
@@ -72,18 +72,38 @@ async function lookupOpenFoodFacts(
   }
 }
 
-interface TavilyResult {
+export interface TavilyResult {
   title: string;
   content: string;
+  url: string;
 }
 
-async function tavilySearch(code: string, apiKey: string): Promise<TavilyResult[] | null> {
+/**
+ * `includeDomains` restricts results to those sites — specs/Price
+ * comparison.md's lib/priceSearch.ts is the one caller that passes it
+ * (the user's saved comparison sites); the barcode-lookup fallback below
+ * searches the open web, same as always. `maxResults` likewise defaults to
+ * this fallback's original 5 but is overridable — lib/priceSearch.ts asks
+ * for more, since a domain-restricted search skews toward less-relevant
+ * pages and benefits from more candidates.
+ */
+export async function tavilySearch(
+  code: string,
+  apiKey: string,
+  includeDomains?: string[],
+  maxResults = 5,
+): Promise<TavilyResult[] | null> {
   try {
     const res = await withTimeout(TAVILY_TIMEOUT_MS, (signal) =>
       fetch("https://api.tavily.com/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ api_key: apiKey, query: code, max_results: 5 }),
+        body: JSON.stringify({
+          api_key: apiKey,
+          query: code,
+          max_results: maxResults,
+          ...(includeDomains?.length ? { include_domains: includeDomains } : {}),
+        }),
         signal,
       }),
     );

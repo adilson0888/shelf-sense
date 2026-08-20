@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Button, Footer, Input, Select, Switch } from "shelf-sense-ds";
+import { Alert, Button, Footer, IconButton, Input, Select, Switch } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { SectionHeader } from "../components/SectionHeader";
-import { ApiError, type PreferencesResponse, type UpdatePreferencesPayload } from "../lib/api";
+import { ApiError, type ComparisonSite, type PreferencesResponse, type UpdatePreferencesPayload } from "../lib/api";
+import { useComparisonSitesStore } from "../lib/comparisonSitesStore";
 import { usePreferencesStore } from "../lib/preferencesStore";
 
 const SAVED_MESSAGE_DELAY_MS = 2600;
@@ -63,6 +64,18 @@ function parsePercent(value: string): number | null {
  */
 export function SettingsPage() {
   const { preferences, loading, error, refetch, save } = usePreferencesStore();
+  // specs/Price comparison.md's Settings CRUD — each action hits the API
+  // immediately (add/edit/remove), unlike the rest of this page's fields,
+  // which only save on the section's own Save button.
+  const {
+    sites: comparisonSites,
+    loading: sitesLoading,
+    error: sitesError,
+    refetch: refetchSites,
+    addSite,
+    editSite,
+    removeSite,
+  } = useComparisonSitesStore();
   const { t, locale } = useT();
   const languageOptions = [
     { value: "en-US", label: t("settings.languageOptions.enUS") },
@@ -78,6 +91,7 @@ export function SettingsPage() {
   const [aiOpen, setAiOpen] = useState(true);
   const [defaultsOpen, setDefaultsOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [comparisonSitesOpen, setComparisonSitesOpen] = useState(false);
 
   // API key field: an always-blank "new key" draft, mutually exclusive with
   // "clear saved key" — typing clears the pending-clear flag, and the saved-
@@ -154,6 +168,72 @@ export function SettingsPage() {
       setSaveError(err instanceof ApiError ? err.message : t("settings.saveErrorFallback"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  // --- Comparison sites: local UI state only (add/edit forms) — the list
+  // itself lives in comparisonSitesStore, per specs/Price comparison.md.
+  const [editingSiteId, setEditingSiteId] = useState<string | null>(null);
+  const [siteDraftLabel, setSiteDraftLabel] = useState("");
+  const [siteDraftDomain, setSiteDraftDomain] = useState("");
+  const [addingSite, setAddingSite] = useState(false);
+  const [newSiteLabel, setNewSiteLabel] = useState("");
+  const [newSiteDomain, setNewSiteDomain] = useState("");
+  const [siteActionBusy, setSiteActionBusy] = useState(false);
+  const [siteActionError, setSiteActionError] = useState<string | null>(null);
+
+  function startEditSite(site: ComparisonSite) {
+    setEditingSiteId(site.id);
+    setSiteDraftLabel(site.label);
+    setSiteDraftDomain(site.domain);
+    setSiteActionError(null);
+  }
+  function cancelEditSite() {
+    setEditingSiteId(null);
+  }
+  async function saveEditSite() {
+    if (!editingSiteId || !siteDraftLabel.trim() || !siteDraftDomain.trim()) return;
+    setSiteActionBusy(true);
+    setSiteActionError(null);
+    try {
+      await editSite(editingSiteId, { label: siteDraftLabel.trim(), domain: siteDraftDomain.trim() });
+      setEditingSiteId(null);
+    } catch (err) {
+      setSiteActionError(err instanceof ApiError ? err.message : t("settings.comparisonSites.saveError"));
+    } finally {
+      setSiteActionBusy(false);
+    }
+  }
+  async function handleRemoveSite(id: string) {
+    setSiteActionBusy(true);
+    setSiteActionError(null);
+    try {
+      await removeSite(id);
+    } catch (err) {
+      setSiteActionError(err instanceof ApiError ? err.message : t("settings.comparisonSites.saveError"));
+    } finally {
+      setSiteActionBusy(false);
+    }
+  }
+  function toggleAddSite() {
+    setAddingSite((v) => !v);
+    setNewSiteLabel("");
+    setNewSiteDomain("");
+    setSiteActionError(null);
+  }
+  async function handleAddSite() {
+    if (!newSiteLabel.trim() || !newSiteDomain.trim()) return;
+    setSiteActionBusy(true);
+    setSiteActionError(null);
+    try {
+      await addSite({ label: newSiteLabel.trim(), domain: newSiteDomain.trim() });
+      setAddingSite(false);
+      setNewSiteLabel("");
+      setNewSiteDomain("");
+    } catch (err) {
+      setSiteActionError(err instanceof ApiError ? err.message : t("settings.comparisonSites.saveError"));
+    } finally {
+      setSiteActionBusy(false);
     }
   }
 
@@ -351,6 +431,135 @@ export function SettingsPage() {
                   {saving ? t("common.saving") : t("common.save")}
                 </Button>
               </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-md border-t border-border pt-lg">
+          <SectionHeader
+            label={t("settings.comparisonSites.heading")}
+            open={comparisonSitesOpen}
+            onToggle={() => setComparisonSitesOpen((v) => !v)}
+          />
+          {comparisonSitesOpen && (
+            <>
+              <p className="text-xs text-ink-muted">{t("settings.comparisonSites.description")}</p>
+
+              {sitesLoading && <p className="text-xs text-ink-muted">{t("settings.comparisonSites.loading")}</p>}
+              {!sitesLoading && sitesError && (
+                <Alert variant="danger" title={t("settings.comparisonSites.loadError")}>
+                  {sitesError}
+                  <div className="mt-sm">
+                    <Button variant="outline" size="sm" onClick={refetchSites}>
+                      {t("common.tryAgain")}
+                    </Button>
+                  </div>
+                </Alert>
+              )}
+
+              {!sitesLoading && !sitesError && (
+                <>
+                  {siteActionError && <Alert variant="danger" title={t("settings.comparisonSites.saveError")}>{siteActionError}</Alert>}
+
+                  {comparisonSites.length === 0 && !addingSite && (
+                    <p className="text-xs text-ink-muted">{t("settings.comparisonSites.emptyHint")}</p>
+                  )}
+
+                  {comparisonSites.length > 0 && (
+                    <div className="overflow-hidden rounded-lg border border-border bg-surface-0">
+                      <div className="grid grid-cols-[1fr_1fr_36px] gap-sm bg-surface-2 px-md py-[9px] font-mono text-[10px] uppercase tracking-[0.1em] text-ink-muted">
+                        <span>{t("settings.comparisonSites.labelLabel")}</span>
+                        <span>{t("settings.comparisonSites.domainLabel")}</span>
+                        <span />
+                      </div>
+                      {comparisonSites.map((site) =>
+                        editingSiteId === site.id ? (
+                          <div key={site.id} className="flex flex-col gap-sm border-t border-border p-md">
+                            <Input
+                              autoFocus
+                              label={t("settings.comparisonSites.labelLabel")}
+                              value={siteDraftLabel}
+                              onChange={(e) => setSiteDraftLabel(e.target.value)}
+                            />
+                            <Input
+                              label={t("settings.comparisonSites.domainLabel")}
+                              placeholder={t("settings.comparisonSites.domainPlaceholder")}
+                              value={siteDraftDomain}
+                              onChange={(e) => setSiteDraftDomain(e.target.value)}
+                            />
+                            <div className="flex justify-end gap-sm">
+                              <Button type="button" variant="ghost" size="sm" onClick={cancelEditSite} disabled={siteActionBusy}>
+                                {t("common.cancel")}
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={saveEditSite}
+                                disabled={siteActionBusy || !siteDraftLabel.trim() || !siteDraftDomain.trim()}
+                              >
+                                {t("common.save")}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div key={site.id} className="grid grid-cols-[1fr_1fr_36px] items-center gap-sm border-t border-border px-md py-[9px]">
+                            <button
+                              type="button"
+                              onClick={() => startEditSite(site)}
+                              className="truncate border-0 border-b border-dashed border-transparent bg-transparent p-0 text-left text-[13px] text-ink-primary hover:border-border-strong"
+                            >
+                              {site.label}
+                            </button>
+                            <span className="truncate font-mono text-[11px] text-ink-muted">{site.domain}</span>
+                            <IconButton
+                              icon="×"
+                              size="sm"
+                              aria-label={t("settings.comparisonSites.removeLabel", { label: site.label })}
+                              disabled={siteActionBusy}
+                              onClick={() => handleRemoveSite(site.id)}
+                            />
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
+
+                  {addingSite ? (
+                    <div className="flex flex-col gap-sm rounded-lg border border-dashed border-border-strong p-md">
+                      <Input
+                        autoFocus
+                        label={t("settings.comparisonSites.labelLabel")}
+                        placeholder={t("settings.comparisonSites.labelPlaceholder")}
+                        value={newSiteLabel}
+                        onChange={(e) => setNewSiteLabel(e.target.value)}
+                      />
+                      <Input
+                        label={t("settings.comparisonSites.domainLabel")}
+                        placeholder={t("settings.comparisonSites.domainPlaceholder")}
+                        value={newSiteDomain}
+                        onChange={(e) => setNewSiteDomain(e.target.value)}
+                      />
+                      <div className="flex justify-end gap-sm">
+                        <Button type="button" variant="ghost" size="sm" onClick={toggleAddSite} disabled={siteActionBusy}>
+                          {t("common.cancel")}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleAddSite}
+                          disabled={siteActionBusy || !newSiteLabel.trim() || !newSiteDomain.trim()}
+                        >
+                          {t("settings.comparisonSites.addButton")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button type="button" variant="outline" size="sm" className="self-start" onClick={toggleAddSite}>
+                      {t("settings.comparisonSites.addToggle")}
+                    </Button>
+                  )}
+                </>
+              )}
             </>
           )}
         </div>

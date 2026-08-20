@@ -4,6 +4,7 @@ import { Alert, Button, Footer, FreshnessBadge, Input, Popover, PopoverItem, cn 
 import { useT } from "shelf-sense-i18n/react";
 import { ScopeTile } from "../components/ScopeTile";
 import { freshnessBadgeLabel } from "../lib/freshness";
+import { useComparisonSitesStore } from "../lib/comparisonSitesStore";
 import { usePreferencesStore } from "../lib/preferencesStore";
 import { useProductsStore } from "../lib/productsStore";
 import { ApiError, createBatch, lookupBarcode, updateBatch, updateProduct } from "../lib/api";
@@ -98,6 +99,12 @@ export function InventoryPage() {
 
   const { products, batches, setProducts, setBatches, loading, error, refetch } = useProductsStore();
   const { preferences } = usePreferencesStore();
+  // specs/Price comparison.md — same independent user-value-then-admin-env-default
+  // resolution GET /lookup-barcode already uses server-side.
+  const { sites: comparisonSites } = useComparisonSitesStore();
+  const hasSearchCredentials =
+    (preferences.tavily_api_key_set || preferences.env_defaults.tavily_api_key_set) &&
+    (preferences.ai_api_key_set || preferences.env_defaults.ai_api_key_set);
   const i18n = useT();
   const { t } = i18n;
   const navigate = useNavigate();
@@ -813,6 +820,10 @@ export function InventoryPage() {
             openQuick(product.id, total, product.tracking_mode);
           }
         }}
+        priceSearch={priceHistory.state?.priceSearch ?? { status: "idle" }}
+        onSearchPrices={priceHistory.runPriceSearch}
+        hasComparisonSites={comparisonSites.length > 0}
+        hasSearchCredentials={hasSearchCredentials}
       />
     </div>
   );

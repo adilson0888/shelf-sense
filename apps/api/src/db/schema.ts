@@ -105,6 +105,22 @@ export const barcodes = pgTable(
   ],
 );
 
+// specs/Price comparison.md — the user's saved shopping sites, searched by
+// POST /price-search below. Flat global list, no per-product scoping,
+// single-user per specs/Persistence.md — same shape as barcodes/
+// productAliases above, not a preferences column since it's a list.
+export const comparisonSites = pgTable(
+  "comparison_sites",
+  {
+    id: uuid("id").primaryKey(),
+    label: text("label").notNull(), // shown as the result matrix's column header
+    domain: text("domain").notNull(), // e.g. "amazon.com.br" — passed to Tavily's include_domains
+    // Display order = insertion order (no manual reordering in v1) — see that spec's Out of scope.
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("comparison_sites_domain_unique").on(table.domain)],
+);
+
 // Schema for specs/Settings.md. Single-user, single active row — no
 // per-provider list, no user_id (matches specs/Persistence.md's stated
 // single-user scope).
