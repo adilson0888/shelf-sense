@@ -1,4 +1,11 @@
-# ShelfSense
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/brand/icon-tote-mono.svg">
+    <img src="apps/web/public/brand/icon-tote-tile.svg" alt="Tote, the ShelfSense mascot" width="72">
+  </picture>
+</p>
+
+<h1 align="center"><code>shelf·sense</code></h1>
 
 Know what's on your shelf. Self-hosted pantry and stock tracking for one household — no accounts, no cloud, no subscription.
 
@@ -70,3 +77,5 @@ A Vite + React 18 + TypeScript SPA (`apps/web`), an Express 4 + TypeScript API (
 ---
 
 Built for one kitchen. If it's useful for yours, it's yours.
+
+<p align="right"><code>shelf·sense</code></p>
