@@ -35,6 +35,15 @@ export interface PriceSearchResult {
   site_id: string;
   label: string;
   price: number | null;
+  /**
+   * The actual listing page the price came from, so the user can confirm
+   * it or buy — deterministically matched from Tavily's own result URLs by
+   * hostname (see matchSiteForUrl below), never AI-generated: asking a
+   * model to also invent a URL risks a hallucinated link, which is a much
+   * worse failure mode here than just omitting one. null whenever price is
+   * null, or a matching URL genuinely wasn't in the results.
+   */
+  url: string | null;
 }
 
 export interface PriceSearchRow {
@@ -58,8 +67,22 @@ function emptyRows(barcodes: PriceSearchBarcodeInput[], sites: ComparisonSiteInp
   return barcodes.map((b) => ({
     barcode_id: b.id,
     label: b.label,
-    results: sites.map((s) => ({ site_id: s.id, label: s.label, price: null })),
+    results: sites.map((s) => ({ site_id: s.id, label: s.label, price: null, url: null })),
   }));
+}
+
+/** Hostname match, `www.` stripped either side — Tavily's include_domains restricts results to these domains already, this just figures out *which* saved site a given result URL belongs to. */
+function matchSiteForUrl(url: string, sites: ComparisonSiteInput[]): ComparisonSiteInput | undefined {
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return undefined;
+  }
+  return sites.find((s) => {
+    const domain = s.domain.replace(/^www\./, "");
+    return hostname === domain || hostname.endsWith(`.${domain}`);
+  });
 }
 
 /**
@@ -153,12 +176,32 @@ export async function searchPrices(
 
   const domains = sites.map((s) => s.domain);
   const searches = await Promise.all(
-    barcodes.map(async (b) => ({ barcode: b, results: await tavilySearch(b.query, creds.tavilyApiKey as string, domains) })),
+    barcodes.map(async (b) => ({
+      barcode: b,
+      // "preço" biases Tavily toward real listing/price pages over generic
+      // category pages for the same product — measurably helped recall in
+      // manual testing. max_results bumped from barcodeLookup's default 5
+      // to 8: domain-restricted results skew toward less-relevant pages
+      // (search listings, out-of-stock variants), so more candidates gives
+      // the AI extraction step more to work with.
+      results: await tavilySearch(`${b.query} preço`, creds.tavilyApiKey as string, domains, 8),
+    })),
   );
   const withResults = searches.filter((s): s is { barcode: PriceSearchBarcodeInput; results: NonNullable<typeof s.results> } =>
     Boolean(s.results?.length),
   );
   if (withResults.length === 0) return emptyRows(barcodes, sites);
+
+  // Deterministic (not AI-derived) — see PriceSearchResult.url's doc.
+  const urlByBarcode = new Map<string, Map<string, string>>();
+  for (const s of withResults) {
+    const bySite = new Map<string, string>();
+    for (const r of s.results) {
+      const site = matchSiteForUrl(r.url, sites);
+      if (site && !bySite.has(site.id)) bySite.set(site.id, r.url);
+    }
+    urlByBarcode.set(s.barcode.id, bySite);
+  }
 
   const matrix = await extractPriceMatrix(
     withResults.map((s) => ({
@@ -173,6 +216,13 @@ export async function searchPrices(
   return barcodes.map((b) => ({
     barcode_id: b.id,
     label: b.label,
-    results: sites.map((s) => ({ site_id: s.id, label: s.label, price: matrix.get(b.id)?.get(s.id) ?? null })),
+    results: sites.map((s) => {
+      const price = matrix.get(b.id)?.get(s.id) ?? null;
+      // A price with no matched URL is deliberately still shown as a plain
+      // (non-linked) price — see PriceHistoryModal.tsx — rather than
+      // suppressed, since the price itself is still useful information.
+      const url = price !== null ? (urlByBarcode.get(b.id)?.get(s.id) ?? null) : null;
+      return { site_id: s.id, label: s.label, price, url };
+    }),
   }));
 }

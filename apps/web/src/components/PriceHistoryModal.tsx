@@ -133,7 +133,18 @@ export function PriceHistoryModal({
       align: "right" as const,
       render: (row) => {
         const cell = row.results.find((c) => c.site_id === r.site_id);
-        return cell?.price != null ? formatPrice(cell.price) : t("priceHistory.searchNotFound");
+        if (cell?.price == null) return t("priceHistory.searchNotFound");
+        // specs/Price comparison.md — links straight to the listing so the
+        // user can confirm or buy; a price with no matched URL (rare, see
+        // PriceSearchResult.url) still shows as plain text rather than
+        // being hidden.
+        return cell.url ? (
+          <a href={cell.url} target="_blank" rel="noopener noreferrer" className="text-brand-600 underline hover:no-underline">
+            {formatPrice(cell.price)}
+          </a>
+        ) : (
+          formatPrice(cell.price)
+        );
       },
     }));
     return [{ key: "product", header: t("priceHistory.searchProductColumn"), render: (row) => row.label }, ...siteColumns];

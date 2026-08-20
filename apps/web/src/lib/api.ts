@@ -231,6 +231,8 @@ export interface PriceSearchResult {
   site_id: string;
   label: string;
   price: number | null;
+  /** The listing page the price came from — deterministically matched server-side, never AI-generated. null whenever price is null, or no matching URL was found. */
+  url: string | null;
 }
 
 export interface PriceSearchRow {
