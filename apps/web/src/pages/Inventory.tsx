@@ -11,6 +11,7 @@ import { useProductsStore } from "../lib/productsStore";
 import { ApiError, createBatch, lookupBarcode, updateBatch, updateProduct } from "../lib/api";
 import { isBarcodeScanSupported } from "../lib/barcodeScanner";
 import type { AddProductLocationState } from "./AddProduct";
+import type { StockEditLocationState } from "./StockEdit";
 import {
   type EnrichedProduct,
   type ListScope,
@@ -425,7 +426,7 @@ export function InventoryPage() {
   // so it can stay mounted/reachable after InventoryPage unmounts.
   function openStock(id: string) {
     setQuick(null);
-    navigate(`/products/${id}/stock`);
+    navigate(`/products/${id}/stock`, { state: { from: "/" } satisfies StockEditLocationState });
   }
 
   // --- Product Edit -----------------------------------------------------

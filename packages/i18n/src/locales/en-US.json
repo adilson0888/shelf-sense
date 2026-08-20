@@ -204,7 +204,7 @@
   "groceryList.emptyFilteredHint": "Try a different search or switch back to All.",
   "groceryList.outOfStockBadge": "OUT",
 
-  "stockEdit.backToInventory": "Back to inventory",
+  "stockEdit.back": "Back",
   "stockEdit.eyebrow": "Stock edit",
   "stockEdit.noBatches": "No batches",
   "stockEdit.batchesCount.one": "{count} batch",
