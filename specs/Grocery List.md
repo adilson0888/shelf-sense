@@ -1,6 +1,6 @@
 # Grocery List
 
-**Status:** draft
+**Status:** done
 
 ## User story
 

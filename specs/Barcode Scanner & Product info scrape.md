@@ -1,6 +1,6 @@
 # Barcode Scanner & Product info scrape
 
-**Status:** draft
+**Status:** done
 
 ## User story
 

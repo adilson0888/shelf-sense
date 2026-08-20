@@ -4,15 +4,6 @@ Ideas that are real — we intend to build them eventually — but are deliberat
 
 When something's deferred out of a spec, leave a short pointer back to this file rather than deleting the requirement outright. When it's time to pick an entry up, promote it into a real spec via the normal loop (`specs/README.md`) — write/update the target spec's acceptance criteria, data, and UI requirements properly; don't just delete the entry here and start coding from these notes alone.
 
-## Where a zero-quantity product surfaces (Product List, Grocery List)
-
-Pulled from `Inventory.md` (2026-08-13) — that spec was renamed from `Product List.md` and narrowed to exclude any product with 0 total quantity across all batches, since it's meant to show what's on the shelf, not a general catalog. That leaves an open gap: once a product's stock hits 0, it disappears from the app entirely — nothing shows "products I'm out of" today.
-
-Covers, when picked back up:
-- A redesigned **Product List** screen — a full catalog view, differently emphasized than `Inventory.md`, not yet specced.
-- A new **Grocery List** screen — surfaces what's missing/needed, the more direct answer to "what am I out of."
-- Both need their own spec via the normal loop (`specs/README.md`) before implementation — this entry is a placeholder pointer, not a design.
-
 ## Additional Menu sections (Reports, Prices)
 
 Pulled from `Menu.md` (2026-08-12) — the drawer is scoped to Inventory and Settings for now; more sections are expected but not yet designed.
@@ -22,21 +13,7 @@ Covers, when picked back up:
 - Re-check at that point whether the flat, ungrouped list in `Menu.md` still holds, or whether the item count justifies grouping/categorizing the drawer.
 - **Prices** specifically now has real underlying data to build on: `specs/Prices & Product Differentiation.md` adds `Batch.price` and retains consumed batches as history — this entry is just the browsing/comparison UI on top, still undesigned.
 
-## Batch cost tracking & consumed-batch history — promoted 2026-08-19
-
-Promoted into `specs/Prices & Product Differentiation.md`, which resolves the open question below: `consumed` is a single boolean status field on `Batch` itself, not a separate history entity. Building the actual browsable purchase-history/Prices UI on top of this retained data is still deferred — see that spec's Out of scope and the "Additional Menu sections (Reports, Prices)" entry above.
-
-<details><summary>Original entry (2026-08-12), kept for context</summary>
-
-Pulled from `Stock Edit.md` (2026-08-12) — raised while deciding what happens to a batch whose quantity reaches 0. Today (in both `Stock Edit.md` and `Quick Batch Edit.md`) an emptied batch is hard-deleted; that's a placeholder, not a settled design.
-
-Covers, when picked back up:
-- **A per-batch cost/price attribute** — batches represent individual purchases/lots, so cost naturally lives there, not on `Product`.
-- **Emptied batches are retained, not deleted** — once a batch hits 0 quantity it becomes "consumed" rather than removed, so it can still serve as purchase/price history. Consumed batches must **not** appear in any active view (Inventory rollups, Quick Batch Edit, Stock Edit's table) — they're history-only.
-- **Open question, not yet decided**: whether "consumed" is a state on `Batch` itself (e.g. a status field) or price history moves to its own separate entity keyed off the purchase rather than the batch. Needs a real design pass, not just a field bolted on.
-- **Touches two existing specs when this lands**: `Quick Batch Edit.md`'s Save behavior ("any batch emptied to 0 is removed entirely") and `Stock Edit.md`'s zero-quantity handling both hard-delete via the same underlying mechanism today — both need updating together, not independently, or they'll drift back out of sync.
-
-</details>
+## Batch cost tracking & consumed-batch history — resolved, see `specs/Prices & Product Differentiation.md`.
 
 ## Percentage-tracked products in Price History
 

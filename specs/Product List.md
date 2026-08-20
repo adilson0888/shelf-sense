@@ -1,6 +1,6 @@
 # Product List
 
-**Status:** draft. (Named 2026-08-13 — reuses the name the grouped/stock-triage screen used to have, freed up when that screen was renamed to `specs/Inventory.md`. See that spec's status line and `specs/BACKLOG.md`'s "Where a zero-quantity product surfaces" entry for why: `Inventory.md` only shows products with stock on hand, so this full-catalog screen — plus a still-unspecced Grocery List — exist to cover what that rename excludes.)
+**Status:** done. (Named 2026-08-13 — reuses the name the grouped/stock-triage screen used to have, freed up when that screen was renamed to `specs/Inventory.md`. `Inventory.md` only shows products with stock on hand; this full-catalog screen, plus `specs/Grocery List.md`, cover what that rename excludes.)
 
 ## User story
 
