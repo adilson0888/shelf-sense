@@ -5,8 +5,6 @@ Know what's on your shelf. Self-hosted pantry and stock tracking for one househo
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/adilson0888/shelf-sense/pkgs/container/shelf-sense-web)
 
-![ShelfSense — Inventory view](docs/screenshots/inventory-light.jpg)
-
 ## Why ShelfSense
 
 Most inventory apps assume you're running a business, or that you're fine handing your grocery habits to someone else's cloud. ShelfSense assumes neither. It's built for one household tracking what's actually in the pantry — what's about to expire, what's running low, what's already gone — and it runs on hardware you control.
