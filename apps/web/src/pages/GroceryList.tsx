@@ -57,10 +57,12 @@ import {
   type ProductEditState,
 } from "../lib/productEdit";
 import { BarcodeCaptureModal } from "../components/BarcodeCaptureModal";
+import { DeleteProductModal } from "../components/DeleteProductModal";
 import { QuickBatchEditModal } from "../components/QuickBatchEditModal";
 import { PriceHistoryModal } from "../components/PriceHistoryModal";
 import { ProductEditView } from "../components/ProductEditView";
 import { usePriceHistory } from "../lib/usePriceHistory";
+import type { Product } from "../types";
 
 const SAVED_MESSAGE_DELAY_MS = 2600;
 // Same long-press threshold Inventory.tsx's/Product List's own hold-to-open gesture uses.
@@ -120,6 +122,11 @@ export function GroceryListPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [editSaveError, setEditSaveError] = useState<string | null>(null);
   const [justSavedMessage, setJustSavedMessage] = useState<string | null>(null);
+  // --- Delete product (specs/Delete products.md), opened via Product Edit's
+  // own "Delete product" button — same DeleteProductModal Product List's
+  // "⋯" popover opens (this page has no "⋯" menu of its own, see this
+  // page's own doc comment).
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
 
   // --- Quick Batch Edit: hold-to-open card gesture, same gesture/timing as
   // Inventory.tsx's row long-press, minus its swipe-to-reveal panel.
@@ -207,6 +214,14 @@ export function GroceryListPage() {
     () => (edit ? batches.filter((b) => b.product_id === edit.productId && b.expires_on !== null).length : 0),
     [batches, edit],
   );
+
+  // specs/Delete products.md — same active-stock computation ProductList.tsx's
+  // own deleteActiveStock uses, driving DeleteProductModal's stock-loss warning.
+  const deleteActiveStock = useMemo(() => {
+    if (!deleteTarget) return 0;
+    if (deleteTarget.tracking_mode === "percentage") return deleteTarget.stock_percent ?? 0;
+    return batches.filter((b) => b.product_id === deleteTarget.id).reduce((sum, b) => sum + b.quantity, 0);
+  }, [deleteTarget, batches]);
 
   function clearFilters() {
     setQuery("");
@@ -415,6 +430,27 @@ export function GroceryListPage() {
   }
   function editCancelConfirm() {
     if (edit) setEdit(cancelConfirm(edit));
+  }
+  // specs/Delete products.md — Product Edit's own "Delete product" button;
+  // closes this view first and hands off to the same DeleteProductModal
+  // ProductList.tsx's "⋯" popover opens.
+  function editDeleteProduct() {
+    if (!edit) return;
+    const product = products.find((p) => p.id === edit.productId);
+    setEdit(null);
+    if (product) setDeleteTarget(product);
+  }
+  // specs/Delete products.md — the delete itself already committed
+  // server-side (cascading batches/aliases/barcodes via FK) by the time
+  // this fires; this just drops the same rows from local state and shows
+  // the same one-shot success message editSave's own Save success uses.
+  function handleProductDeleted(deleted: Product) {
+    setProducts((ps) => ps.filter((p) => p.id !== deleted.id));
+    setBatches((bs) => bs.filter((b) => b.product_id !== deleted.id));
+    setDeleteTarget(null);
+    setJustSavedMessage(t("productList.productDeleted", { name: deleted.short_description }));
+    if (savedMessageTimer.current) clearTimeout(savedMessageTimer.current);
+    savedMessageTimer.current = window.setTimeout(() => setJustSavedMessage(null), SAVED_MESSAGE_DELAY_MS);
   }
   async function editSave() {
     if (!edit) return;
@@ -732,6 +768,14 @@ export function GroceryListPage() {
         onSave={editSave}
         saving={editSaving}
         saveError={editSaveError}
+        onDeleteProduct={editDeleteProduct}
+      />
+
+      <DeleteProductModal
+        product={deleteTarget}
+        activeStockCount={deleteActiveStock}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={handleProductDeleted}
       />
 
       <PriceHistoryModal

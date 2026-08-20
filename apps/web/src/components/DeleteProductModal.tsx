@@ -25,6 +25,11 @@ export interface DeleteProductModalProps {
  * aliases, and barcodes all removed via apps/api's onDelete: "cascade"
  * FKs, see that spec's Data section). Same Modal-with-a-danger-button shape
  * LinkExistingProductModal's own confirm step already establishes.
+ *
+ * Opened from two entry points, both handing off the same product/
+ * activeStockCount/onDeleted contract: Product List's own "⋯" popover, and
+ * Product Edit's "Delete product" button (ProductEditView.tsx) — reached
+ * from Product List, Inventory, and Grocery List's own Quick Batch Edit.
  */
 export function DeleteProductModal({ product, activeStockCount, onClose, onDeleted }: DeleteProductModalProps) {
   const { t, tPlural } = useT();

@@ -473,6 +473,15 @@ export function ProductListPage() {
   function editCancelConfirm() {
     if (edit) setEdit(cancelConfirm(edit));
   }
+  // specs/Delete products.md — Product Edit's own "Delete product" button;
+  // closes this view first and hands off to the same DeleteProductModal
+  // the "⋯" popover's own Delete product item opens.
+  function editDeleteProduct() {
+    if (!edit) return;
+    const product = products.find((p) => p.id === edit.productId);
+    setEdit(null);
+    if (product) setDeleteTarget(product);
+  }
   async function editSave() {
     if (!edit) return;
     if (!edit.saveArmed) {
@@ -843,6 +852,7 @@ export function ProductListPage() {
         onSave={editSave}
         saving={editSaving}
         saveError={editSaveError}
+        onDeleteProduct={editDeleteProduct}
       />
 
       <DeleteProductModal
