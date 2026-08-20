@@ -18,6 +18,7 @@ import { useProductsStore } from "../lib/productsStore";
 import { ApiError, createBatch, lookupBarcode, updateBatch, updateProduct } from "../lib/api";
 import { isBarcodeScanSupported } from "../lib/barcodeScanner";
 import type { AddProductLocationState } from "./AddProduct";
+import type { StockEditLocationState } from "./StockEdit";
 import { enrichProduct, matchesSearch, type InventoryDefaults } from "../lib/inventory";
 import {
   compareByName,
@@ -391,7 +392,7 @@ export function ProductListPage() {
   // --- Stock Edit — a real route (Stock Edit.md), same as Inventory.tsx's own.
   function openStock(id: string) {
     setQuick(null);
-    navigate(`/products/${id}/stock`);
+    navigate(`/products/${id}/stock`, { state: { from: "/products" } satisfies StockEditLocationState });
   }
 
   // --- Product Edit (verbatim from Inventory.tsx — same lib/productEdit.ts

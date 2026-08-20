@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Alert, Button, FreshnessBadge, Input, Select, cn } from "shelf-sense-ds";
 import { useT } from "shelf-sense-i18n/react";
 import { ApiError, createBatch, updateBatch } from "../lib/api";
@@ -34,23 +34,39 @@ import {
   type StockEditState,
 } from "../lib/stockEdit";
 
+/** Passed via navigate(path, { state }) — see Inventory.tsx/ProductList.tsx/GroceryList.tsx's "Stock" wiring. */
+export interface StockEditLocationState {
+  /** Where to return to on Save/Cancel — the page this view was opened from. */
+  from?: string;
+}
+
 /**
- * Full-screen batch editor, reached from Quick Batch Edit's "Stock" button.
- * A real route (/products/:id/stock, Stock Edit.md) rather than local modal
- * state — deliberately outside AppShell's chrome, same reasoning as
- * ProductEditView (see App.tsx). Translated from the approved Claude Design
- * prototype (templates/stock-edit/StockEdit.dc.html) — same header, table,
- * and confirm-to-commit footer, real shelf-sense-ds `variant="confirm"`
- * instead of the prototype's own placeholder, same story as Product Edit.
+ * Full-screen batch editor, reached from Quick Batch Edit's "Stock" button,
+ * or directly via Product List's "Edit stock" ⋯ menu option. A real route
+ * (/products/:id/stock, Stock Edit.md) rather than local modal state —
+ * deliberately outside AppShell's chrome, same reasoning as ProductEditView
+ * (see App.tsx). Translated from the approved Claude Design prototype
+ * (templates/stock-edit/StockEdit.dc.html) — same header, table, and
+ * confirm-to-commit footer, real shelf-sense-ds `variant="confirm"` instead
+ * of the prototype's own placeholder, same story as Product Edit.
+ *
+ * Reachable from more than one page (Inventory, Product List, Grocery
+ * List), so Save/Cancel can't just assume Inventory — same `from`-in-
+ * router-state convention `AddProduct.tsx`'s `AddProductLocationState`
+ * already established, not a new mechanism.
  */
 export function StockEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { products, batches, setBatches } = useProductsStore();
   const { preferences } = usePreferencesStore();
   const i18n = useT();
   const { t } = i18n;
   const product = products.find((p) => p.id === id);
+
+  const locState = (location.state ?? null) as StockEditLocationState | null;
+  const backTo = locState?.from ?? "/";
 
   const [edit, setEdit] = useState<StockEditState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -66,7 +82,7 @@ export function StockEditPage() {
   }, [id]);
 
   function goBack() {
-    navigate("/");
+    navigate(backTo);
   }
 
   if (!product || !id) {
@@ -145,7 +161,7 @@ export function StockEditPage() {
           <button
             type="button"
             onClick={goBack}
-            title={t("stockEdit.backToInventory")}
+            title={t("stockEdit.back")}
             className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-border bg-surface-1 text-base text-ink-primary"
           >
             ‹

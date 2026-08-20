@@ -204,7 +204,7 @@
   "groceryList.emptyFilteredHint": "Tente outra busca ou volte para Todos.",
   "groceryList.outOfStockBadge": "ACABOU",
 
-  "stockEdit.backToInventory": "Voltar para o estoque",
+  "stockEdit.back": "Voltar",
   "stockEdit.eyebrow": "Editar estoque",
   "stockEdit.noBatches": "Nenhum lote",
   "stockEdit.batchesCount.one": "{count} lote",
