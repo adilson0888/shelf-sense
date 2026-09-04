@@ -30,6 +30,7 @@ export interface ProductEditViewProps {
   /** BarcodeCaptureModal's onCancel ("Edit manually") — falls through to the blank inline form. */
   onCancelAddBarcodeScan: () => void;
   onRemoveSelectedBarcodes: () => void;
+  onSearchSelectedBarcodes: () => void;
   /** Confirms whichever move is pending — a barcode conflict or an alias conflict (edit.confirm names which). */
   onConfirmMove: () => void;
   onCancelConfirm: () => void;
@@ -81,6 +82,7 @@ export function ProductEditView({
   onAddBarcodeDetect,
   onCancelAddBarcodeScan,
   onRemoveSelectedBarcodes,
+  onSearchSelectedBarcodes,
   onConfirmMove,
   onCancelConfirm,
   onSave,
@@ -236,6 +238,9 @@ export function ProductEditView({
                     </span>
                     <Button type="button" variant="danger" size="sm" onClick={onRemoveSelectedBarcodes}>
                       {t("common.remove")}
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={onSearchSelectedBarcodes}>
+                      {t("productEdit.searchPricesButton")}
                     </Button>
                   </div>
                 )}

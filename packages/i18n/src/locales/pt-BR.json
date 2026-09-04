@@ -294,6 +294,7 @@
   "productEdit.barcodeCodePlaceholder": "13 dígitos",
   "productEdit.addCodeButton": "Adicionar código",
   "productEdit.addBarcodeToggle": "+ Adicionar código de barras",
+  "productEdit.searchPricesButton": "Pesquisar preços",
   "productEdit.saveChangesButton": "Salvar alterações",
   "productEdit.moveAliasTitle": "Mover este apelido?",
   "productEdit.moveBarcodeBody": "Este código de barras está atualmente vinculado a \"{ownerName}\". Continuar vai desvinculá-lo desse produto e vinculá-lo a este.",

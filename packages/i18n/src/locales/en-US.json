@@ -294,6 +294,7 @@
   "productEdit.barcodeCodePlaceholder": "13 digits",
   "productEdit.addCodeButton": "Add code",
   "productEdit.addBarcodeToggle": "+ Add barcode",
+  "productEdit.searchPricesButton": "Search prices",
   "productEdit.saveChangesButton": "Save changes",
   "productEdit.moveAliasTitle": "Move this alias?",
   "productEdit.moveBarcodeBody": "This barcode is currently linked to \"{ownerName}.\" Continuing will unlink it from that product and link it to this one instead.",

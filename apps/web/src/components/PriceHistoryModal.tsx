@@ -300,6 +300,22 @@ export function PriceHistoryModal({
             )}
           </>
         )}
+        {!loading && !error && !hasAnyPricedData && priceSearch.status === "loading" && (
+          <p className="text-center text-xs text-ink-muted">{t("priceHistory.searchLoading")}</p>
+        )}
+        {!loading && !error && !hasAnyPricedData && priceSearch.status === "error" && (
+          <Alert variant="danger" title={t("priceHistory.searchError")}>
+            {priceSearch.message}
+            <div className="mt-sm">
+              <Button variant="outline" size="sm" onClick={onSearchPrices}>
+                {t("common.tryAgain")}
+              </Button>
+            </div>
+          </Alert>
+        )}
+        {!loading && !error && !hasAnyPricedData && priceSearch.status === "done" && (
+          <DataTable columns={matrixColumns} data={priceSearch.rows} getRowKey={(row) => row.barcode_id} />
+        )}
       </ModalBody>
       <ModalFooter>
         <Button variant="outline" size="sm" onClick={onJumpToQuickBatchEdit}>

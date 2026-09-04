@@ -248,7 +248,9 @@ export function InventoryPage() {
   // --- Quick Batch Edit: gestures ---------------------------------------
 
   function openQuick(id: string, total: number, mode: "units" | "percentage") {
-    setQuick(openQuickEditState(id, total, mode));
+    const product = products.find((p) => p.id === id);
+    const defaultBarcodeId = product?.barcodes.length === 1 ? product.barcodes[0].id : null;
+    setQuick(openQuickEditState(id, total, mode, defaultBarcodeId));
   }
   function openQuickFromSwipe(id: string, total: number, mode: "units" | "percentage") {
     setSwipedId(null);
@@ -518,6 +520,15 @@ export function InventoryPage() {
   }
   function editRemoveSelectedBarcodes() {
     if (edit) setEdit(removeSelectedBarcodes(edit));
+  }
+  function editSearchSelectedBarcodes() {
+    if (!edit) return;
+    const product = products.find((p) => p.id === edit.productId);
+    if (!product) return;
+    const persistedIds = new Set(product.barcodes.map((b) => b.id));
+    const barcodeIds = edit.selectedBarcodeIds.filter((id) => persistedIds.has(id));
+    setEdit(null);
+    if (barcodeIds.length > 0) priceHistory.open(product, batches.filter((b) => b.product_id === product.id), barcodeIds);
   }
   function editConfirmMove() {
     if (!edit || !edit.confirm) return;
@@ -833,7 +844,8 @@ export function InventoryPage() {
         onAddBarcode={editAddBarcode}
         onAddBarcodeDetect={editAddBarcodeDetect}
         onCancelAddBarcodeScan={editCancelAddBarcodeScan}
-        onRemoveSelectedBarcodes={editRemoveSelectedBarcodes}
+         onRemoveSelectedBarcodes={editRemoveSelectedBarcodes}
+         onSearchSelectedBarcodes={editSearchSelectedBarcodes}
         onConfirmMove={editConfirmMove}
         onCancelConfirm={editCancelConfirm}
         onSave={editSave}

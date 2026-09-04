@@ -26,6 +26,7 @@ export interface PriceHistoryState {
   // specs/Price comparison.md — same "resets for free on (re)open" reasoning
   // as visibleKeys above; nothing outside this modal needs it either.
   priceSearch: PriceSearchState;
+  searchBarcodeIds: string[];
 }
 
 /**
@@ -42,9 +43,17 @@ export function usePriceHistory(generalLabel: string) {
   // for a different product has already superseded it.
   const requestIdRef = useRef(0);
 
-  async function open(product: Product, activeBatches: Batch[]) {
+  async function open(product: Product, activeBatches: Batch[], searchBarcodeIds: string[] = []) {
     const requestId = ++requestIdRef.current;
-    setState({ product, series: [], visibleKeys: new Set(), loading: true, error: null, priceSearch: { status: "idle" } });
+    setState({
+      product,
+      series: [],
+      visibleKeys: new Set(),
+      loading: true,
+      error: null,
+      priceSearch: searchBarcodeIds.length > 0 ? { status: "loading" } : { status: "idle" },
+      searchBarcodeIds,
+    });
 
     let consumedBatches: Batch[];
     try {
@@ -58,6 +67,7 @@ export function usePriceHistory(generalLabel: string) {
         loading: false,
         error: err instanceof ApiError ? err.message : "Couldn't load price history.",
         priceSearch: { status: "idle" },
+        searchBarcodeIds,
       });
       return;
     }
@@ -70,8 +80,20 @@ export function usePriceHistory(generalLabel: string) {
       visibleKeys: new Set(series.map((s) => s.key)),
       loading: false,
       error: null,
-      priceSearch: { status: "idle" },
+      priceSearch: searchBarcodeIds.length > 0 ? { status: "loading" } : { status: "idle" },
+      searchBarcodeIds,
     });
+
+    if (searchBarcodeIds.length === 0) return;
+    try {
+      const { rows } = await searchPrices(searchBarcodeIds);
+      if (requestIdRef.current !== requestId) return;
+      setState((cur) => (cur ? { ...cur, priceSearch: { status: "done", rows } } : cur));
+    } catch (err) {
+      if (requestIdRef.current !== requestId) return;
+      const message = err instanceof ApiError ? err.message : "Couldn't compare prices.";
+      setState((cur) => (cur ? { ...cur, priceSearch: { status: "error", message } } : cur));
+    }
   }
 
   function close() {
@@ -82,7 +104,7 @@ export function usePriceHistory(generalLabel: string) {
   function toggleSeries(key: string) {
     setState((s) => {
       if (!s) return s;
-      const visibleKeys = new Set(s.visibleKeys);
+        const visibleKeys = new Set(s.visibleKeys);
       if (visibleKeys.has(key)) visibleKeys.delete(key);
       else visibleKeys.add(key);
       return { ...s, visibleKeys };
@@ -99,7 +121,9 @@ export function usePriceHistory(generalLabel: string) {
   async function runPriceSearch() {
     const s = state;
     if (!s) return;
-    const barcodeIds = [...s.visibleKeys].filter((k) => k !== GENERAL_SERIES_KEY);
+    const barcodeIds = s.searchBarcodeIds.length > 0
+      ? s.searchBarcodeIds
+      : [...s.visibleKeys].filter((k) => k !== GENERAL_SERIES_KEY);
     if (barcodeIds.length === 0) return;
 
     const requestId = requestIdRef.current;

@@ -24,6 +24,7 @@ import {
   bumpQuickEdit,
   commitQuickEditDraft,
   openQuickEditState,
+  planPercentBatch,
   planQuickEdit,
   resetQuickEdit,
   type QuickEditState,
@@ -240,7 +241,9 @@ export function GroceryListPage() {
   // --- Quick Batch Edit: gestures (tap-to-expand / hold-to-open, no swipe) ---
 
   function openQuick(id: string, total: number, mode: "units" | "percentage") {
-    setQuick(openQuickEditState(id, total, mode));
+    const product = products.find((p) => p.id === id);
+    const defaultBarcodeId = product?.barcodes.length === 1 ? product.barcodes[0].id : null;
+    setQuick(openQuickEditState(id, total, mode, defaultBarcodeId));
   }
 
   function handlePressStart(id: string, total: number, mode: "units" | "percentage", e: ReactPointerEvent) {
@@ -315,10 +318,25 @@ export function GroceryListPage() {
       return;
     }
     if (product.tracking_mode === "percentage") {
-      // specs/Relative Tracking.md: overwrites stock_percent directly —
-      // no Batch is ever created or cascaded through for this mode.
+      // A percentage top-up changes stock_percent directly, and a supplied
+      // price additionally creates a symbolic batch for price history.
       setProducts((ps) => ps.map((p) => (p.id === product.id ? { ...p, stock_percent: quick.target } : p)));
-      setQuick(null);
+      const create = planPercentBatch(quick.target - quick.base, quick.addPrice, quick.addBarcodeId);
+      if (!create) {
+        setQuick(null);
+        return;
+      }
+      setQuickSaving(true);
+      setQuickSaveError(null);
+      try {
+        const created = await createBatch(quick.productId, create);
+        setBatches((bs) => [created.batch, ...bs]);
+        setQuick(null);
+      } catch (err) {
+        setQuickSaveError(err instanceof ApiError ? err.message : t("inventory.genericSaveError"));
+      } finally {
+        setQuickSaving(false);
+      }
       return;
     }
     const delta = quick.target - quick.base;
@@ -423,6 +441,15 @@ export function GroceryListPage() {
   }
   function editRemoveSelectedBarcodes() {
     if (edit) setEdit(removeSelectedBarcodes(edit));
+  }
+  function editSearchSelectedBarcodes() {
+    if (!edit) return;
+    const product = products.find((p) => p.id === edit.productId);
+    if (!product) return;
+    const persistedIds = new Set(product.barcodes.map((b) => b.id));
+    const barcodeIds = edit.selectedBarcodeIds.filter((id) => persistedIds.has(id));
+    setEdit(null);
+    if (barcodeIds.length > 0) priceHistory.open(product, batches.filter((b) => b.product_id === product.id), barcodeIds);
   }
   function editConfirmMove() {
     if (!edit || !edit.confirm) return;
@@ -763,7 +790,8 @@ export function GroceryListPage() {
         onAddBarcode={editAddBarcode}
         onAddBarcodeDetect={editAddBarcodeDetect}
         onCancelAddBarcodeScan={editCancelAddBarcodeScan}
-        onRemoveSelectedBarcodes={editRemoveSelectedBarcodes}
+         onRemoveSelectedBarcodes={editRemoveSelectedBarcodes}
+         onSearchSelectedBarcodes={editSearchSelectedBarcodes}
         onConfirmMove={editConfirmMove}
         onCancelConfirm={editCancelConfirm}
         onSave={editSave}

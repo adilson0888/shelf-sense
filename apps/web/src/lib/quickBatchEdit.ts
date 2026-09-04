@@ -21,9 +21,17 @@ export interface QuickEditState {
   // Which of this product's linked codes the new batch is for — only ever
   // shown/settable when the product has more than one.
   addBarcodeId: string | null;
+  // The only linked code, when there is exactly one, must remain selected
+  // even after Reset clears the other pending fields.
+  defaultBarcodeId: string | null;
 }
 
-export function openQuickEditState(productId: string, total: number, mode: "units" | "percentage" = "units"): QuickEditState {
+export function openQuickEditState(
+  productId: string,
+  total: number,
+  mode: "units" | "percentage" = "units",
+  defaultBarcodeId: string | null = null,
+): QuickEditState {
   return {
     productId,
     mode,
@@ -33,7 +41,8 @@ export function openQuickEditState(productId: string, total: number, mode: "unit
     draft: String(total),
     addExpiresOn: "",
     addPrice: "",
-    addBarcodeId: null,
+    addBarcodeId: defaultBarcodeId,
+    defaultBarcodeId,
   };
 }
 
@@ -52,7 +61,15 @@ export function commitQuickEditDraft(state: QuickEditState): QuickEditState {
 }
 
 export function resetQuickEdit(state: QuickEditState): QuickEditState {
-  return { ...state, target: state.base, draft: String(state.base), editing: false, addExpiresOn: "", addPrice: "", addBarcodeId: null };
+  return {
+    ...state,
+    target: state.base,
+    draft: String(state.base),
+    editing: false,
+    addExpiresOn: "",
+    addPrice: "",
+    addBarcodeId: state.defaultBarcodeId,
+  };
 }
 
 export interface QuickEditPlan {
