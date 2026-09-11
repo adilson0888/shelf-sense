@@ -1,6 +1,6 @@
 # Database Configuration
 
-**Status:** in-progress — `apps/api/src/db/client.ts`'s `resolvePgConfig()`, `.env.example`, and both `docker-compose*.yml` files implemented and verified (discrete vars, `DATABASE_URL` precedence, `DB_PORT` default, and the fail-fast missing-vars error all confirmed against a real Postgres instance). No UI involved, so nothing in `apps/web`/`apps/mobile`.
+**Status:** in-progress — `apps/api/src/db/client.ts`'s `resolvePgConfig()`, `.env.example`, and both `docker-compose*.yml` files implemented and verified (discrete vars, `DATABASE_URL` precedence, `DB_PORT` default, and the fail-fast missing-vars error all confirmed against a real Postgres instance). No UI involved, so nothing in `apps/web`.
 
 ## User story
 

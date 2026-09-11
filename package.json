@@ -16,7 +16,6 @@
     "build:i18n": "npm run build -w shelf-sense-i18n",
     "dev:web": "npm run dev -w shelf-sense-web",
     "dev:api": "npm run dev -w shelf-sense-api",
-    "dev:mobile": "npm run start -w shelf-sense-mobile",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {

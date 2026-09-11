@@ -61,7 +61,7 @@ interface PhotoIdentifyResult {
 
 - **Entry point**: "add product" affordance on the Inventory screen (already gestured at in that spec's empty state).
 - **Method choice**: a modal/sheet with three options — barcode/QR scan, photo, manual.
-- **Barcode scan screen**: reuses the camera-scanning flow already built in `apps/mobile`'s `ScanScreen` — this spec extends it with the match/lookup logic above rather than building scanning from scratch.
+- **Barcode scan screen**: reuses the camera-scanning flow already built in the web app — this spec extends it with the match/lookup logic above rather than building scanning from scratch.
 - **Photo capture screen**: camera, single shot, sent for identification; loading state while `identify-from-photo` runs.
 - **Match review** (barcode-matched-locally case): shows the matched product's `short_description`/`long_description`, with "use this" and "add as new" actions.
 - **Unlink warning**: triggered by "add as new" from a match. A confirmation dialog naming the matched product and stating the barcode will move to the new product — not a toast, not an inline hint; the user must actively confirm before the manual form opens. Uses the same new modal/dialog component the method-choice step needs (see below).

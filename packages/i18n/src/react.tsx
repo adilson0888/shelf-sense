@@ -8,7 +8,7 @@ import { formatDate, formatList, formatNumber, t, tPlural, type Dictionary, type
  * etc.) can call t()/tPlural() directly without pulling React into their
  * import graph at all. `react` is a peerDependency only — no react-dom or
  * document/window coupling here, so this half is reusable by a future
- * non-web (e.g. React Native) consumer even though none exists yet.
+ * non-web consumer if one is added later.
  */
 interface I18nContextValue {
   locale: Locale;

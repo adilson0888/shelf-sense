@@ -91,7 +91,6 @@ tavilyApiKey: text("tavily_api_key"), // plaintext, same never-echoed-in-full co
 
 - **The photo/AI-vision capture method entirely** — `identify-from-photo` (never actually implemented in `apps/api`, only documented) is dropped along with it. Reviving a photo-based entry method is a separate future spec if ever revisited, not a deferred piece of this one.
 - **The method-choice modal, match-review screen, and unlink-warning modal** — all three become unreachable once scan is the default and matches skip straight to Quick Batch Edit; retired, not just unused.
-- **`apps/mobile` scanning** — `ScanScreen.tsx` stays an unreplaced prototype; a separate future spec.
 - **A `BarcodeDetector` polyfill/JS-library fallback** for unsupported browsers.
 - ~~**Manually typing a barcode to trigger this same lookup pipeline** — camera-scan-triggered only; `Product Edit.md`'s manual-code-entry stays lookup-free.~~ No longer true as of `Product Edit.md`'s later revision: its "+ Add barcode" is scan-first now and does trigger this same lookup on a successful scan. Typing a code by hand (unsupported browser, or backing out of a scan) still never triggers a lookup — that half of this bullet still holds.
 - **Configurable or reorderable provider priority.**
